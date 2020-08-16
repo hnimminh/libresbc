@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+
+<document type="freeswitch/xml">
+
+  <X-PRE-PROCESS cmd="include" data="vars.xml"/>
+
+  <!--- BEGIN: CONFIGURATION PART -->
+  <section name="configuration" description="Various Configuration">
+    <X-PRE-PROCESS cmd="include" data="autoload_configs/*.conf.xml"/>
+  </section>
+  <!--- END: CONFIGURATION PART -->
+
+  <section name="dialplan" description="Regex/XML Dialplan">
+    <X-PRE-PROCESS cmd="include" data="dialplan.xml"/>
+  </section>
+</document>

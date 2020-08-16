@@ -1,0 +1,13 @@
+<!-- File for setting global variables -->
+<include>
+  <X-PRE-PROCESS cmd="set" data="fs_user={{general.user}}"/>
+  <X-PRE-PROCESS cmd="set" data="fs_password={{general.password}}"/>
+  <X-PRE-PROCESS cmd="set" data="console_loglevel=info"/>
+  <X-PRE-PROCESS cmd="set" data="user_agent_string=LibreSBC"/>
+  <X-PRE-PROCESS cmd="set" data="configuration_server=http://127.0.0.1:8443/freeswitch"/>
+  <X-PRE-PROCESS cmd="set" data="db_location=/usr/local/freeswitch/db"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_start_port={{rtp_start_port}}"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port={{rtp_end_port}}"/>
+  <X-PRE-PROCESS cmd="set" data="codec_prefs=G711A,G711U,G729"/>
+  <X-PRE-PROCESS cmd="set" data="call_duration_limit=86400"/>
+</include>
