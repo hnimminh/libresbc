@@ -1,0 +1,47 @@
+<?xml version="1.0"?>                                                                                                                                                                                                           
+<document type="captagent/xml">                                                                                                                                                                                                 
+  <configuration name="core.conf" description="CORE Settings" serial="2014024212">                                                                                                                                        
+    <settings>                                                                                                                                                                                                          
+      <param name="debug" value="3"/>
+      <param name="version" value="2"/>
+      <param name="serial" value="2014056501"/>
+      <param name="uuid" value="00781a4a-5b69-11e4-9522-bb79a8fcf0f3"/>
+      <param name="daemon" value="false"/>
+      <param name="syslog" value="false"/>
+      <param name="pid_file" value="/var/run/captagent.pid"/>
+      <!-- Configure using installation path if different from default -->
+      <param name="module_path" value="/usr/local/captagent/lib/captagent/modules"/>
+      <param name="config_path" value="/usr/local/captagent/etc/captagent/"/>
+      <param name="capture_plans_path" value="/usr/local/captagent/etc/captagent/captureplans"/>
+      <param name="backup" value="/usr/local/captagent/etc/captagent/backup"/>
+      <param name="chroot" value="/usr/local/captagent/etc/captagent"/>
+    </settings>
+  </configuration>
+  <configuration name="modules.conf" description="Modules">
+    <modules>
+      <load module="transport_hep" register="local"/>
+      <load module="protocol_sip" register="local"/>
+      <load module="socket_pcap" register="local"/>
+      <!--
+      <load module="database_hash" register="local"/>
+      <load module="protocol_rtcp" register="local"/>
+      -->
+      <!-- NOTE: Block required for RTCPXR socket + RTCPXR protocol -->
+      <!-- 
+      <load module="protocol_rtcpxr" register="local"/>
+      <load module="socket_collector" register="local"/> 
+      -->
+      <!--
+      <load module="socket_tzsp" register="local"/>
+      <load module="protocol_ss7" register="local"/>
+      <load module="protocol_diameter" register="local"/>
+      <load module="protocol_tcp" register="local"/>
+      <load module="output_json" register="local"/>
+      <load module="protocol_rtcp" register="local"/>
+      <load module="interface_http" register="local"/>
+      <load module="database_redis" register="local"/>
+      <load module="socket_pfring" register="local"/>
+      -->
+    </modules>
+  </configuration>
+</document>

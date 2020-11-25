@@ -1,0 +1,32 @@
+---
+# tasks file for netfilter
+- name: Update a netfilter.sh to /usr/local/bin/
+  template:
+    src: netfilter.sh
+    dest: /usr/local/bin/netfilter.sh
+    owner: root
+    group: root
+    mode: u+rx,g+x,o-w
+
+- name: Update a iptables rules to services/netfilter/rules
+  template:
+    src: "{{sourcedir}}/platform/netfilter/rules"
+    dest: "{{destinationdir}}/platform/netfilter/rules"
+    owner: root
+    group: root
+    mode: u+rx,g+x,o-w
+
+- name: Update a netfilter.service to systemd
+  copy:
+    src: netfilter.service
+    dest: /etc/systemd/system/netfilter.service
+    owner: root
+    group: root
+    mode: 0754
+
+- name: handle netfilter daemon 
+  debug: 
+    msg: "netfilter will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart netfilter

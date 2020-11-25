@@ -1,0 +1,4 @@
+# vars file for sample
+rsyslog_convention:
+  udp: '@'
+  tcp: '@@'

@@ -1,0 +1,31 @@
+---
+# tasks file for logrotate
+- name:  Find logrotate.d configuration file
+  find:
+    paths: "{{destinationdir}}/platform/logrotate/logrotate.d/"
+    file_type: file
+  register: logrotate_d_conf
+
+- name: Update logrotate config
+  template:
+    src: "{{sourcedir}}/platform/logrotate/logrotate.d/{{item.path|basename}}" 
+    dest: "{{destinationdir}}/platform/logrotate/logrotate.d/{{item.path|basename}}"
+    owner: root
+    group: root
+    mode: "0644"
+  with_items: "{{logrotate_d_conf.files}}"
+
+- name: Update a symbolic link for components
+  file:
+    src: "{{rundir}}/platform/logrotate/logrotate.d/{{item.path|basename}}"
+    dest: /etc/logrotate.d/{{item.path|basename}}
+    state: link
+    force: true
+  with_items: "{{logrotate_d_conf.files}}"
+
+- name: handle logrotate daemon 
+  debug: 
+    msg: "logrotate will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - reload logrotate

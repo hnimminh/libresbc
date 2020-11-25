@@ -1,0 +1,15 @@
+---
+# handlers file for captagent
+- name: restart captagent
+  systemd:
+    name: captagent
+    enabled: true
+    state: restarted
+    daemon_reload: true
+
+- name: stop captagent
+  systemd:
+    name: captagent
+    enabled: true
+    state: stopped
+    daemon_reload: true

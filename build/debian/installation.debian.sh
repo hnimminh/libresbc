@@ -99,11 +99,16 @@ make install
 #                   PYTHON3
 #------------------------------------------------------------------------------------------------------------
 apt-get install -y python3 python3-dev python3-pip
+pip3 install --user -r /opt/libresbc/run/liberator/requirements.pip3
 #------------------------------------------------------------------------------------------------------------
 #                   NGINX
 #------------------------------------------------------------------------------------------------------------
 apt-get install -y nginx
 mv /etc/nginx /etc/nginx.origin
+
+#https://bugs.launchpad.net/ubuntu/+source/nginx/+bug/1581864
+sudo mkdir /etc/systemd/system/nginx.service.d
+printf "[Service]\nExecStartPost=/bin/sleep 0.1\n" | sudo tee /etc/systemd/system/nginx.service.d/override.conf
 #------------------------------------------------------------------------------------------------------------
 #                   CAPTAGENT: 
 #       https://github.com/sipcapture/captagent
@@ -127,8 +132,8 @@ systemctl enable redis-server
 #                   NETFILTER
 #------------------------------------------------------------------------------------------------------------
 apt-get install ipset iptables
-ipset create rtppeers hash:net family inet hashsize 1024 maxelem 65536 -exist
-ipset create sippeers hash:net family inet hashsize 1024 maxelem 65536 -exist
+ipset create rtpset hash:net family inet hashsize 1024 maxelem 65536 -exist
+ipset create sipset hash:net family inet hashsize 1024 maxelem 65536 -exist
 #------------------------------------------------------------------------------------------------------------
 #                   LIBRESBC
 #------------------------------------------------------------------------------------------------------------

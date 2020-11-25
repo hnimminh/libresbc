@@ -1,0 +1,9 @@
+---
+# tasks file for corectl
+- name: Update configuration for corectl
+  template:
+    src: "{{sourcedir}}/corectl/configuration.lua"
+    dest: "{{destinationdir}}/corectl/configuration.lua"
+    owner: root
+    group: root
+    mode: 0754

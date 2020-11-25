@@ -1,0 +1,20 @@
+---
+# nginx
+- name: Symbolic link for nginx
+  file:
+    src: "{{rundir}}/platform/nginx"
+    dest: /etc/nginx
+    state: link
+    force: true
+
+- name: Update config service for nginx libresbc
+  template:
+    src: "{{sourcedir}}/platform/nginx/libresbc.conf"
+    dest: "{{destinationdir}}/platform/nginx/libresbc.conf"
+
+- name: handle nginx daemon 
+  debug: 
+    msg: "nginx will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart nginx

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<document type="captagent_module/xml">
+    <module name="protocol_sip" description="SIP Protocol" serial="2014010402">
+	<profile name="proto_sip" description="PROTO SIP" enable="true" serial="2014010402">
+	    <settings>
+		<param name="dialog-type" value="2"/>
+		<param name="dialog-timeout" value="180"/>
+	    </settings>
+	</profile>
+    </module>
+</document>

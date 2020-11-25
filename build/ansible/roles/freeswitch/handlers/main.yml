@@ -1,0 +1,8 @@
+---
+# handlers file for freeswitch
+- name: restart freeswitch
+  systemd:
+    name: freeswitch
+    enabled: true
+    state: restart
+    daemon_reload: true

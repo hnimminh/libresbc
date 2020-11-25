@@ -1,0 +1,29 @@
+---
+# tasks file for sudoer
+- name: Add a new user named {{username}}
+  user:
+    name: "{{username}}"
+    comment: "{{username}} is sudo user"
+    # password: "{{ssh_password}}"
+  # vars:
+    # python -c 'import crypt; print crypt.crypt("my_ssh_password", "$1$SaltSugar$")'
+    # ssh_password: $1$SaltSuga$Hq/.73gqeLdVNm0NOJh.z.
+
+- name: Grand sudo for {{username}}
+  copy:
+    dest: "/etc/sudoers.d/{{username}}"
+    content: "{{username}}  ALL=(ALL)  NOPASSWD: ALL"
+    owner: root
+    group: root
+    mode: 0440
+
+- name: Lock password user {{username}}
+  user:
+    name: "{{username}}"
+    password_lock: true
+
+- name: Deploy SSH key for {{username}}
+  authorized_key:
+    user: "{{username}}"
+    key: "{{ lookup('file', '~/.ssh/{{username}}.public.rsa') }}"
+    state: present

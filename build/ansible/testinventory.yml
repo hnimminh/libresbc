@@ -1,0 +1,59 @@
+#-------------------------------------------------------------------------------------------------------------------------------------------------------#
+#                                                                                                                                                       #
+# This is the ansible 'hosts' file with yml syntax.                                                                                                     #
+# https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html                                                                       #
+# https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html                                                                            #
+#                                                                                                                                                       #
+# Keep It Simple:                                                                                                                                       #
+# When you can do something simply, do something simply. Do not reach to use every feature of Ansible together, all at once. Use what works for you     #
+# If something feels complicated, it probably is, and may be a good opportunity to simplify things.                                                     #                                                                                                           #
+#                                                                                                                                                       #
+#-------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+
+#------------------------------------------------------------------------------------------------------------------------
+# TESTING LIBRESBC
+#------------------------------------------------------------------------------------------------------------------------
+libresbcs:
+  hosts:
+    libresbc1:
+      ansible_host: 188.166.185.82
+      interface:
+        management:
+          name: httpapi
+          ip: 188.166.185.82
+          port: 8443
+  vars:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+      password: null
+    homer:
+      host: 127.0.0.1
+      port: 9060
+      protocol: udp
+    logstash: null
+    acls: null
+
+#------------------------------------------------------------------------------------------------------------------------
+# GLOBAL VARIABLES
+#------------------------------------------------------------------------------------------------------------------------
+all:
+  vars:
+    version: 0.0.1
+    sourcedir: ~/codespace/libresbc
+    versiondir: /opt/libresbc/versions
+    rundir: /opt/libresbc/run
+    logdir: /var/log/libresbc
+    # CONFIGURATION
+    timezone: UTC
+    logstash:
+      protocol: udp
+      host: 127.0.0.1
+      port: 514
+    acls: null
+    # PSEUDO VARIABLES
+    nodename: "{{inventory_hostname}}"
+    clustername: "{{group_names[0]}}"
+    cluster_members: "{{ groups[clustername]}}"

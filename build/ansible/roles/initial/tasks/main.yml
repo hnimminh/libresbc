@@ -1,0 +1,14 @@
+---
+# update, install dev tools and repos
+- import_tasks: install_repository.yml
+# disable selinux
+- import_tasks: disable_selinux.yml
+# disable firewalld, rpcbind, enable chronyd
+- import_tasks: set_default_service.yml
+# timezone config
+- import_tasks: set_timezone.yml
+# set hostname is codename
+- import_tasks: set_hostname.yml
+# harden linux server for voice service
+- import_tasks: performance_tunning.yml
+...

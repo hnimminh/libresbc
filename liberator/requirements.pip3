@@ -1,0 +1,14 @@
+requests==2.22.0
+fastapi==0.58.1   
+typing==3.7.4.1
+pydantic==1.5.1
+PyMySQL==0.9.3
+DBUtils==1.3 
+uvicorn==0.11.5
+starlette==0.13.4
+Jinja2==2.11.2 
+aiofiles==0.5.0
+redis==3.5.2
+contextvars==2.4
+schedule==0.6.0
+pytz==2020.1

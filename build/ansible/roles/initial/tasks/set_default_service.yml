@@ -1,0 +1,18 @@
+- name: Disable and stop ntp
+  systemd:
+    name: ntp
+    enabled: false
+    state: stopped
+    masked: false
+    no_block: false
+  ignore_errors: true
+
+# use chronyd instead of ntpd
+- name: Enable and start chronyd
+  systemd:
+    name: chronyd
+    enabled: true
+    state: started
+    masked: false
+    no_block: false
+  ignore_errors: true

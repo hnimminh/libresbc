@@ -1,0 +1,11 @@
+/var/log/freeswitch/*.log {
+	rotate 100
+	daily
+	compress
+	delaycompress
+	copytruncate
+
+	postrotate
+        	/bin/kill -HUP `cat /usr/local/freeswitch/run/freeswitch.pid` 2> /dev/null || true
+	endscript
+}

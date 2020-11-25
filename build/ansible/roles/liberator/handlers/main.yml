@@ -1,0 +1,9 @@
+---
+# handlers file for liberator
+- name: restart liberator
+  systemd:
+    name: liberator
+    enabled: true
+    state: restarted
+    daemon_reload: true
+...

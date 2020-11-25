@@ -1,0 +1,40 @@
+---
+# tasks file for freeswitch
+- name: Symbolic link for freeswitch
+  file:
+    src: "{{rundir}}/freeswitch"
+    dest: /usr/local/etc/freeswitch
+    state: link
+    force: true
+
+- name: Template update SBC VARS IP address per server
+  template:
+    src: "{{sourcedir}}/freeswitch/vars.xml"
+    dest: "{{destinationdir}}/freeswitch/vars.xml"
+    owner: root
+    group: root
+    mode: 0754
+
+- name: Copy a fs_cli.conf to etc
+  template:
+    src: fs_cli.conf
+    dest: /etc/fs_cli.conf
+    owner: root
+    group: root
+    mode: 0754
+
+# systemd control
+- name: Copy a freeswitch.service to systemd
+  template:
+    src: freeswitch.service
+    dest: /etc/systemd/system/freeswitch.service
+    owner: root
+    group: root
+    mode: 0644
+  
+- name: handle freeswitch daemon 
+  debug: 
+    msg: "freeswitch will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart freeswitch

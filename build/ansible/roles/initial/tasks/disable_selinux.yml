@@ -1,0 +1,5 @@
+# disable selinux
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  ignore_errors: true

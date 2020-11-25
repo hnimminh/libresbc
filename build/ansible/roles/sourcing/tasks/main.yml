@@ -1,0 +1,29 @@
+---
+# tasks file for sourcing: copy source code to server
+- name: Create a new source code directory in server {{destinationdir}}
+  file:
+    path: "{{destinationdir}}"
+    owner: root
+    group: root
+    mode: 0755
+    state: directory
+
+# using synchronize instead of copy for best performance
+- name: Synchronization source code to target host
+  synchronize:
+    src: "{{sourcedir}}/"
+    dest: "{{destinationdir}}/"
+    rsync_opts:
+      - "--exclude=.git"
+      - "--exclude=.gitignore"
+      - "--exclude=.editorconfig"
+      - "--exclude=build/ansible"
+      - "--exclude=*/__pycache__"
+
+- name: Recurse apply permission to {{destinationdir}}
+  file:
+    path: "{{destinationdir}}"
+    recurse: true
+    owner: root
+    group: root
+    mode: 0755

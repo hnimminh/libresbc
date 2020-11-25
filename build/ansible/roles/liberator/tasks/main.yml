@@ -1,0 +1,34 @@
+---
+# tasks file for liberator
+- name: Update config service for liberator
+  template:
+    src: "{{sourcedir}}/liberator/configuration.py"
+    dest: "{{destinationdir}}/liberator/configuration.py"
+    owner: root
+    group: root
+    mode: 0754
+
+# shell file
+- name: Copy a liberator.sh to /usr/local/bin/
+  copy:
+    src: liberator.sh
+    dest: /usr/local/bin/liberator.sh
+    owner: root
+    group: root
+    mode: u+rx,g+x,o-w
+
+# systemd control
+- name: Copy a liberator.service to systemd
+  copy:
+    src: liberator.service
+    dest: /etc/systemd/system/liberator.service
+    owner: root
+    group: root
+    mode: 0644
+
+- name: handle liberator daemon 
+  debug: 
+    msg: "liberator will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart liberator

@@ -1,0 +1,12 @@
+- name: Change hostname {{ansible_hostname}} to {{nodename|lower}}
+  hostname:
+    name: "{{nodename | lower}}"
+  
+# this workaround task is mandatory for hostname renaming
+# https://github.com/ansible/ansible/issues/19176
+- name: set hostname - workaround
+  replace:
+    path: /etc/hosts
+    regexp: ^127.0.1.1(.*){{ansible_hostname}}(.*)$
+    replace: 127.0.1.1\1{{nodename|lower}}\2
+    backup: yes

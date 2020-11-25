@@ -1,0 +1,38 @@
+- name: Upgrade the OS (apt-get dist-upgrade)
+  apt:
+    upgrade: dist
+
+- name: Update all packages to their latest version
+  apt:
+    name: "*"
+    state: latest
+
+- name: Install necessary packages
+  apt:
+    name:
+      - lsb-release
+      - build-essential
+      - g++ 
+      - g++-8 
+      - gcc 
+      - gcc-8
+      - libtool
+      - autoconf
+      - make
+      - git
+      - wget
+      - curl
+      - ipset
+      - net-tools
+      - rsyslog
+      - logrotate
+      - rsync
+    state: present
+
+- name: Remove useless packages from the cache
+  apt:
+    autoclean: yes
+
+- name: Remove dependencies that are no longer required
+  apt:
+    autoremove: yes
