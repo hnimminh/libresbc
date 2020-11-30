@@ -9,15 +9,15 @@ from fastapi import FastAPI, Request, Response, Depends, status
 
 from configuration import _APPLICATION, _SWVERSION, _DESCRIPTION
 from utilities import logger, dlogger, _request_uuid_ctx_var, get_request_uuid
-#from httpapi import management, provisioning
+from libreapi import librerouter
 
 
 #----------------------------------------------------------------------------------------------------------------------
-fapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/documents')
+fastapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/documents')
 #----------------------------------------------------------------------------------------------------------------------
 # MIDDLEWARE
 #----------------------------------------------------------------------------------------------------------------------
-@fapi.middleware('http')
+@fastapi.middleware('http')
 async def tracking(request: Request, call_next) -> Response:
     try:
         start_time = time.time()
@@ -43,14 +43,14 @@ async def reqjson(request: Request):
 #----------------------------------------------------------------------------------------------------------------------
 # HEARTBEAT
 #----------------------------------------------------------------------------------------------------------------------
-@fapi.get("/heartbeat")
+@fastapi.get("/heartbeat")
 def heartbeat():
     return "OK"
 #----------------------------------------------------------------------------------------------------------------------
 # ROUTER SEGMENTS API
 # ------------------------------------------------------
-#fapi.include_router(management.router, dependencies=[Depends(reqjson)])
-#fapi.include_router(provisioning.router)
+fastapi.include_router(librerouter, dependencies=[Depends(reqjson)])
+#fastapi.include_router(provisioning.router)
 
 #----------------------------------------------------------------------------------------------------------------------
 # MAIN APPLICATION
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     try:
         dlogger('module=liberator, space=main, action=liberator_starting')
         # HTTP API
-        uvicorn.run('main:fapi', host='127.0.0.1', port=8080, workers=4, )
+        uvicorn.run('main:fastapi', host='127.0.0.1', port=8080, workers=4, )
     except Exception as e:
         logger(f'module=liberator, space=main, exception: {e}, traceback: {traceback.format_exc()}')
     finally:

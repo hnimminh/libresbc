@@ -13,6 +13,10 @@ REDIS_PASSWORD = {{ ('%s')|format(redis.password)|to_json if redis.password else
 SCAN_COUNT = 1000
 RACTION_TIMEOUT = 5
 
+# VOICE ATTRIBUTE
+VOICECODECS = ['ALAW', 'ULAW', 'G729']
+
+
 # SERVER PROPERTIES
 NODENAME = '{{nodename}}'
 CLUSTERNAME = '{{clustername}}'

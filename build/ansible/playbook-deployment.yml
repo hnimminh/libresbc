@@ -16,5 +16,5 @@
     #- corectl
     #- freeswitch
     - netfilter
-    - captagent
+    #- captagent
     - linking
