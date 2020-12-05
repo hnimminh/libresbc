@@ -15,8 +15,11 @@ RACTION_TIMEOUT = 5
 
 # VOICE ATTRIBUTE
 SWCODECS = ['ALAW', 'ULAW', 'G729']
+MAX_CPS = 200
+MAX_ACTIVE_SESSION = 60000
+
 
 # SERVER PROPERTIES
 NODENAME = '{{nodename}}'
 CLUSTERNAME = '{{clustername}}'
-CLUSTER_MEMBERS = {{cluster_members}}
+CLUSTERMEMBERS = {{clustermembers}}
