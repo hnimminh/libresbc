@@ -56,4 +56,5 @@ all:
     # PSEUDO VARIABLES
     nodename: "{{inventory_hostname}}"
     clustername: "{{group_names[0]}}"
-    cluster_members: "{{ groups[clustername]}}"
+    clustermembers: "{{ groups[clustername]}}"
+    
