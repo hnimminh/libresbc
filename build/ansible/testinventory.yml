@@ -18,6 +18,7 @@ libresbcs:
   hosts:
     libresbc1:
       ansible_host: 188.166.185.82
+      nodeid: 'libresbc-nodeid-demo-001'
       interface:
         management:
           name: httpapi
@@ -53,8 +54,3 @@ all:
       host: 127.0.0.1
       port: 514
     acls: null
-    # PSEUDO VARIABLES
-    nodename: "{{inventory_hostname}}"
-    clustername: "{{group_names[0]}}"
-    clustermembers: "{{ groups[clustername]}}"
-    
