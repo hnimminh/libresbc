@@ -615,7 +615,6 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     finally:
         return result
 
-
 @librerouter.delete("/interconnection/inbound/{uuid}", status_code=200)
 def delete_inbound_interconnection(uuid: str, response: Response):
     result = None
@@ -716,10 +715,60 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, uuid: str, r
         response.status_code, result = 200, {'uuid': uuid}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
+@librerouter.get("/interconnection/inbound/{uuid}", status_code=200)
+def detail_inbound_interconnection(uuid: str, response: Response):
+    result = None
+    try:
+        if not rdbconn.exists(f'interconnection:{uuid}:attribute'):
+            response.status_code, result = 400, {'error': 'nonexistent_interconnection'}; return
+        interconnection = rdbconn.hgetall(f'interconnection:{uuid}:attribute')
+        interconnection['nodes'] = json.loads(interconnection['nodes'])
+        interconnection['enable'] = int2bool(interconnection['enable'])
+        classes = rdbconn.hgetall(f'interconnection:{uuid}:classes')
+        classes['translations'] = json.loads(classes['translations'])
+        classes['manipulations'] = json.loads(classes['manipulations'])
+        medias = rdbconn.smembers(f'interconnection:{uuid}:medias')
+        accesses = rdbconn.smembers(f'interconnection:{uuid}:accesses')
+        engagements = rdbconn.smembers(f'engagement:interconnection:{uuid}')
+        interconnection.update({'accesses': accesses, 'classes': classes, 'medias': medias, 'engagements': engagements})
+        response.status_code, result = 200, interconnection
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.get("/interconnection", status_code=200)
+def list_interconnect(response: Response):
+    result = None
+    try:
+        KEYPATTERN = 'interconnection:*:attribute'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'name', 'desc', 'sipprofile', 'direction')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            id = mainkey.decode().split(':')[1]
+            detail.update({'id': id})
+            data.append(detail)
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OUTBOUND INTERCONECTION
