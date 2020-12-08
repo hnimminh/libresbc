@@ -546,7 +546,7 @@ class ClassModel(BaseModel):
             return uuids
 
 class InboundInterconnection(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection class')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
     desc: str = Field(max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile uuid that interconnection engage to')
     accesses: List[IPv4Address] = Field(min_items=1, max_item=10, description='a set of signalling that use for SIP')
@@ -742,7 +742,6 @@ def detail_inbound_interconnection(uuid: str, response: Response):
     finally:
         return result
 
-
 @librerouter.get("/interconnection", status_code=200)
 def list_interconnect(response: Response):
     result = None
@@ -788,24 +787,75 @@ class DistributionEnum(str, Enum):
 class GatewayModel(BaseModel):
     ip: IPv4Address = Field(description='farend ip address')
     port: int = Field(ge=0, le=65535, description='farend destination port')
-    transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
-    weight: int
-    username: str
-    password: str
-    realm: str
-    reigister: bool
-    cid_type: str
-    ping: int
-    ping_max: int
-    ping_min: int
+    transport: TransportEnum = Field(default=TransportEnum.UDP, description='farend transport protocol')
+    weight: int = Field(default=1, ge=0, le=99, description='weight based load distribution')
+    username: str = Field(default='', description='digest auth username')
+    password: str = Field(default='', description='digest auth password')
+    realm: str = Field(default='', description='digest auth realm')
+    reigister: bool = Field(default=False, description='register')
+    cid_type: str = Field(default='none', description='caller id type')
+    ping: int = Field(default=300, description='the period (second) to send SIP OPTION')
+    ping_max: int = Field(default=1, description='number of success pings to declaring a gateway up')
+    ping_min: int = Field(default=1, description='number of failure pings to declaring a gateway down')
 
-class OutboundConnection(BaseModel):
-    name: str
-    desc: str
-    sipprofile: str
-    distribution: DistributionEnum
-    gateways: List[GatewayModel]
-    medias: List[IPv4Network]
-    clases: ClassModel
-    nodes: List[str]
-    state: bool
+class OutboundInterconnection(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
+    desc: str = Field(max_length=64, description='description')
+    sipprofile: str = Field(description='a sip profile uuid that interconnection engage to')
+    distribution: DistributionEnum = Field(default=DistributionEnum.round_robin, description='The method selects a destination from addresses set')
+    gateways: List[GatewayModel] = Field(min_items=1, max_item=20, description='list of outbound gateways')
+    medias: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
+    clases: ClassModel = Field(description='an object of class include codec, capacity, translations, manipualtions')
+    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
+    enable: bool = Field(default=True, description='enable/disable this interconnection')
+
+    @validator('sipprofile')
+    def check_sipprofile(cls, uuid):
+        if not rdbconn.exists(f'sipprofile:{uuid}'):
+            raise ValueError('nonexistent_sipprofile')
+        return uuid
+
+@librerouter.post("/interconnection/outbound", status_code=200)
+def create_inbound_interconnection(reqbody: OutboundInterconnection, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        desc = reqbody.desc
+        sipprofile = reqbody.sipprofile
+        distribution = reqbody.distribution
+        gateways = reqbody.gateways
+        medias = reqbody.medias
+        clases = reqbody.clases
+        nodes = reqbody.nodes
+        clases = reqbody.clases
+
+
+        uuid = guid()
+
+        for access in accesses:
+            if rdbconn.exists(f'recognition:{sipprofile}:{str(access)}'):
+                response.status_code, result = 403, {'error': 'nonunique_ip_access'}; return
+
+        pipe.hmset(f'interconnection:{uuid}:attribute', {'name': name, 'desc': desc, 'direction': 'inbound', 'sipprofile': sipprofile, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
+        for node in nodes: pipe.sadd(f'engagement:node:{node}', uuid)
+        pipe.sadd(f'engagement:sipprofile:{sipprofile}', uuid)
+
+        pipe.hmset(f'interconnection:{uuid}:classes', {'codec': codec, 'capacity': capacity, 'translations': json.dumps(translations), 'manipualtions': json.dumps(manipualtions)})
+        pipe.sadd(f'engagement:codec:{codec}', uuid)
+        pipe.sadd(f'engagement:capacity:{capacity}', uuid)
+        for translation in translations: pipe.sadd(f'engagement:translation:{translation}', uuid)
+        for manipualtion in manipualtions: pipe.sadd(f'engagement:manipualtion:{manipualtion}', uuid)
+
+        for access in accesses:
+            ip = str(access)
+            pipe.sadd(f'interconnection:{uuid}:accesses', ip)
+            pipe.set(f'recognition:{sipprofile}:{ip}', uuid)
+        for media in medias:
+            pipe.sadd(f'interconnection:{uuid}:medias', str(media))
+        pipe.execute()
+        response.status_code, result = 200, {'uuid': uuid}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
