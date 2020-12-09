@@ -793,10 +793,13 @@ class GatewayModel(BaseModel):
     password: str = Field(default='', description='digest auth password')
     realm: str = Field(default='', description='digest auth realm')
     reigister: bool = Field(default=False, description='register')
-    cid_type: str = Field(default='none', description='caller id type')
+    register_proxy: str = Field(default='', description='proxy address to register')
+    sip_cid_type: str = Field(default='none', description='caller id type: rpid, pid, none')
+    caller_id_in_from: bool = Field(default=False, description='caller id in from hearder')
     ping: int = Field(default=300, description='the period (second) to send SIP OPTION')
     ping_max: int = Field(default=1, description='number of success pings to declaring a gateway up')
     ping_min: int = Field(default=1, description='number of failure pings to declaring a gateway down')
+    privacy: str = Field(default='no', description='caller privacy on calls')
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
