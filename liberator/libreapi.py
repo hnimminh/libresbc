@@ -796,9 +796,9 @@ class GatewayModel(BaseModel):
     register_proxy: str = Field(default='', description='proxy address to register')
     sip_cid_type: str = Field(default='none', description='caller id type: rpid, pid, none')
     caller_id_in_from: bool = Field(default=False, description='caller id in from hearder')
-    ping: int = Field(default=300, description='the period (second) to send SIP OPTION')
-    ping_max: int = Field(default=1, description='number of success pings to declaring a gateway up')
-    ping_min: int = Field(default=1, description='number of failure pings to declaring a gateway down')
+    ping: int = Field(default=0, ge=5, le=3600, description='the period (second) to send SIP OPTION')
+    ping_max: int = Field(default=1, ge=1, le=31, description='number of success pings to declaring a gateway up')
+    ping_min: int = Field(default=1, ge=1, le=31,description='number of failure pings to declaring a gateway down')
     privacy: str = Field(default='no', description='caller privacy on calls')
 
 class OutboundInterconnection(BaseModel):
@@ -819,7 +819,7 @@ class OutboundInterconnection(BaseModel):
         return uuid
 
 @librerouter.post("/interconnection/outbound", status_code=200)
-def create_inbound_interconnection(reqbody: OutboundInterconnection, response: Response):
+def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
     result = None
     try:
         name = reqbody.name
@@ -830,16 +830,10 @@ def create_inbound_interconnection(reqbody: OutboundInterconnection, response: R
         medias = reqbody.medias
         clases = reqbody.clases
         nodes = reqbody.nodes
-        clases = reqbody.clases
-
-
+        enable = reqbody.enable
         uuid = guid()
 
-        for access in accesses:
-            if rdbconn.exists(f'recognition:{sipprofile}:{str(access)}'):
-                response.status_code, result = 403, {'error': 'nonunique_ip_access'}; return
-
-        pipe.hmset(f'interconnection:{uuid}:attribute', {'name': name, 'desc': desc, 'direction': 'inbound', 'sipprofile': sipprofile, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
+        pipe.hmset(f'interconnection:{uuid}:attribute', {'name': name, 'desc': desc, 'direction': 'outbound', 'sipprofile': sipprofile, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
         for node in nodes: pipe.sadd(f'engagement:node:{node}', uuid)
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', uuid)
 
