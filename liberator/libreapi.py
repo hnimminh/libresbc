@@ -63,7 +63,7 @@ class ClusterModel(BaseModel):
     def check_member(cls, members):
         for nodeid in members:
             if not rdbconn.exists(f'cluster:node:{nodeid}'):
-                raise ValueError('nonexistent_node')
+                raise ValueError('nonexistent node')
         return members
 
 @librerouter.put("/cluster/name", status_code=200)
@@ -113,7 +113,7 @@ def delete_node(reqbody: NodeModel, response: Response):
             response.status_code, result = 403, {'error': 'engaged_node'}; return
         key = f'cluster:node:{id}'
         if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent_node'}; return
+            response.status_code, result = 400, {'error': 'nonexistent node'}; return
         rdbconn.delete(key)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -128,7 +128,7 @@ def detail_node(nodeid: str, response: Response):
     try:
         key = f'cluster:node:{nodeid}'
         if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent_node'}; return
+            response.status_code, result = 400, {'error': 'nonexistent node'}; return
         name = rdbconn.get(key)
         clustered = True if rdbconn.sismember('cluster:members', nodeid) else False
         engagements = set(rdbconn.smembers('engagement:node:{nodeid}') + rdbconn.smembers('engagement:node:_ALL_'))
@@ -162,6 +162,130 @@ def list_node(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=list_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# SIP PROFILES 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class SIPProfileModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
+    desc: str = Field(max_length=64, description='description')
+    user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
+    disable_transfer: bool = Field(default=False, description='true mean disable call transfer')
+    manual_redirect: bool = Field(default=False, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
+    disable_hold: bool = Field(default=False, description='no handling the SIP re-INVITE with hold/unhold')
+    nonce_ttl: int = Field(default=60, ge=15, le=120, description='TTL for nonce in sip auth')
+    nat_space: str = Field(default='rfc1918.auto', description='the network will be applied NAT')
+    sip_options_respond_503_on_busy: bool = Field(default=True, description='response 503 when system is in heavy load')
+    enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
+    enable_timer: bool = Field(default=True, description='true to support for RFC 4028 SIP Session Timers')
+    session_timeout: int = Field(default=0, ge=1800, le=3600, description='call to expire after the specified seconds')
+    minimum_session_expires: int = Field(default=120, ge=90, le=3600, description='Value of SIP header Min-SE')
+    sip_listen_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
+    sip_listen_ip: IPv4Address = Field(description='IP to bind to for SIP traffic')
+    sip_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for SIP')
+    rtp_listen_ip: IPv4Address = Field(description='IP to bind to for RTP traffic')
+    rtp_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for RTP')
+    sip_tls: bool = Field(default=False, description='true to enable SIP TLS')
+    sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
+    tls_version: List[str] = Field(default=['tlsv1.2'], description='TLS version')
+    tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
+
+
+@librerouter.post("/sipprofile", status_code=200)
+def create_sipprofile(reqbody: SIPProfileModel, response: Response):
+    result = None
+    try:
+        data = reqbody.dict()
+        hrid = humanrid(); key = f'sipprofile:{hrid}'
+        if rdbconn.exists(key): hrid = humanrid()
+        else: response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
+
+        rdbconn.hmset(key, data)
+        response.status_code, result = 200, {'hrid': hrid}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.put("/sipprofile/{hrid}", status_code=200)
+def update_sipprofile(reqbody: SIPProfileModel, hrid: str, response: Response):
+    result = None
+    try:
+        data = reqbody.dict()
+        key = f'sipprofile:{hrid}'
+        if not rdbconn.exists(key): 
+            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
+        rdbconn.hmset(key, data)
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.delete("sipprofile/{hrid}", status_code=200)
+def delete_sipprofile(hrid: str, response: Response):
+    result = None
+    try:
+        if rdbconn.scard(f'engagement:sipprofile:{hrid}'): 
+            response.status_code, result = 403, {'error': 'enageged sipprofile'}; return
+        key = f'sipprofile:{hrid}'
+        if not rdbconn.exists(key):
+            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
+        rdbconn.delete(key)
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/sipprofile/{hrid}", status_code=200)
+def detail_sipprofile(hrid: str, response: Response):
+    result = None
+    try:
+        key = f'sipprofile:{hrid}'
+        if not rdbconn.exists(key): 
+            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
+        data = rdbconn.hgetall(key)
+        engagements = rdbconn.smembers(f'engagement:sipprofile:{hrid}')
+        data.update({'engagements': engagements})
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/sipprofile", status_code=200)
+def list_sipprofile(response: Response):
+    result = None
+    try:
+        KEYPATTERN = f'sipprofile:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'name', 'desc')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            if detail:
+                hrid = mainkey.split(':')[-1]
+                detail.update({'hrid': hrid})
+                data.append(detail)
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -207,7 +331,7 @@ def update_codec_class(reqbody: CodecModel, hrid: str, response: Response):
         data = reqbody.data
         key = f'class:codec:{hrid}'
         if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.hmset(key, {'desc': desc, 'data': json.dumps(data)})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -221,10 +345,10 @@ def delete_codec_class(hrid: str, response: Response):
     result = None
     try:
         if rdbconn.scard(f'engagement:codec:{hrid}'): 
-            response.status_code, result = 403, {'error': 'enageged_class'}; return
+            response.status_code, result = 403, {'error': 'enageged class'}; return
         classkey = f'class:codec:{hrid}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.delete(classkey)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -239,7 +363,7 @@ def detail_codec_class(hrid: str, response: Response):
     try:
         classkey = f'class:codec:{hrid}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         data = rdbconn.hgetall(classkey)
         engagements = rdbconn.smembers(f'engagement:codec:{hrid}')
         data.update({'engagements': engagements})
@@ -318,7 +442,7 @@ def update_capacity_class(reqbody: CapacityModel, hrid: str, response: Response)
         capacity = reqbody.capacity
         key = f'class:capacity:{hrid}'
         if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'capacity': capacity})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -332,10 +456,10 @@ def delete_capacity_class(hrid: str, response: Response):
     result = None
     try:
         if rdbconn.scard(f'engagement:capacity:{id}'): 
-            response.status_code, result = 403, {'error': 'enageged_class'}; return
+            response.status_code, result = 403, {'error': 'enageged class'}; return
         classkey = f'class:capacity:{id}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.delete(classkey)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -350,7 +474,7 @@ def detail_capacity_class(hrid: str, response: Response):
     try:
         classkey = f'class:capacity:{hrid}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         data = rdbconn.hgetall(classkey)
         engagements = rdbconn.smembers(f'engagement:capacity:{hrid}')
         data.update({'engagements': engagements})
@@ -436,7 +560,7 @@ def update_translation_class(reqbody: TranslationModel, hrid: str, response: Res
         callee_replacement = reqbody.callee_replacement
         key = f'class:translation:{hrid}'
         if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.hmset(key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
                             'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
         response.status_code, result = 200, {'passed': True}
@@ -451,10 +575,10 @@ def delete_translation_class(hrid: str, response: Response):
     result = None
     try:
         if rdbconn.scard(f'engagement:translation:{hrid}'): 
-            response.status_code, result = 403, {'error': 'enageged_class'}; return
+            response.status_code, result = 403, {'error': 'enageged class'}; return
         classkey = f'class:translation:{hrid}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.delete(classkey)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -469,7 +593,7 @@ def detail_translation_class(hrid: str, response: Response):
     try:
         classkey = f'class:translation:{hrid}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent_class'}; return
+            response.status_code, result = 400, {'error': 'nonexistent class'}; return
         data = rdbconn.hgetall(classkey)
         engagements = rdbconn.smembers(f'engagement:translation:{hrid}')
         data.update({'engagements': engagements})
@@ -522,27 +646,27 @@ class ClassModel(BaseModel):
     @validator('codec', pre=True)
     def check_codec_existent(cls, hrid):
         if not rdbconn.exists(f'class:codec:{hrid}'):
-            raise ValueError('nonexistent_class')
+            raise ValueError('nonexistent class')
         return hrid
 
     @validator('capacity', pre=True)
     def check_capacity_existent(cls, hrid):
         if not rdbconn.exists(f'class:capacity:{hrid}'):
-            raise ValueError('nonexistent_class')
+            raise ValueError('nonexistent class')
         return hrid
 
     @root_validator('manipulations', pre=True)
     def check_manipulation_existent(cls, hrids):
         for hrid in hrids:
             if not rdbconn.exists(f'class:manipulation:{hrid}'):
-                raise ValueError('nonexistent_class')
+                raise ValueError('nonexistent class')
             return hrid
 
     @root_validator('translations', pre=True)
     def check_translation_existent(cls, hrids):
         for hrid in hrids:
             if not rdbconn.exists(f'class:translation:{hrid}'):
-                raise ValueError('nonexistent_class')
+                raise ValueError('nonexistent class')
             return hrids
 
 class InboundInterconnection(BaseModel):
@@ -559,14 +683,14 @@ class InboundInterconnection(BaseModel):
     @validator('sipprofile', pre=True)
     def check_sipprofile(cls, hrid):
         if not rdbconn.exists(f'sipprofile:{hrid}'):
-            raise ValueError('nonexistent_sipprofile')
+            raise ValueError('nonexistent sipprofile')
         return hrid
 
     @validator('nodes', pre=True)
     def check_node(cls, nodes):
         for node in nodes:
             if node != '_ALL_' and node not in CLUSTERMEMBERS:
-                raise ValueError('nonexistent_node')
+                raise ValueError('nonexistent node')
         return nodes
 
 
@@ -797,7 +921,7 @@ class OutboundInterconnection(BaseModel):
     @validator('sipprofile', pre=True)
     def check_sipprofile(cls, hrid):
         if not rdbconn.exists(f'sipprofile:{hrid}'):
-            raise ValueError('nonexistent_sipprofile')
+            raise ValueError('nonexistent sipprofile')
         return hrid
 
 @librerouter.post("/interconnection/outbound", status_code=200)
