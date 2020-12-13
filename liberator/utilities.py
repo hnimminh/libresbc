@@ -35,5 +35,5 @@ def rembytes (data):
 def nameid(name):
     return md5(f'{name}'.lower().encode()).hexdigest()
 
-def guid() -> str: 
+def humanrid() -> str: 
     return str(uuid4())
