@@ -14,13 +14,22 @@ from utilities import logify, debugy
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=5, timeout=5)
 
-
 def fssocket(command):
+    result, error = None, None
     con = ESL.ESLconnection(CES_HOST, CES_PORT, CES_SECRET)
-    if con.connected():
-        return con.api(command)
-    else:
-        return None
+    if con.connected(): result = con.api(command)
+    else: error = 'Call Engine is not ready'
+    return result, error
+
+
+def firewall():
+    # This library is implemented in pure-python and does not interface with C library libiptc 
+    # using libiptc directly is not recommended by netfilter development team
+    # http://www.netfilter.org/documentation/FAQ/netfilter-faq-4.html#ss4.5
+    # thus eliminating a number of issues arising from interface changes while staying compatible with different versions of iptables.
+    pass
+
+
 
 class EventControl(Thread):
     def __init__(self):

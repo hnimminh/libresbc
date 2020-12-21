@@ -1,0 +1,4 @@
+create {{name}} hash:net family inet hashsize 1024 maxelem 65536 -exist
+{% for address in addresses %}
+add {{name}} {{address}}
+{% endfor %}
