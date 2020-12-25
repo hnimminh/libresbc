@@ -26,8 +26,8 @@ _DEFAULT_NODENAME = 'LIBRE-DEFAULT-NODENAME'
 _DEFAULT_CLUSTERNAME = 'LIBRE-DEFAULT-CLUSTERNAME'
 #-----------------------------------------------------------------------------------------------------
 NODEID = '{NODEID}'
-NODENAME = DEFAULT_NODENAME
-CLUSTERNAME = DEFAULT_CLUSTERNAME
+NODENAME = _DEFAULT_NODENAME
+CLUSTERNAME = _DEFAULT_CLUSTERNAME
 CLUSTERMEMBERS = [NODEID]
 #-----------------------------------------------------------------------------------------------------
 # CALL ENGINE
