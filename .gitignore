@@ -27,4 +27,4 @@ luac.out
 # Ignore all local history of files
 .history
 
-*/testinventory.yml
+*/staging/*

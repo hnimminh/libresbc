@@ -9,7 +9,7 @@
 - name: Detail information for linking
   debug:
     msg:
-      - Host {{clustername}} {{nodename}} {{ inventory_hostname }} {{ ansible_hostname }}
+      - Host {{ inventory_hostname }} {{ ansible_hostname }}
       - New version {{sourcedir}}
       - Symbolic created {{rundir}} >>> {{destinationdir}}
 ...
