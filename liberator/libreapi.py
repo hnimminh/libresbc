@@ -332,7 +332,7 @@ def update_codec_class(reqbody: CodecModel, hrid: str, response: Response):
         key = f'class:codec:{hrid}'
         if not rdbconn.exists(key): 
             response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'desc': desc, 'data': json.dumps(data)})
+        rdbconn.hmset(key, {'name': name, 'desc': desc, 'data': json.dumps(data)})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
