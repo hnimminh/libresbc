@@ -13,7 +13,7 @@ from libreapi import librerouter
 
 
 #----------------------------------------------------------------------------------------------------------------------
-fastapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/documents')
+fastapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/apidocs')
 #----------------------------------------------------------------------------------------------------------------------
 # MIDDLEWARE
 #----------------------------------------------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     try:
         debugy('module=liberator, space=main, action=initialize')
         # HTTP API
-        uvicorn.run('main:fastapi', host='127.0.0.1', port=8080, workers=4, )
+        uvicorn.run('main:fastapi', host='127.0.0.1', port=8080, workers=4, reload=True )
     except Exception as e:
         logify(f'module=liberator, space=main, exception: {e}, traceback: {traceback.format_exc()}')
     finally:

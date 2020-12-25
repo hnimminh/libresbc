@@ -1,0 +1,20 @@
+- name: CODE DEPLOYEMENT LIBRESBC
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    destinationdir: "{{versiondir}}/{{ version }}"
+    firedaemon: restarted
+
+  roles:
+    - sourcing
+    - rsyslog
+    #- logrotate
+    - nginx
+    - liberator
+    #- corectl
+    #- freeswitch
+    - netfilter
+    #- captagent
+    - linking

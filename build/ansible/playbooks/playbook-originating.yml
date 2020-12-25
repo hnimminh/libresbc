@@ -1,0 +1,14 @@
+- name: Intial Voice Server [install repo, disable unused service, tune performance, add sudoer, harden ssh]
+  hosts: all
+  gather_facts: true
+  remote_user: hnimminh
+  become: true
+
+  vars:
+    username:
+    private_key:
+
+  roles:
+    #- initial
+    #- sudoer
+    #- sshd
