@@ -42,7 +42,7 @@ except:
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@librerouter.get("/predefine", status_code=200)
+@librerouter.get("/libresbc/predefine", status_code=200)
 def predefine():
     return {
         "nodename": NODENAME,
@@ -59,14 +59,14 @@ class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='the name of libresbc cluster')
     members: List[str] = Field(min_items=1, max_item=10, description='the name of libresbc cluster')
 
-    @validator('member', pre=True)
+    @validator('members', pre=True)
     def check_member(cls, members):
         for nodeid in members:
             if not rdbconn.exists(f'cluster:node:{nodeid}'):
                 raise ValueError('nonexistent node')
         return members
 
-@librerouter.put("/cluster/name", status_code=200)
+@librerouter.put("/libresbc/cluster/name", status_code=200)
 def change_cluster_name(reqbody: ClusterModel, response: Response):
     result = None
     try:
@@ -87,13 +87,13 @@ class NodeModel(BaseModel):
     id: str = Field(max_length=32, description='the name node unique-id member in libresbc cluster')
     name: Optional[str] = Field(default=_DEFAULT_NODENAME,regex=_NAME_, max_length=32, description='the name node name member in libresbc cluster')
 
-@librerouter.post("/cluster/node", status_code=200)
+@librerouter.post("/libresbc/cluster/node", status_code=200)
 def add_node(reqbody: NodeModel, response: Response):
     result = None
     try:
         id = reqbody.id
         name = reqbody.name
-        rdbconn.set('cluster:node:{id}', name)
+        rdbconn.set(f'cluster:node:{id}', name)
         CLUSTERNAME = name
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -102,7 +102,7 @@ def add_node(reqbody: NodeModel, response: Response):
     finally:
         return result
 
-@librerouter.delete("/cluster/node", status_code=200)
+@librerouter.delete("/libresbc/cluster/node", status_code=200)
 def delete_node(reqbody: NodeModel, response: Response):
     result = None
     try:
@@ -122,7 +122,7 @@ def delete_node(reqbody: NodeModel, response: Response):
     finally:
         return result
 
-@librerouter.get("/cluster/node/{nodeid}", status_code=200)
+@librerouter.get("/libresbc/cluster/node/{nodeid}", status_code=200)
 def detail_node(nodeid: str, response: Response):
     result = None
     try:
@@ -139,7 +139,7 @@ def detail_node(nodeid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/cluster/node", status_code=200)
+@librerouter.get("/libresbc/cluster/node", status_code=200)
 def list_node(response: Response):
     result = None
     try:
@@ -194,7 +194,7 @@ class SIPProfileModel(BaseModel):
     tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
 
 
-@librerouter.post("/sipprofile", status_code=200)
+@librerouter.post("/libresbc/sipprofile", status_code=200)
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     result = None
     try:
@@ -211,7 +211,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/sipprofile/{hrid}", status_code=200)
+@librerouter.put("/libresbc/sipprofile/{hrid}", status_code=200)
 def update_sipprofile(reqbody: SIPProfileModel, hrid: str, response: Response):
     result = None
     try:
@@ -227,7 +227,7 @@ def update_sipprofile(reqbody: SIPProfileModel, hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.delete("sipprofile/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/sipprofile/{hrid}", status_code=200)
 def delete_sipprofile(hrid: str, response: Response):
     result = None
     try:
@@ -244,7 +244,7 @@ def delete_sipprofile(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/sipprofile/{hrid}", status_code=200)
+@librerouter.get("/libresbc/sipprofile/{hrid}", status_code=200)
 def detail_sipprofile(hrid: str, response: Response):
     result = None
     try:
@@ -261,7 +261,7 @@ def detail_sipprofile(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/sipprofile", status_code=200)
+@librerouter.get("/libresbc/sipprofile", status_code=200)
 def list_sipprofile(response: Response):
     result = None
     try:
@@ -303,7 +303,7 @@ class CodecModel(BaseModel):
     data: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted set of codec')
 
 
-@librerouter.post("/class/codec", status_code=200)
+@librerouter.post("/libresbc/class/codec", status_code=200)
 def create_codec_class(reqbody: CodecModel, response: Response):
     result = None
     try:
@@ -322,7 +322,7 @@ def create_codec_class(reqbody: CodecModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/class/codec/{hrid}", status_code=200)
+@librerouter.put("/libresbc/class/codec/{hrid}", status_code=200)
 def update_codec_class(reqbody: CodecModel, hrid: str, response: Response):
     result = None
     try:
@@ -340,7 +340,7 @@ def update_codec_class(reqbody: CodecModel, hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.delete("/class/codec/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/class/codec/{hrid}", status_code=200)
 def delete_codec_class(hrid: str, response: Response):
     result = None
     try:
@@ -357,7 +357,7 @@ def delete_codec_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/codec/{hrid}", status_code=200)
+@librerouter.get("/libresbc/class/codec/{hrid}", status_code=200)
 def detail_codec_class(hrid: str, response: Response):
     result = None
     try:
@@ -374,7 +374,7 @@ def detail_codec_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/codec", status_code=200)
+@librerouter.get("/libresbc/class/codec", status_code=200)
 def list_codec_class(response: Response):
     result = None
     try:
@@ -412,7 +412,7 @@ class CapacityModel(BaseModel):
     capacity: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION/2, description='concurernt call')
 
 
-@librerouter.post("/class/capacity", status_code=200)
+@librerouter.post("/libresbc/class/capacity", status_code=200)
 def create_capacity_class(reqbody: CapacityModel, response: Response):
     result = None
     try:
@@ -432,7 +432,7 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/class/capacity/{hrid}", status_code=200)
+@librerouter.put("/libresbc/class/capacity/{hrid}", status_code=200)
 def update_capacity_class(reqbody: CapacityModel, hrid: str, response: Response):
     result = None
     try:
@@ -451,7 +451,7 @@ def update_capacity_class(reqbody: CapacityModel, hrid: str, response: Response)
     finally:
         return result
 
-@librerouter.delete("/class/capacity/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/class/capacity/{hrid}", status_code=200)
 def delete_capacity_class(hrid: str, response: Response):
     result = None
     try:
@@ -468,7 +468,7 @@ def delete_capacity_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/capacity/{hrid}", status_code=200)
+@librerouter.get("/libresbc/class/capacity/{hrid}", status_code=200)
 def detail_capacity_class(hrid: str, response: Response):
     result = None
     try:
@@ -485,7 +485,7 @@ def detail_capacity_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/capacity", status_code=200)
+@librerouter.get("/libresbc/class/capacity", status_code=200)
 def list_capacity_class(response: Response):
     result = None
     try:
@@ -525,7 +525,7 @@ class TranslationModel(BaseModel):
     caller_replacement: str = Field(max_length=128, description='replacement that refer to caller_pattern use pcre')
     callee_replacement: str = Field(max_length=128, description='replacement that refer to callee_pattern use pcre')
 
-@librerouter.post("/class/translation", status_code=200)
+@librerouter.post("/libresbc/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
     result = None
     try:
@@ -548,7 +548,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/class/translation/{hrid}", status_code=200)
+@librerouter.put("/libresbc/class/translation/{hrid}", status_code=200)
 def update_translation_class(reqbody: TranslationModel, hrid: str, response: Response):
     result = None
     try:
@@ -570,7 +570,7 @@ def update_translation_class(reqbody: TranslationModel, hrid: str, response: Res
     finally:
         return result
 
-@librerouter.delete("/class/translation/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/class/translation/{hrid}", status_code=200)
 def delete_translation_class(hrid: str, response: Response):
     result = None
     try:
@@ -587,7 +587,7 @@ def delete_translation_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/translation/{hrid}", status_code=200)
+@librerouter.get("/libresbc/class/translation/{hrid}", status_code=200)
 def detail_translation_class(hrid: str, response: Response):
     result = None
     try:
@@ -604,7 +604,7 @@ def detail_translation_class(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/class/translation", status_code=200)
+@librerouter.get("/libresbc/class/translation", status_code=200)
 def list_translation_class(response: Response):
     result = None
     try:
@@ -655,14 +655,14 @@ class ClassModel(BaseModel):
             raise ValueError('nonexistent class')
         return hrid
 
-    @root_validator('manipulations', pre=True)
+    @validator('manipulations', pre=True)
     def check_manipulation_existent(cls, hrids):
         for hrid in hrids:
             if not rdbconn.exists(f'class:manipulation:{hrid}'):
                 raise ValueError('nonexistent class')
             return hrid
 
-    @root_validator('translations', pre=True)
+    @validator('translations', pre=True)
     def check_translation_existent(cls, hrids):
         for hrid in hrids:
             if not rdbconn.exists(f'class:translation:{hrid}'):
@@ -694,7 +694,7 @@ class InboundInterconnection(BaseModel):
         return nodes
 
 
-@librerouter.post("/interconnection/inbound", status_code=200)
+@librerouter.post("/libresbc/interconnection/inbound", status_code=200)
 def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
     result = None
     try:
@@ -745,7 +745,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     finally:
         return result
 
-@librerouter.delete("/interconnection/inbound/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/interconnection/inbound/{hrid}", status_code=200)
 def delete_inbound_interconnection(hrid: str, response: Response):
     result = None
     try:
@@ -783,7 +783,7 @@ def delete_inbound_interconnection(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.update("/interconnection/inbound/{hrid}", status_code=200)
+@librerouter.put("/libresbc/interconnection/inbound/{hrid}", status_code=200)
 def update_inbound_interconnection(reqbody: InboundInterconnection, hrid: str, response: Response):
     result = None
     try:
@@ -852,7 +852,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, hrid: str, r
     finally:
         return result
 
-@librerouter.get("/interconnection/inbound/{hrid}", status_code=200)
+@librerouter.get("/libresbc/interconnection/inbound/{hrid}", status_code=200)
 def detail_inbound_interconnection(hrid: str, response: Response):
     result = None
     try:
@@ -924,7 +924,7 @@ class OutboundInterconnection(BaseModel):
             raise ValueError('nonexistent sipprofile')
         return hrid
 
-@librerouter.post("/interconnection/outbound", status_code=200)
+@librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
     result = None
     try:
@@ -968,7 +968,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         return result
 
 
-@librerouter.post("/interconnection/outbound/{hrid}", status_code=200)
+@librerouter.post("/libresbc/interconnection/outbound/{hrid}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, hrid: str, response: Response):
     result = None
     try:
@@ -1026,7 +1026,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, hrid: str,
     finally:
         return result
 
-@librerouter.delete("/interconnection/outbound/{hrid}", status_code=200)
+@librerouter.delete("/libresbc/interconnection/outbound/{hrid}", status_code=200)
 def delete_outbound_interconnection(hrid: str, response: Response):
     result = None
     try:
@@ -1060,7 +1060,7 @@ def delete_outbound_interconnection(hrid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/interconnection/outbound/{hrid}", status_code=200)
+@librerouter.get("/libresbc/interconnection/outbound/{hrid}", status_code=200)
 def detail_outbound_interconnection(hrid: str, response: Response):
     result = None
     try:
@@ -1084,7 +1084,7 @@ def detail_outbound_interconnection(hrid: str, response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@librerouter.get("/interconnection", status_code=200)
+@librerouter.get("/libresbc/interconnection", status_code=200)
 def list_interconnect(response: Response):
     result = None
     try:

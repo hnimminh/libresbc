@@ -23,15 +23,20 @@ async def tracking(request: Request, call_next) -> Response:
         start_time = time.time()
         request_uuid = _request_uuid_ctx_var.set(str(uuid.uuid4()))
         clientip = request.client.host
-        method = request.method
-        url = request.url
+        method = request.method.lower()
+        url = request.url.path
         response = await call_next(request)
-        response_body = bytes()
-        async for chunk in response.body_iterator: response_body += chunk
-        response_body=response_body.decode()
         status_code = response.status_code
-        process_time = round(time.time() - start_time, 3)
-        logify(f'module=liberator, space=httpapi, action=middleware, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}, processtime={process_time}')
+
+        if url.startswith('/libresbc/'):
+            response_body = bytes()
+            async for chunk in response.body_iterator: response_body += chunk
+            response_body=response_body.decode()
+            process_time = round(time.time() - start_time, 3)
+            logify(f'module=liberator, space=httpapi, action=middleware, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}, processtime={process_time}')
+        else:
+            process_time = round(time.time() - start_time, 3)
+            logify(f'module=liberator, space=httpapi, action=middleware, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, processtime={process_time}')
         _request_uuid_ctx_var.reset(request_uuid)
         return response
     except:
