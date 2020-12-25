@@ -30,7 +30,7 @@
 {% for acl in acls %}
 # {{acl.name}}
 {% for source in acl.sources %}
--A INPUT -p {{acl.protocol}} -m multiport --dport {{acl.destport}} -s {{source}} -j ACCEPT
+-A INPUT -p {{acl.protocol}} -m multiport --dport {{acl.destports|join(',')}} -s {{source}} -j ACCEPT
 {% endfor %}
 {% endfor %}
 {% endif %}
