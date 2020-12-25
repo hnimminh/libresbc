@@ -27,18 +27,19 @@ async def tracking(request: Request, call_next) -> Response:
         url = request.url.path
         response = await call_next(request)
         status_code = response.status_code
-
-        if url.startswith('/libresbc/'):
-            response_body = bytes()
-            async for chunk in response.body_iterator: response_body += chunk
-            response_body=response_body.decode()
-            process_time = round(time.time() - start_time, 3)
-            logify(f'module=liberator, space=httpapi, action=middleware, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}, processtime={process_time}')
-        else:
-            process_time = round(time.time() - start_time, 3)
-            logify(f'module=liberator, space=httpapi, action=middleware, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, processtime={process_time}')
+        response_headers = dict(response.headers)
+        response_media_type = response.media_type
+        response_body = bytes()
+        async for chunk in response.body_iterator: response_body += chunk
+        response_body = response_body.decode()
+        process_time = round(time.time() - start_time, 3)
+        if url.startswith('/libresbc/'): logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}')
+        else: logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}')
         _request_uuid_ctx_var.reset(request_uuid)
-        return response
+        return Response(content=response_body,
+                        status_code=status_code,
+                        headers=response_headers,
+                        media_type=response_media_type)
     except:
         pass
 
