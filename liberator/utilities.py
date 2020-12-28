@@ -11,7 +11,7 @@ def get_request_uuid() -> str:
     return _request_uuid_ctx_var.get()
 
 # human readable identifier
-humanrid = HRID()
+humanrid = HRID(delimeter='-', hridfmt=('adjective', 'noun'))
 
 def logify(msg):
     syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL7)
