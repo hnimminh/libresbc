@@ -3,10 +3,15 @@ from uuid import uuid4
 from hashlib import md5
 from contextvars import ContextVar
 
+from nameid import nameid
+
 # distinct request uuid for log tracing
 _request_uuid_ctx_var: ContextVar[str] = ContextVar('request_uuid', default=None)
 def get_request_uuid() -> str:
     return _request_uuid_ctx_var.get()
+
+# human readable identifier
+humanrid = nameid()
 
 def logify(msg):
     syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL7)
@@ -31,9 +36,3 @@ def rembytes (data):
   if isinstance(data, tuple):       return tuple(map(rembytes, data))
   if isinstance(data, list):        return list(map(rembytes, data))
   if isinstance(data, set):         return set(map(rembytes, data))
-
-def nameid(name):
-    return md5(f'{name}'.lower().encode()).hexdigest()
-
-def humanrid() -> str: 
-    return str(uuid4())
