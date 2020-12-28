@@ -390,9 +390,7 @@ def list_codec_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.split(':')[-1]
-                detail.update({'nameid': nameid})
-                data.append(detail)
+                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -619,9 +617,7 @@ def list_translation_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.split(':')[-1]
-                detail.update({'nameid': nameid})
-                data.append(detail)
+                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1098,9 +1094,7 @@ def list_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            id = mainkey.split(':')[1]
-            detail.update({'id': id})
-            data.append(detail)
+            data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1], 'sipprofile': detail[2], 'direction': detail[3]})
 
         response.status_code, result = 200, data
     except Exception as e:
