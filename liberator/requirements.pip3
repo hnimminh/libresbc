@@ -12,3 +12,4 @@ redis==3.5.2
 contextvars==2.4
 schedule==0.6.0
 pytz==2020.1
+nameid==0.2.2
