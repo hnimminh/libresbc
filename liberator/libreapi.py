@@ -66,8 +66,8 @@ class ClusterModel(BaseModel):
                 raise ValueError('nonexistent node')
         return members
 
-@librerouter.put("/libresbc/cluster/name", status_code=200)
-def change_cluster_name(reqbody: ClusterModel, response: Response):
+@librerouter.put("/libresbc/cluster", status_code=200)
+def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
     try:
         name = reqbody.name
@@ -79,7 +79,20 @@ def change_cluster_name(reqbody: ClusterModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=change_cluster_name, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=change_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/cluster", status_code=200)
+def get_cluster(response: Response):
+    result = None
+    try:
+        name = rdbconn.get('cluster:name')
+        members = rdbconn.smembers('cluster:members')
+        response.status_code, result = 200, {'name': name, 'members': members}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 #--------------------------------------------------------------------------------------------
@@ -87,22 +100,21 @@ class NodeModel(BaseModel):
     id: str = Field(max_length=32, description='the name node unique-id member in libresbc cluster')
     name: Optional[str] = Field(default=_DEFAULT_NODENAME,regex=_NAME_, max_length=32, description='the name node name member in libresbc cluster')
 
-@librerouter.post("/libresbc/cluster/node", status_code=200)
-def add_node(reqbody: NodeModel, response: Response):
+@librerouter.post("/libresbc/node", status_code=200)
+def declare_node(reqbody: NodeModel, response: Response):
     result = None
     try:
         id = reqbody.id
         name = reqbody.name
-        rdbconn.set(f'cluster:node:{id}', name)
-        CLUSTERNAME = name
+        rdbconn.set(f'node:{id}', name)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=add_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=declare_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.delete("/libresbc/cluster/node", status_code=200)
+@librerouter.delete("/libresbc/node", status_code=200)
 def delete_node(reqbody: NodeModel, response: Response):
     result = None
     try:
@@ -405,8 +417,8 @@ def list_codec_class(response: Response):
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class')
     desc: str = Field(max_length=64, description='description')
-    cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS/2, description='call per second')
-    cc: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION/2, description='concurrent calls')
+    cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS//2, description='call per second')
+    cc: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
 
 
 @librerouter.post("/libresbc/class/capacity", status_code=200)
