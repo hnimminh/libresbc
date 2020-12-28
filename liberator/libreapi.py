@@ -155,7 +155,7 @@ def list_node(response: Response):
 
         data = list()
         for mainkey, name in zip(mainkeys, names):
-            id = mainkey.decode().split(':')[-1]
+            id = mainkey.split(':')[-1]
             data.append({'id': id, 'name': name})
 
         response.status_code, result = 200, data
@@ -362,10 +362,11 @@ def detail_codec_class(nameid: str, response: Response):
         classkey = f'class:codec:{nameid}'
         if not rdbconn.exists(classkey): 
             response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        data = rdbconn.hgetall(classkey)
+        result = rdbconn.hgetall(classkey)
+        result.update({'data': json.loads(result.get('data'))})
         engagements = rdbconn.smembers(f'engagement:codec:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+        result.update({'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -389,7 +390,7 @@ def list_codec_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.decode().split(':')[-1]
+                nameid = mainkey.split(':')[-1]
                 detail.update({'nameid': nameid})
                 data.append(detail)
 
@@ -499,7 +500,7 @@ def list_capacity_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.decode().split(':')[-1]
+                nameid = mainkey.split(':')[-1]
                 detail.update({'nameid': nameid})
                 data.append(detail)
 
@@ -618,7 +619,7 @@ def list_translation_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.decode().split(':')[-1]
+                nameid = mainkey.split(':')[-1]
                 detail.update({'nameid': nameid})
                 data.append(detail)
 
@@ -1097,7 +1098,7 @@ def list_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            id = mainkey.decode().split(':')[1]
+            id = mainkey.split(':')[1]
             detail.update({'id': id})
             data.append(detail)
 
