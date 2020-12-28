@@ -3,7 +3,7 @@ from uuid import uuid4
 from hashlib import md5
 from contextvars import ContextVar
 
-from nameid import nameid
+from hrid import HRID
 
 # distinct request uuid for log tracing
 _request_uuid_ctx_var: ContextVar[str] = ContextVar('request_uuid', default=None)
@@ -11,7 +11,7 @@ def get_request_uuid() -> str:
     return _request_uuid_ctx_var.get()
 
 # human readable identifier
-humanrid = nameid()
+humanrid = HRID()
 
 def logify(msg):
     syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL7)
