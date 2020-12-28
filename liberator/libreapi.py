@@ -109,7 +109,7 @@ def delete_node(reqbody: NodeModel, response: Response):
         id = reqbody.id
         if rdbconn.sismember('cluster:members', id):
             response.status_code, result = 403, {'error': 'node_is_a_cluster_member'}; return
-        if rdbconn.scard('engagement:node:{id}'):
+        if rdbconn.scard(f'engagement:node:{id}'):
             response.status_code, result = 403, {'error': 'engaged_node'}; return
         key = f'cluster:node:{id}'
         if not rdbconn.exists(key): 
@@ -406,7 +406,7 @@ class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class')
     desc: str = Field(max_length=64, description='description')
     cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS/2, description='call per second')
-    capacity: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION/2, description='concurernt call')
+    cc: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION/2, description='concurrent calls')
 
 
 @librerouter.post("/libresbc/class/capacity", status_code=200)
@@ -416,11 +416,11 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
         name = reqbody.name
         desc = reqbody.desc
         cps = reqbody.cps
-        capacity = reqbody.capacity
+        cc = reqbody.cc
         nameid = humanrid.generate(); key = f'class:capacity:{nameid}'
         if rdbconn.exists(key):
             response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'capacity': capacity})
+        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
         response.status_code, result = 200, {'nameid': nameid}
     except Exception as e:
         response.status_code, result = 500, None
@@ -435,11 +435,11 @@ def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Respons
         name = reqbody.name
         desc = reqbody.desc
         cps = reqbody.cps
-        capacity = reqbody.capacity
+        cc = reqbody.cc
         key = f'class:capacity:{nameid}'
         if not rdbconn.exists(key): 
             response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'capacity': capacity})
+        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -451,9 +451,9 @@ def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Respons
 def delete_capacity_class(nameid: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:capacity:{id}'): 
+        if rdbconn.scard(f'engagement:capacity:{nameid}'): 
             response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:capacity:{id}'
+        classkey = f'class:capacity:{nameid}'
         if not rdbconn.exists(classkey): 
             response.status_code, result = 400, {'error': 'nonexistent class'}; return
         rdbconn.delete(classkey)
@@ -498,9 +498,7 @@ def list_capacity_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.split(':')[-1]
-                detail.update({'nameid': nameid})
-                data.append(detail)
+                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
