@@ -46,7 +46,10 @@ except:
 def predefine():
     return {
         "nodename": NODENAME,
-        "cluster": CLUSTERNAME,
+        "cluster": {
+            "name": CLUSTERNAME,
+            "members": CLUSTERMEMBERS
+        },
         "application": _APPLICATION,
         'swversion': _SWVERSION,
         "description": _DESCRIPTION
@@ -55,16 +58,14 @@ def predefine():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # FUNDAMENTAL: CLUSTER NAME, NODE MEMBER
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class ClusterModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='the name of libresbc cluster')
-    members: List[str] = Field(min_items=1, max_item=10, description='the name of libresbc cluster')
+class NodeModel(BaseModel):
+    nodeid: str = Field(max_length=32, description='The unique id of libresbc node')
+    nodename: Optional[str] = Field(default=_DEFAULT_NODENAME, regex=_NAME_, max_length=32, description='The friendly name of libresbc node')
 
-    @validator('members', pre=True)
-    def check_member(cls, members):
-        for nodeid in members:
-            if not rdbconn.exists(f'cluster:node:{nodeid}'):
-                raise ValueError('nonexistent node')
-        return members
+class ClusterModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
+    members: List[NodeModel] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
+
 
 @librerouter.put("/libresbc/cluster", status_code=200)
 def update_cluster(reqbody: ClusterModel, response: Response):
@@ -72,10 +73,25 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     try:
         name = reqbody.name
         members = reqbody.members
-        for member in members: pipe.sadd('cluster:members', member)
+        _memberdata = rdbconn.hgetall('cluster:members')
+        _nodeids = set(_memberdata.keys())
+        memberdata = dict()
+        nodeids = set()
+        for member in members:
+            nodename = member.nodename
+            nodeid = member.nodeid
+            nodeids.add(nodeid)
+            memberdata.update({nodeid: nodename})
+        
+        oldids = _nodeids - nodeids
+        for oldid in oldids:
+            if rdbconn.scard(f'engagement:node:{oldid}'):
+                response.status_code, result = 403, {'error': 'engaged_node'}; return
+
         pipe.set('cluster:name', name)
+        pipe.hmset('cluster:members', memberdata)
         pipe.execute()
-        CLUSTERNAME, CLUSTERMEMBERS = name, members
+        CLUSTERNAME, CLUSTERMEMBERS = name, nodeids
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -83,12 +99,14 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     finally:
         return result
 
+
 @librerouter.get("/libresbc/cluster", status_code=200)
 def get_cluster(response: Response):
     result = None
     try:
         name = rdbconn.get('cluster:name')
-        members = rdbconn.smembers('cluster:members')
+        memberdata = rdbconn.hgetall('cluster:members')
+        members = [{'nodeid': nodeid, 'nodename': nodename} for nodeid, nodename in  memberdata.items()]
         response.status_code, result = 200, {'name': name, 'members': members}
     except Exception as e:
         response.status_code, result = 500, None
@@ -96,10 +114,6 @@ def get_cluster(response: Response):
     finally:
         return result
 #--------------------------------------------------------------------------------------------
-class NodeModel(BaseModel):
-    id: str = Field(max_length=32, description='the name node unique-id member in libresbc cluster')
-    name: Optional[str] = Field(default=_DEFAULT_NODENAME,regex=_NAME_, max_length=32, description='the name node name member in libresbc cluster')
-
 @librerouter.post("/libresbc/node", status_code=200)
 def declare_node(reqbody: NodeModel, response: Response):
     result = None
