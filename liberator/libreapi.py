@@ -8,12 +8,13 @@ from typing import Optional, List
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response
+from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, _DEFAULT_NODENAME, _DEFAULT_CLUSTERNAME, 
                            NODEID, NODENAME, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_CPS, MAX_ACTIVE_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -31,13 +32,11 @@ librerouter = APIRouter()
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 try:
-    NODENAME = rdbconn.get(f'cluster:node:{NODEID}')
     CLUSTERNAME = rdbconn.get('cluster:name')
-    CLUSTERMEMBERS = rdbconn.smembers('cluster:members')
+    memberdata = rdbconn.smembers('cluster:members')
+    CLUSTERMEMBERS = set(_memberdata.keys()) 
 except:
-    NODENAME = _DEFAULT_NODENAME
-    CLUSTERNAME = _DEFAULT_CLUSTERNAME
-    CLUSTERMEMBERS = [NODEID]
+    pass
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
@@ -45,7 +44,7 @@ except:
 @librerouter.get("/libresbc/predefine", status_code=200)
 def predefine():
     return {
-        "nodename": NODENAME,
+        "nodeid": NODEID,
         "cluster": {
             "name": CLUSTERNAME,
             "members": CLUSTERMEMBERS
@@ -56,7 +55,7 @@ def predefine():
     }
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# FUNDAMENTAL: CLUSTER NAME, NODE MEMBER
+# CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class NodeModel(BaseModel):
     nodeid: str = Field(max_length=32, description='The unique id of libresbc node')
@@ -113,84 +112,6 @@ def get_cluster(response: Response):
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-#--------------------------------------------------------------------------------------------
-@librerouter.post("/libresbc/node", status_code=200)
-def declare_node(reqbody: NodeModel, response: Response):
-    result = None
-    try:
-        id = reqbody.id
-        name = reqbody.name
-        rdbconn.set(f'node:{id}', name)
-        response.status_code, result = 200, {'passed': True}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=declare_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.delete("/libresbc/node", status_code=200)
-def delete_node(reqbody: NodeModel, response: Response):
-    result = None
-    try:
-        id = reqbody.id
-        if rdbconn.sismember('cluster:members', id):
-            response.status_code, result = 403, {'error': 'node_is_a_cluster_member'}; return
-        if rdbconn.scard(f'engagement:node:{id}'):
-            response.status_code, result = 403, {'error': 'engaged_node'}; return
-        key = f'cluster:node:{id}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent node'}; return
-        rdbconn.delete(key)
-        response.status_code, result = 200, {'passed': True}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.get("/libresbc/cluster/node/{nodeid}", status_code=200)
-def detail_node(nodeid: str, response: Response):
-    result = None
-    try:
-        key = f'cluster:node:{nodeid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent node'}; return
-        name = rdbconn.get(key)
-        clustered = True if rdbconn.sismember('cluster:members', nodeid) else False
-        engagements = set(rdbconn.smembers('engagement:node:{nodeid}') + rdbconn.smembers('engagement:node:_ALL_'))
-        response.status_code, result = 200, {'id': id, 'name': name, 'clustered': clustered, 'engagements': engagements}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.get("/libresbc/cluster/node", status_code=200)
-def list_node(response: Response):
-    result = None
-    try:
-        KEYPATTERN = f'cluster:node:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-
-        for mainkey in mainkeys:
-            pipe.get(mainkey)
-        names = pipe.execute()
-
-        data = list()
-        for mainkey, name in zip(mainkeys, names):
-            id = mainkey.split(':')[-1]
-            data.append({'id': id, 'name': name})
-
-        response.status_code, result = 200, data
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_node, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SIP PROFILES 
@@ -216,7 +137,7 @@ class SIPProfileModel(BaseModel):
     rtp_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for RTP')
     sip_tls: bool = Field(default=False, description='true to enable SIP TLS')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
-    tls_version: List[str] = Field(default=['tlsv1.2'], description='TLS version')
+    tls_version: str = Field(default='tlsv1.2', description='TLS version')
     tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
 
 
@@ -224,11 +145,11 @@ class SIPProfileModel(BaseModel):
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     result = None
     try:
-        data = reqbody.dict()
+        data = jsonable_encoder(reqbody)
         nameid = humanrid.generate(); key = f'sipprofile:{nameid}'
         if rdbconn.exists(key): 
             response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, data)
+        rdbconn.hmset(key, redishash(data))
         response.status_code, result = 200, {'nameid': nameid}
     except Exception as e:
         response.status_code, result = 500, None
@@ -244,7 +165,7 @@ def update_sipprofile(reqbody: SIPProfileModel, nameid: str, response: Response)
         key = f'sipprofile:{nameid}'
         if not rdbconn.exists(key): 
             response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        rdbconn.hmset(key, data)
+        rdbconn.hmset(key, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -276,7 +197,7 @@ def detail_sipprofile(nameid: str, response: Response):
         key = f'sipprofile:{nameid}'
         if not rdbconn.exists(key): 
             response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        data = rdbconn.hgetall(key)
+        data = jsonhash(rdbconn.hgetall(key))
         engagements = rdbconn.smembers(f'engagement:sipprofile:{nameid}')
         data.update({'engagements': engagements})
         response.status_code, result = 200, data
@@ -303,9 +224,7 @@ def list_sipprofile(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                nameid = mainkey.split(':')[-1]
-                detail.update({'nameid': nameid})
-                data.append(detail)
+                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
