@@ -5,6 +5,8 @@ from contextvars import ContextVar
 
 from hrid import HRID
 
+# delimiter for data transformation
+_delimiter_ = ','
 # distinct request uuid for log tracing
 _request_uuid_ctx_var: ContextVar[str] = ContextVar('request_uuid', default=None)
 def get_request_uuid() -> str:
@@ -29,10 +31,30 @@ def bool2int(booleaner):
     assert type(booleaner) == bool
     return 1 if booleaner else 0
 
-def rembytes (data):
-  if isinstance(data, bytes):       return data.decode()
-  if isinstance(data, (str,int)):   return data
-  if isinstance(data, dict):        return dict(map(rembytes, data.items()))
-  if isinstance(data, tuple):       return tuple(map(rembytes, data))
-  if isinstance(data, list):        return list(map(rembytes, data))
-  if isinstance(data, set):         return set(map(rembytes, data))
+def rembytes(data):
+    if isinstance(data, bytes):       return data.decode()
+    if isinstance(data, (str,int)):   return data
+    if isinstance(data, dict):        return dict(map(rembytes, data.items()))
+    if isinstance(data, tuple):       return tuple(map(rembytes, data))
+    if isinstance(data, list):        return list(map(rembytes, data))
+    if isinstance(data, set):         return set(map(rembytes, data))
+
+
+def redishash(data):
+    assert isinstance(data, dict)
+    for key, value in data.items():
+        if isinstance(value, bool):
+            if value: data.update({key: ':bool:true'})
+            else: data.update({key: ':bool:false'})
+        if isinstance(value, list): data.update({key: f':list:{_delimiter_.join(value)}'})
+    return data
+
+
+def jsonhash(data):
+    assert isinstance(data, dict)
+    for key, value in data.items():
+        if isinstance(value, str):
+            if value == ':bool:true': data.update({key: True})
+            if value == ':bool:false': data.update({key: False})
+            if value.startswith(':list:'): value[6:].split(_delimiter_)
+    return data
