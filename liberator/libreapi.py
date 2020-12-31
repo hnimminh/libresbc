@@ -132,11 +132,12 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     result = None
     try:
         data = jsonable_encoder(reqbody)
-        nameid = humanrid.generate(); key = f'sipprofile:{nameid}'
+        name = data.get('name')
+        key = f'sipprofile:{name}'
         if rdbconn.exists(key): 
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
+            response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(key, redishash(data))
-        response.status_code, result = 200, {'nameid': nameid}
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -176,15 +177,15 @@ def delete_sipprofile(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/sipprofile/{nameid}", status_code=200)
-def detail_sipprofile(nameid: str, response: Response):
+@librerouter.get("/libresbc/sipprofile/{identifier}", status_code=200)
+def detail_sipprofile(identifier: str, response: Response):
     result = None
     try:
-        key = f'sipprofile:{nameid}'
+        key = f'sipprofile:{identifier}'
         if not rdbconn.exists(key): 
             response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
         data = jsonhash(rdbconn.hgetall(key))
-        engagements = rdbconn.smembers(f'engagement:sipprofile:{nameid}')
+        engagements = rdbconn.smembers(f'engagement:sipprofile:{identifier}')
         data.update({'engagements': engagements})
         response.status_code, result = 200, data
     except Exception as e:
