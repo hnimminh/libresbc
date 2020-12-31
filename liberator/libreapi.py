@@ -131,12 +131,12 @@ class SIPProfileModel(BaseModel):
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     result = None
     try:
+        name = reqbody.name
         data = jsonable_encoder(reqbody)
-        name = data.get('name')
-        key = f'sipprofile:{name}'
-        if rdbconn.exists(key): 
-            response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(key, redishash(data))
+        classkey = f'sipprofile:{name}'
+        if rdbconn.exists(classkey):
+            response.status_code, result = 403, {'error': 'existent sip profile name'}; return
+        rdbconn.hmset(classkey, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -144,15 +144,29 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/sipprofile/{nameid}", status_code=200)
-def update_sipprofile(reqbody: SIPProfileModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/sipprofile/{identifier}", status_code=200)
+def update_sipprofile(reqbody: SIPProfileModel, identifier: str, response: Response):
     result = None
     try:
-        data = reqbody.dict()
-        key = f'sipprofile:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        rdbconn.hmset(key, redishash(data))
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        class_id_key = f'sipprofile:{identifier}'
+        class_name_key = f'sipprofile:{name}'
+        engaged_id_key = f'engagement:sipprofile:{identifier}'
+        engaged_name_key = f'engagement:sipprofile:{name}'
+        if not rdbconn.exists(class_id_key): 
+            response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
+        if name != identifier and rdbconn.exists(class_name_key):
+            response.status_code, result = 403, {'error': 'existent sip profile name'}; return
+        rdbconn.hmset(class_name_key, redishash(data))
+        if name != identifier:
+            engagements = rdbconn.smembers(engaged_id_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(engaged_id_key):
+                pipe.rename(engaged_id_key, engaged_name_key)
+            pipe.delete(class_id_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -160,16 +174,19 @@ def update_sipprofile(reqbody: SIPProfileModel, nameid: str, response: Response)
     finally:
         return result
 
-@librerouter.delete("/libresbc/sipprofile/{nameid}", status_code=200)
-def delete_sipprofile(nameid: str, response: Response):
+@librerouter.delete("/libresbc/sipprofile/{identifier}", status_code=200)
+def delete_sipprofile(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:sipprofile:{nameid}'): 
-            response.status_code, result = 403, {'error': 'enageged sipprofile'}; return
-        key = f'sipprofile:{nameid}'
-        if not rdbconn.exists(key):
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        rdbconn.delete(key)
+        engagekey = f'engagement:sipprofile:{identifier}'
+        classkey = f'sipprofile:{identifier}'
+        if rdbconn.scard(engagekey): 
+            response.status_code, result = 403, {'error': 'engaged sipprofile'}; return
+        if not rdbconn.exists(classkey):
+            response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
+        pipe.delete(engagekey)
+        pipe.delete(classkey)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -181,13 +198,14 @@ def delete_sipprofile(nameid: str, response: Response):
 def detail_sipprofile(identifier: str, response: Response):
     result = None
     try:
-        key = f'sipprofile:{identifier}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        data = jsonhash(rdbconn.hgetall(key))
-        engagements = rdbconn.smembers(f'engagement:sipprofile:{identifier}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+        engagekey = f'engagement:sipprofile:{identifier}'
+        classkey = f'sipprofile:{identifier}'
+        if not rdbconn.exists(classkey):
+            response.status_code, result = 403, {'error': 'nonexistent sip profile'}; return
+        result = jsonhash(rdbconn.hgetall(classkey))
+        engagements = rdbconn.smembers(engagekey)
+        result.update({'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -205,13 +223,13 @@ def list_sipprofile(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'nameid': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -231,7 +249,7 @@ class CodecEnum(str, Enum):
 class CodecModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of codec class (identifier)')
     desc: str = Field(max_length=64, description='description')
-    data: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted set of codec')
+    codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
 
 
 @librerouter.post("/libresbc/class/codec", status_code=200)
@@ -239,12 +257,11 @@ def create_codec_class(reqbody: CodecModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        data = reqbody.data
-        key = f'class:codec:{name}'
-        if rdbconn.exists(key):
+        data = jsonable_encoder(reqbody)
+        classkey = f'class:codec:{name}'
+        if rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(key, redishash({'desc': desc, 'data': data}))
+        rdbconn.hmset(classkey, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -257,19 +274,16 @@ def update_codec_class(reqbody: CodecModel, identifier: str, response: Response)
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        data = reqbody.data
-
+        data = jsonable_encoder(reqbody)
         class_id_key = f'class:codec:{identifier}'
         class_name_key = f'class:codec:{name}'
         engaged_id_key = f'engagement:codec:{identifier}'
         engaged_name_key = f'engagement:codec:{name}'
-
         if not rdbconn.exists(class_id_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(class_name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(class_name_key, redishash({'desc': desc, 'data': data}))
+        rdbconn.hmset(class_name_key, redishash(data))
         if name != identifier:
             engagements = rdbconn.smembers(engaged_id_key)
             for engagement in engagements:
@@ -278,7 +292,6 @@ def update_codec_class(reqbody: CodecModel, identifier: str, response: Response)
                 pipe.rename(engaged_id_key, engaged_name_key)
             pipe.delete(class_id_key)
             pipe.execute()
-
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -293,7 +306,7 @@ def delete_codec_class(identifier: str, response: Response):
         engagekey = f'engagement:codec:{identifier}'
         classkey = f'class:codec:{identifier}'
         if rdbconn.scard(engagekey): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
+            response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         pipe.delete(engagekey)
@@ -312,11 +325,11 @@ def detail_codec_class(identifier: str, response: Response):
     try:
         engagekey = f'engagement:codec:{identifier}'
         classkey = f'class:codec:{identifier}'
-        if not rdbconn.exists(classkey): 
+        if not rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = jsonhash(rdbconn.hgetall(classkey))
         engagements = rdbconn.smembers(engagekey)
-        result.update({'name': identifier, 'engagements': engagements})
+        result.update({'engagements': engagements})
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
@@ -365,13 +378,11 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        cps = reqbody.cps
-        ccs = reqbody.ccs
-        key = f'class:capacity:{name}'
-        if rdbconn.exists(key):
+        data = jsonable_encoder(reqbody)
+        classkey = f'class:capacity:{name}'
+        if rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(key, redishash({'desc': desc, 'cps': cps, 'ccs': ccs}))
+        rdbconn.hmset(classkey, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -384,9 +395,7 @@ def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Res
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        cps = reqbody.cps
-        ccs = reqbody.ccs
+        data = jsonable_encoder(reqbody)
         class_id_key = f'class:capacity:{identifier}'
         class_name_key = f'class:capacity:{name}'
         engaged_id_key = f'engagement:capacity:{identifier}'
@@ -395,7 +404,7 @@ def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Res
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(class_name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(class_name_key, redishash({'desc': desc, 'cps': cps, 'ccs': ccs}))
+        rdbconn.hmset(class_name_key, redishash(data))
         if name != identifier:
             engagements = rdbconn.smembers(engaged_id_key)
             for engagement in engagements:
@@ -418,7 +427,7 @@ def delete_capacity_class(identifier: str, response: Response):
         engagekey = f'engagement:capacity:{identifier}'
         classkey = f'class:capacity:{identifier}'
         if rdbconn.scard(engagekey): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
+            response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         pipe.delete(engagekey)
@@ -441,7 +450,7 @@ def detail_capacity_class(identifier: str, response: Response):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = jsonhash(rdbconn.hgetall(classkey))
         engagements = rdbconn.smembers(engagekey)
-        result.update({'name': identifier, 'engagements': engagements})
+        result.update({'engagements': engagements})
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
@@ -492,16 +501,11 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        caller_pattern = reqbody.caller_pattern
-        callee_pattern = reqbody.callee_pattern
-        caller_replacement = reqbody.caller_replacement
-        callee_replacement = reqbody.callee_replacement
-        key = f'class:translation:{name}'
-        if rdbconn.exists(key):
+        data = jsonable_encoder(reqbody)
+        classkey = f'class:translation:{name}'
+        if rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(key, {'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
-                            'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
+        rdbconn.hmset(classkey, data)
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -514,11 +518,7 @@ def update_translation_class(reqbody: TranslationModel, identifier: str, respons
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        caller_pattern = reqbody.caller_pattern
-        callee_pattern = reqbody.callee_pattern
-        caller_replacement = reqbody.caller_replacement
-        callee_replacement = reqbody.callee_replacement
+        data = jsonable_encoder(reqbody)
         class_id_key = f'class:translation:{identifier}'
         class_name_key = f'class:translation:{name}'
         engaged_id_key = f'engagement:translation:{identifier}'
@@ -527,8 +527,7 @@ def update_translation_class(reqbody: TranslationModel, identifier: str, respons
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(class_name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        rdbconn.hmset(class_name_key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
-                            'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
+        rdbconn.hmset(class_name_key, data)
         if name != identifier:
             engagements = rdbconn.smembers(engaged_id_key)
             for engagement in engagements:
@@ -551,7 +550,7 @@ def delete_translation_class(identifier: str, response: Response):
         engagekey = f'engagement:translation:{identifier}'
         classkey = f'class:translation:{identifier}'
         if rdbconn.scard(engagekey): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
+            response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(classkey):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         pipe.delete(engagekey)
@@ -574,7 +573,7 @@ def detail_translation_class(identifier: str, response: Response):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = rdbconn.hgetall(classkey)
         engagements = rdbconn.smembers(engagekey)
-        result.update({'name': identifier, 'engagements': engagements})
+        result.update({'engagements': engagements})
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
