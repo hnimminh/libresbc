@@ -10,8 +10,8 @@ from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response
 from fastapi.encoders import jsonable_encoder
 
-from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, _DEFAULT_NODENAME, _DEFAULT_CLUSTERNAME, 
-                           NODEID, NODENAME, CLUSTERNAME, CLUSTERMEMBERS,
+from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
+                           NODEID, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_CPS, MAX_ACTIVE_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash
@@ -32,9 +32,10 @@ librerouter = APIRouter()
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 try:
-    CLUSTERNAME = rdbconn.get('cluster:name')
-    memberdata = rdbconn.smembers('cluster:members')
-    CLUSTERMEMBERS = set(_memberdata.keys()) 
+    _clustername = rdbconn.get('cluster:name')
+    if _clustername: CLUSTERNAME = _clustername
+    _clustermembers = set(rdbconn.smembers('cluster:members')) 
+    if _clustermembers: CLUSTERMEMBERS = _clustermembers
 except:
     pass
 
@@ -57,13 +58,9 @@ def predefine():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class NodeModel(BaseModel):
-    nodeid: str = Field(max_length=32, description='The unique id of libresbc node')
-    nodename: Optional[str] = Field(default=_DEFAULT_NODENAME, regex=_NAME_, max_length=32, description='The friendly name of libresbc node')
-
 class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
-    members: List[NodeModel] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
+    members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
 
 
 @librerouter.put("/libresbc/cluster", status_code=200)
@@ -71,26 +68,18 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        members = reqbody.members
-        _memberdata = rdbconn.hgetall('cluster:members')
-        _nodeids = set(_memberdata.keys())
-        memberdata = dict()
-        nodeids = set()
-        for member in members:
-            nodename = member.nodename
-            nodeid = member.nodeid
-            nodeids.add(nodeid)
-            memberdata.update({nodeid: nodename})
-        
-        oldids = _nodeids - nodeids
-        for oldid in oldids:
-            if rdbconn.scard(f'engagement:node:{oldid}'):
-                response.status_code, result = 403, {'error': 'engaged_node'}; return
+        members = set(reqbody.members)
+        _members = set(rdbconn.smembers('cluster:members'))
+  
+        removed_members = _members - members
+        for removed_member in removed_members:
+            if rdbconn.scard(f'engagement:node:{removed_member}'):
+                response.status_code, result = 403, {'error': 'engaged node'}; return
 
         pipe.set('cluster:name', name)
-        pipe.hmset('cluster:members', memberdata)
+        for member in members: pipe.sadd('cluster:members', member)
         pipe.execute()
-        CLUSTERNAME, CLUSTERMEMBERS = name, nodeids
+        CLUSTERNAME, CLUSTERMEMBERS = name, members
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -103,10 +92,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        name = rdbconn.get('cluster:name')
-        memberdata = rdbconn.hgetall('cluster:members')
-        members = [{'nodeid': nodeid, 'nodename': nodename} for nodeid, nodename in  memberdata.items()]
-        response.status_code, result = 200, {'name': name, 'members': members}
+        response.status_code, result = 200, {'name': CLUSTERNAME, 'members': CLUSTERMEMBERS}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -242,7 +228,7 @@ class CodecEnum(str, Enum):
     G729 = "G729"
 
 class CodecModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of codec class')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of codec class (identifier)')
     desc: str = Field(max_length=64, description='description')
     data: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted set of codec')
 
@@ -254,28 +240,44 @@ def create_codec_class(reqbody: CodecModel, response: Response):
         name = reqbody.name
         desc = reqbody.desc
         data = reqbody.data
-        nameid = humanrid.generate(); key = f'class:codec:{nameid}'
+        key = f'class:codec:{name}'
         if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'data': json.dumps(data)})
-        response.status_code, result = 200, {'nameid': nameid}
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(key, redishash({'desc': desc, 'data': data}))
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/codec/{nameid}", status_code=200)
-def update_codec_class(reqbody: CodecModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/codec/{identifier}", status_code=200)
+def update_codec_class(reqbody: CodecModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
         desc = reqbody.desc
         data = reqbody.data
-        key = f'class:codec:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'data': json.dumps(data)})
+
+        class_id_key = f'class:codec:{identifier}'
+        class_name_key = f'class:codec:{name}'
+        engaged_id_key = f'engagement:codec:{identifier}'
+        engaged_name_key = f'engagement:codec:{name}'
+
+        if not rdbconn.exists(class_id_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(class_name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(class_name_key, redishash({'desc': desc, 'data': data}))
+        if name != identifier:
+            engagements = rdbconn.smembers(engaged_id_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(engaged_id_key):
+                pipe.rename(engaged_id_key, engaged_name_key)
+            pipe.delete(class_id_key)
+            pipe.execute()
+
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -283,16 +285,19 @@ def update_codec_class(reqbody: CodecModel, nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/codec/{nameid}", status_code=200)
-def delete_codec_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/codec/{identifier}", status_code=200)
+def delete_codec_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:codec:{nameid}'): 
+        engagekey = f'engagement:codec:{identifier}'
+        classkey = f'class:codec:{identifier}'
+        if rdbconn.scard(engagekey): 
             response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:codec:{nameid}'
         if not rdbconn.exists(classkey):
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(engagekey)
+        pipe.delete(classkey)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -300,17 +305,17 @@ def delete_codec_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/codec/{nameid}", status_code=200)
-def detail_codec_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/codec/{identifier}", status_code=200)
+def detail_codec_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:codec:{nameid}'
+        engagekey = f'engagement:codec:{identifier}'
+        classkey = f'class:codec:{identifier}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        result = rdbconn.hgetall(classkey)
-        result.update({'data': json.loads(result.get('data'))})
-        engagements = rdbconn.smembers(f'engagement:codec:{nameid}')
-        result.update({'engagements': engagements})
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(classkey))
+        engagements = rdbconn.smembers(engagekey)
+        result.update({'name': identifier, 'engagements': engagements})
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
@@ -329,13 +334,13 @@ def list_codec_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -348,10 +353,10 @@ def list_codec_class(response: Response):
 # CAPACITY 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CapacityModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: str = Field(max_length=64, description='description')
     cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS//2, description='call per second')
-    cc: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
+    ccs: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
 
 
 @librerouter.post("/libresbc/class/capacity", status_code=200)
@@ -361,30 +366,43 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
         name = reqbody.name
         desc = reqbody.desc
         cps = reqbody.cps
-        cc = reqbody.cc
-        nameid = humanrid.generate(); key = f'class:capacity:{nameid}'
+        ccs = reqbody.ccs
+        key = f'class:capacity:{name}'
         if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
-        response.status_code, result = 200, {'nameid': nameid}
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(key, redishash({'desc': desc, 'cps': cps, 'ccs': ccs}))
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/capacity/{nameid}", status_code=200)
-def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/capacity/{identifier}", status_code=200)
+def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
         desc = reqbody.desc
         cps = reqbody.cps
-        cc = reqbody.cc
-        key = f'class:capacity:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
+        ccs = reqbody.ccs
+        class_id_key = f'class:capacity:{identifier}'
+        class_name_key = f'class:capacity:{name}'
+        engaged_id_key = f'engagement:capacity:{identifier}'
+        engaged_name_key = f'engagement:capacity:{name}'
+        if not rdbconn.exists(class_id_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(class_name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(class_name_key, redishash({'desc': desc, 'cps': cps, 'ccs': ccs}))
+        if name != identifier:
+            engagements = rdbconn.smembers(engaged_id_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(engaged_id_key):
+                pipe.rename(engaged_id_key, engaged_name_key)
+            pipe.delete(class_id_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -392,16 +410,19 @@ def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Respons
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/capacity/{nameid}", status_code=200)
-def delete_capacity_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/capacity/{identifier}", status_code=200)
+def delete_capacity_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:capacity:{nameid}'): 
+        engagekey = f'engagement:capacity:{identifier}'
+        classkey = f'class:capacity:{identifier}'
+        if rdbconn.scard(engagekey): 
             response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:capacity:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+        if not rdbconn.exists(classkey):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(engagekey)
+        pipe.delete(classkey)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -409,17 +430,18 @@ def delete_capacity_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/capacity/{nameid}", status_code=200)
-def detail_capacity_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/capacity/{identifier}", status_code=200)
+def detail_capacity_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:capacity:{nameid}'
+        engagekey = f'engagement:capacity:{identifier}'
+        classkey = f'class:capacity:{identifier}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        data = rdbconn.hgetall(classkey)
-        engagements = rdbconn.smembers(f'engagement:capacity:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(classkey))
+        engagements = rdbconn.smembers(engagekey)
+        result.update({'name': identifier, 'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -437,13 +459,13 @@ def list_capacity_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -459,10 +481,10 @@ def list_capacity_class(response: Response):
 class TranslationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
     desc: str = Field(max_length=64, description='description')
-    caller_pattern: str = Field(max_length=128, description='callerid pattern use pcre')
-    callee_pattern: str = Field(max_length=128, description='callee/destination pattern use pcre')
-    caller_replacement: str = Field(max_length=128, description='replacement that refer to caller_pattern use pcre')
-    callee_replacement: str = Field(max_length=128, description='replacement that refer to callee_pattern use pcre')
+    caller_pattern: str = Field(max_length=128, description='caller pattern use pcre')
+    callee_pattern: str = Field(max_length=128, description='callee pattern use pcre')
+    caller_replacement: str = Field(max_length=128, description='replacement that refer to caller pattern use pcre')
+    callee_replacement: str = Field(max_length=128, description='replacement that refer to callee pattern use pcre')
 
 @librerouter.post("/libresbc/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
@@ -474,21 +496,20 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
         callee_pattern = reqbody.callee_pattern
         caller_replacement = reqbody.caller_replacement
         callee_replacement = reqbody.callee_replacement
-        nameid = humanrid.generate(); key = f'class:translation:{nameid}'
+        key = f'class:translation:{name}'
         if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(key, {'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
                             'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
-        response.status_code, result = 200, {'nameid': nameid}
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/translation/{nameid}", status_code=200)
-def update_translation_class(reqbody: TranslationModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/translation/{identifier}", status_code=200)
+def update_translation_class(reqbody: TranslationModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
@@ -497,11 +518,24 @@ def update_translation_class(reqbody: TranslationModel, nameid: str, response: R
         callee_pattern = reqbody.callee_pattern
         caller_replacement = reqbody.caller_replacement
         callee_replacement = reqbody.callee_replacement
-        key = f'class:translation:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
+        class_id_key = f'class:translation:{identifier}'
+        class_name_key = f'class:translation:{name}'
+        engaged_id_key = f'engagement:translation:{identifier}'
+        engaged_name_key = f'engagement:translation:{name}'
+        if not rdbconn.exists(class_id_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(class_name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(class_name_key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
                             'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
+        if name != identifier:
+            engagements = rdbconn.smembers(engaged_id_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(engaged_id_key):
+                pipe.rename(engaged_id_key, engaged_name_key)
+            pipe.delete(class_id_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -509,16 +543,19 @@ def update_translation_class(reqbody: TranslationModel, nameid: str, response: R
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/translation/{nameid}", status_code=200)
-def delete_translation_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/translation/{identifier}", status_code=200)
+def delete_translation_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:translation:{nameid}'): 
+        engagekey = f'engagement:translation:{identifier}'
+        classkey = f'class:translation:{identifier}'
+        if rdbconn.scard(engagekey): 
             response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:translation:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+        if not rdbconn.exists(classkey):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(engagekey)
+        pipe.delete(classkey)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -526,17 +563,18 @@ def delete_translation_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/translation/{nameid}", status_code=200)
-def detail_translation_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/translation/{identifier}", status_code=200)
+def detail_translation_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:translation:{nameid}'
+        engagekey = f'engagement:translation:{identifier}'
+        classkey = f'class:translation:{identifier}'
         if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        data = rdbconn.hgetall(classkey)
-        engagements = rdbconn.smembers(f'engagement:translation:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = rdbconn.hgetall(classkey)
+        engagements = rdbconn.smembers(engagekey)
+        result.update({'name': identifier, 'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -554,14 +592,13 @@ def list_translation_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
-
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
