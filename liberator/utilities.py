@@ -46,7 +46,7 @@ def redishash(data):
             if isinstance(value, bool):
                 if value: data.update({key: ':bool:true'})
                 else: data.update({key: ':bool:false'})
-            if isinstance(value, int): data.update({key: f':int:{value}'})
+            elif isinstance(value, int): data.update({key: f':int:{value}'})
             if isinstance(value, list): data.update({key: f':list:{_delimiter_.join(value)}'})
     return data
 
