@@ -41,20 +41,22 @@ def rembytes(data):
 
 
 def redishash(data):
-    assert isinstance(data, dict)
-    for key, value in data.items():
-        if isinstance(value, bool):
-            if value: data.update({key: ':bool:true'})
-            else: data.update({key: ':bool:false'})
-        if isinstance(value, list): data.update({key: f':list:{_delimiter_.join(value)}'})
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, bool):
+                if value: data.update({key: ':bool:true'})
+                else: data.update({key: ':bool:false'})
+            if isinstance(value, int): data.update({key: f':int:{value}'})
+            if isinstance(value, list): data.update({key: f':list:{_delimiter_.join(value)}'})
     return data
 
 
 def jsonhash(data):
-    assert isinstance(data, dict)
-    for key, value in data.items():
-        if isinstance(value, str):
-            if value == ':bool:true': data.update({key: True})
-            if value == ':bool:false': data.update({key: False})
-            if value.startswith(':list:'): value[6:].split(_delimiter_)
+    if isinstance(data, dict):
+        for key, value in data.items():
+            if isinstance(value, str):
+                if value == ':bool:true': data.update({key: True})
+                if value == ':bool:false': data.update({key: False})
+                if value.startswith(':int:'): data.update({key: int(value[5:])}) 
+                if value.startswith(':list:'): data.update({key: value[6:].split(_delimiter_)})
     return data
