@@ -10,8 +10,8 @@ from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response
 from fastapi.encoders import jsonable_encoder
 
-from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, _DEFAULT_NODENAME, _DEFAULT_CLUSTERNAME, 
-                           NODEID, NODENAME, CLUSTERNAME, CLUSTERMEMBERS,
+from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
+                           NODEID, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_CPS, MAX_ACTIVE_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash
@@ -32,9 +32,10 @@ librerouter = APIRouter()
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 try:
-    CLUSTERNAME = rdbconn.get('cluster:name')
-    memberdata = rdbconn.smembers('cluster:members')
-    CLUSTERMEMBERS = set(_memberdata.keys()) 
+    _clustername = rdbconn.get('cluster:name')
+    if _clustername: CLUSTERNAME = _clustername
+    _clustermembers = set(rdbconn.smembers('cluster:members')) 
+    if _clustermembers: CLUSTERMEMBERS = _clustermembers
 except:
     pass
 
@@ -57,13 +58,9 @@ def predefine():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class NodeModel(BaseModel):
-    nodeid: str = Field(max_length=32, description='The unique id of libresbc node')
-    nodename: Optional[str] = Field(default=_DEFAULT_NODENAME, regex=_NAME_, max_length=32, description='The friendly name of libresbc node')
-
 class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
-    members: List[NodeModel] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
+    members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
 
 
 @librerouter.put("/libresbc/cluster", status_code=200)
@@ -71,26 +68,18 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        members = reqbody.members
-        _memberdata = rdbconn.hgetall('cluster:members')
-        _nodeids = set(_memberdata.keys())
-        memberdata = dict()
-        nodeids = set()
-        for member in members:
-            nodename = member.nodename
-            nodeid = member.nodeid
-            nodeids.add(nodeid)
-            memberdata.update({nodeid: nodename})
-        
-        oldids = _nodeids - nodeids
-        for oldid in oldids:
-            if rdbconn.scard(f'engagement:node:{oldid}'):
-                response.status_code, result = 403, {'error': 'engaged_node'}; return
+        members = set(reqbody.members)
+        _members = set(rdbconn.smembers('cluster:members'))
+  
+        removed_members = _members - members
+        for removed_member in removed_members:
+            if rdbconn.scard(f'engagement:node:{removed_member}'):
+                response.status_code, result = 403, {'error': 'engaged node'}; return
 
         pipe.set('cluster:name', name)
-        pipe.hmset('cluster:members', memberdata)
+        for member in members: pipe.sadd('cluster:members', member)
         pipe.execute()
-        CLUSTERNAME, CLUSTERMEMBERS = name, nodeids
+        CLUSTERNAME, CLUSTERMEMBERS = name, members
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -103,10 +92,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        name = rdbconn.get('cluster:name')
-        memberdata = rdbconn.hgetall('cluster:members')
-        members = [{'nodeid': nodeid, 'nodename': nodename} for nodeid, nodename in  memberdata.items()]
-        response.status_code, result = 200, {'name': name, 'members': members}
+        response.status_code, result = 200, {'name': CLUSTERNAME, 'members': CLUSTERMEMBERS}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -118,7 +104,7 @@ def get_cluster(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class SIPProfileModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
-    desc: str = Field(max_length=64, description='description')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
     disable_transfer: bool = Field(default=False, description='true mean disable call transfer')
     manual_redirect: bool = Field(default=False, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
@@ -145,27 +131,42 @@ class SIPProfileModel(BaseModel):
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     result = None
     try:
+        name = reqbody.name
         data = jsonable_encoder(reqbody)
-        nameid = humanrid.generate(); key = f'sipprofile:{nameid}'
-        if rdbconn.exists(key): 
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, redishash(data))
-        response.status_code, result = 200, {'nameid': nameid}
+        name_key = f'sipprofile:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent sip profile name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/sipprofile/{nameid}", status_code=200)
-def update_sipprofile(reqbody: SIPProfileModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/sipprofile/{identifier}", status_code=200)
+def update_sipprofile(reqbody: SIPProfileModel, identifier: str, response: Response):
     result = None
     try:
-        data = reqbody.dict()
-        key = f'sipprofile:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        rdbconn.hmset(key, redishash(data))
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        _name_key = f'sipprofile:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'sipprofile:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent sip profile name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -173,16 +174,19 @@ def update_sipprofile(reqbody: SIPProfileModel, nameid: str, response: Response)
     finally:
         return result
 
-@librerouter.delete("/libresbc/sipprofile/{nameid}", status_code=200)
-def delete_sipprofile(nameid: str, response: Response):
+@librerouter.delete("/libresbc/sipprofile/{identifier}", status_code=200)
+def delete_sipprofile(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:sipprofile:{nameid}'): 
-            response.status_code, result = 403, {'error': 'enageged sipprofile'}; return
-        key = f'sipprofile:{nameid}'
-        if not rdbconn.exists(key):
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        rdbconn.delete(key)
+        _name_key = f'sipprofile:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engage_key): 
+            response.status_code, result = 403, {'error': 'engaged sipprofile'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
+        pipe.delete(_engage_key)
+        pipe.delete(_name_key)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -190,17 +194,18 @@ def delete_sipprofile(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/sipprofile/{nameid}", status_code=200)
-def detail_sipprofile(nameid: str, response: Response):
+@librerouter.get("/libresbc/sipprofile/{identifier}", status_code=200)
+def detail_sipprofile(identifier: str, response: Response):
     result = None
     try:
-        key = f'sipprofile:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent sipprofile'}; return
-        data = jsonhash(rdbconn.hgetall(key))
-        engagements = rdbconn.smembers(f'engagement:sipprofile:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+        _name_key = f'sipprofile:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent sip profile'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engage_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -218,13 +223,13 @@ def list_sipprofile(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -242,9 +247,9 @@ class CodecEnum(str, Enum):
     G729 = "G729"
 
 class CodecModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of codec class')
-    desc: str = Field(max_length=64, description='description')
-    data: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted set of codec')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of codec class (identifier)')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
+    codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
 
 
 @librerouter.post("/libresbc/class/codec", status_code=200)
@@ -252,30 +257,41 @@ def create_codec_class(reqbody: CodecModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        data = reqbody.data
-        nameid = humanrid.generate(); key = f'class:codec:{nameid}'
-        if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'data': json.dumps(data)})
-        response.status_code, result = 200, {'nameid': nameid}
+        data = jsonable_encoder(reqbody)
+        name_key = f'class:codec:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/codec/{nameid}", status_code=200)
-def update_codec_class(reqbody: CodecModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/codec/{identifier}", status_code=200)
+def update_codec_class(reqbody: CodecModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        data = reqbody.data
-        key = f'class:codec:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'data': json.dumps(data)})
+        data = jsonable_encoder(reqbody)
+        _name_key = f'class:codec:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'class:codec:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -283,16 +299,19 @@ def update_codec_class(reqbody: CodecModel, nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/codec/{nameid}", status_code=200)
-def delete_codec_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/codec/{identifier}", status_code=200)
+def delete_codec_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:codec:{nameid}'): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:codec:{nameid}'
-        if not rdbconn.exists(classkey):
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+        _name_key = f'class:codec:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engage_key): 
+            response.status_code, result = 403, {'error': 'engaged class'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(_engage_key)
+        pipe.delete(_name_key)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -300,16 +319,16 @@ def delete_codec_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/codec/{nameid}", status_code=200)
-def detail_codec_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/codec/{identifier}", status_code=200)
+def detail_codec_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:codec:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        result = rdbconn.hgetall(classkey)
-        result.update({'data': json.loads(result.get('data'))})
-        engagements = rdbconn.smembers(f'engagement:codec:{nameid}')
+        _name_key = f'class:codec:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
         response.status_code = 200
     except Exception as e:
@@ -329,13 +348,13 @@ def list_codec_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -348,10 +367,10 @@ def list_codec_class(response: Response):
 # CAPACITY 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CapacityModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class')
-    desc: str = Field(max_length=64, description='description')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
     cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS//2, description='call per second')
-    cc: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
+    ccs: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
 
 
 @librerouter.post("/libresbc/class/capacity", status_code=200)
@@ -359,32 +378,41 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        cps = reqbody.cps
-        cc = reqbody.cc
-        nameid = humanrid.generate(); key = f'class:capacity:{nameid}'
-        if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
-        response.status_code, result = 200, {'nameid': nameid}
+        data = jsonable_encoder(reqbody)
+        name_key = f'class:capacity:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/capacity/{nameid}", status_code=200)
-def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/capacity/{identifier}", status_code=200)
+def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        cps = reqbody.cps
-        cc = reqbody.cc
-        key = f'class:capacity:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'cps': cps, 'cc': cc})
+        data = jsonable_encoder(reqbody)
+        _name_key = f'class:capacity:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'class:capacity:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -392,16 +420,19 @@ def update_capacity_class(reqbody: CapacityModel, nameid: str, response: Respons
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/capacity/{nameid}", status_code=200)
-def delete_capacity_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/capacity/{identifier}", status_code=200)
+def delete_capacity_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:capacity:{nameid}'): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:capacity:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+        _name_key = f'class:capacity:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged class'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(_engaged_key)
+        pipe.delete(_name_key)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -409,17 +440,18 @@ def delete_capacity_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/capacity/{nameid}", status_code=200)
-def detail_capacity_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/capacity/{identifier}", status_code=200)
+def detail_capacity_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:capacity:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        data = rdbconn.hgetall(classkey)
-        engagements = rdbconn.smembers(f'engagement:capacity:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+        _name_key = f'class:capacity:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -437,13 +469,13 @@ def list_capacity_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -458,50 +490,52 @@ def list_capacity_class(response: Response):
 
 class TranslationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
-    desc: str = Field(max_length=64, description='description')
-    caller_pattern: str = Field(max_length=128, description='callerid pattern use pcre')
-    callee_pattern: str = Field(max_length=128, description='callee/destination pattern use pcre')
-    caller_replacement: str = Field(max_length=128, description='replacement that refer to caller_pattern use pcre')
-    callee_replacement: str = Field(max_length=128, description='replacement that refer to callee_pattern use pcre')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
+    caller_pattern: str = Field(max_length=128, description='caller pattern use pcre')
+    callee_pattern: str = Field(max_length=128, description='callee pattern use pcre')
+    caller_replacement: str = Field(max_length=128, description='replacement that refer to caller pattern use pcre')
+    callee_replacement: str = Field(max_length=128, description='replacement that refer to callee pattern use pcre')
 
 @librerouter.post("/libresbc/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        caller_pattern = reqbody.caller_pattern
-        callee_pattern = reqbody.callee_pattern
-        caller_replacement = reqbody.caller_replacement
-        callee_replacement = reqbody.callee_replacement
-        nameid = humanrid.generate(); key = f'class:translation:{nameid}'
-        if rdbconn.exists(key):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
-                            'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
-        response.status_code, result = 200, {'nameid': nameid}
+        data = jsonable_encoder(reqbody)
+        name_key = f'class:translation:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, data)
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/translation/{nameid}", status_code=200)
-def update_translation_class(reqbody: TranslationModel, nameid: str, response: Response):
+@librerouter.put("/libresbc/class/translation/{identifier}", status_code=200)
+def update_translation_class(reqbody: TranslationModel, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        caller_pattern = reqbody.caller_pattern
-        callee_pattern = reqbody.callee_pattern
-        caller_replacement = reqbody.caller_replacement
-        callee_replacement = reqbody.callee_replacement
-        key = f'class:translation:{nameid}'
-        if not rdbconn.exists(key): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.hmset(key, {'name': name, 'desc': desc, 'caller_pattern': caller_pattern, 'callee_pattern': callee_pattern, 
-                            'caller_replacement': caller_replacement, 'callee_replacement': callee_replacement})
+        data = jsonable_encoder(reqbody)
+        _name_key = f'class:translation:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'class:translation:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, data)
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -509,16 +543,19 @@ def update_translation_class(reqbody: TranslationModel, nameid: str, response: R
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/translation/{nameid}", status_code=200)
-def delete_translation_class(nameid: str, response: Response):
+@librerouter.delete("/libresbc/class/translation/{identifier}", status_code=200)
+def delete_translation_class(identifier: str, response: Response):
     result = None
     try:
-        if rdbconn.scard(f'engagement:translation:{nameid}'): 
-            response.status_code, result = 403, {'error': 'enageged class'}; return
-        classkey = f'class:translation:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        rdbconn.delete(classkey)
+        _name_key = f'class:translation:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged class'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(_engaged_key)
+        pipe.delete(_name_key)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -526,17 +563,18 @@ def delete_translation_class(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/class/translation/{nameid}", status_code=200)
-def detail_translation_class(nameid: str, response: Response):
+@librerouter.get("/libresbc/class/translation/{identifier}", status_code=200)
+def detail_translation_class(identifier: str, response: Response):
     result = None
     try:
-        classkey = f'class:translation:{nameid}'
-        if not rdbconn.exists(classkey): 
-            response.status_code, result = 400, {'error': 'nonexistent class'}; return
-        data = rdbconn.hgetall(classkey)
-        engagements = rdbconn.smembers(f'engagement:translation:{nameid}')
-        data.update({'engagements': engagements})
-        response.status_code, result = 200, data
+        _name_key = f'class:translation:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = rdbconn.hgetall(_name_key)
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -554,14 +592,13 @@ def list_translation_class(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc')
+            pipe.hmget(mainkey, 'desc')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1]})
-
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
@@ -571,267 +608,54 @@ def list_translation_class(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# INBOUND INTERCONECTION
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-class ClassModel(BaseModel):
-    codec: str = Field(description='nameid of codec class')
-    capacity: str = Field(description='nameid of capacity class')
-    translations: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
-    manipulations: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+def check_existent_codec(nameid):
+    if not rdbconn.exists(f'class:codec:{nameid}'):
+        raise ValueError('nonexistent class')
+    return nameid
 
-    @validator('codec', pre=True)
-    def check_codec_existent(cls, nameid):
-        if not rdbconn.exists(f'class:codec:{nameid}'):
+def check_existent_capacity(nameid):
+    if not rdbconn.exists(f'class:capacity:{nameid}'):
+        raise ValueError('nonexistent class')
+    return nameid
+
+def check_existent_manipulation(nameids):
+    for nameid in nameids:
+        if not rdbconn.exists(f'class:manipulation:{nameid}'):
             raise ValueError('nonexistent class')
         return nameid
 
-    @validator('capacity', pre=True)
-    def check_capacity_existent(cls, nameid):
-        if not rdbconn.exists(f'class:capacity:{nameid}'):
+def check_existent_translation(nameids):
+    for nameid in nameids:
+        if not rdbconn.exists(f'class:translation:{nameid}'):
             raise ValueError('nonexistent class')
-        return nameid
+        return nameids
 
-    @validator('manipulations', pre=True)
-    def check_manipulation_existent(cls, nameids):
-        for nameid in nameids:
-            if not rdbconn.exists(f'class:manipulation:{nameid}'):
-                raise ValueError('nonexistent class')
-            return nameid
+def check_existent_sipprofile(nameid):
+    if not rdbconn.exists(f'sipprofile:{nameid}'):
+        raise ValueError('nonexistent sipprofile')
+    return nameid
 
-    @validator('translations', pre=True)
-    def check_translation_existent(cls, nameids):
-        for nameid in nameids:
-            if not rdbconn.exists(f'class:translation:{nameid}'):
-                raise ValueError('nonexistent class')
-            return nameids
-
-class InboundInterconnection(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
-    desc: str = Field(max_length=64, description='description')
-    sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
-    accesses: List[IPv4Address] = Field(min_items=1, max_item=10, description='a set of signalling that use for SIP')
-    medias: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
-    classes: ClassModel = Field(description='an object of class include codec, capacity, translations, manipulations')
-    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
-    enable: bool = Field(default=True, description='enable/disable this interconnection')
-
-
-    @validator('sipprofile', pre=True)
-    def check_sipprofile(cls, nameid):
-        if not rdbconn.exists(f'sipprofile:{nameid}'):
-            raise ValueError('nonexistent sipprofile')
-        return nameid
-
-    @validator('nodes', pre=True)
-    def check_node(cls, nodes):
-        for node in nodes:
-            if node != '_ALL_' and node not in CLUSTERMEMBERS:
-                raise ValueError('nonexistent node')
-        return nodes
-
-
-@librerouter.post("/libresbc/interconnection/inbound", status_code=200)
-def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
-    result = None
-    try:
-        name = reqbody.name
-        desc = reqbody.desc
-        sipprofile = reqbody.sipprofile
-        accesses = reqbody.accesses
-        medias = reqbody.medias
-        codec = reqbody.classes.codec
-        capacity = reqbody.classes.capacity
-        translations = reqbody.classes.translations
-        manipulations = reqbody.classes.manipulations
-        nodes = reqbody.nodes
-        enable = reqbody.enable
-        # standardize data form
-        accesses = set(map(str, accesses))
-        medias = set(map(str, medias))
-        nodes = set(map(str, medias))
-        nameid = humanrid.generate()
-        if rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-
-        for access in accesses:
-            if rdbconn.exists(f'recognition:{sipprofile}:{str(access)}'):
-                response.status_code, result = 403, {'error': 'nonunique_ip_access'}; return
-
-        pipe.hmset(f'interconnection:{nameid}:attribute', {'name': name, 'desc': desc, 'direction': 'inbound', 'sipprofile': sipprofile, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
-        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
-
-        pipe.hmset(f'interconnection:{nameid}:classes', {'codec': codec, 'capacity': capacity, 'translations': json.dumps(translations), 'manipulations': json.dumps(manipulations)})
-        pipe.sadd(f'engagement:codec:{codec}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity}', nameid)
-        for translation in translations: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulations: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
-
-        for access in accesses:
-            ip = str(access)
-            pipe.sadd(f'interconnection:{nameid}:accesses', ip)
-            pipe.set(f'recognition:{sipprofile}:{ip}', nameid)
-        for media in medias:
-            pipe.sadd(f'interconnection:{nameid}:medias', str(media))
-        pipe.execute()
-        response.status_code, result = 200, {'nameid': nameid}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.delete("/libresbc/interconnection/inbound/{nameid}", status_code=200)
-def delete_inbound_interconnection(nameid: str, response: Response):
-    result = None
-    try:
-        if not rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 403, {'error': 'nonexistent interconnection'}; return
-
-        sipprofile = rdbconn.hget(f'interconnection:{nameid}:attribute', 'sipprofile')
-        pipe.srem(f'engagement:sipprofile:{sipprofile}', nameid)
-        nodes = json.loads(rdbconn.hget(f'interconnection:{nameid}:attribute', 'nodes'))
-        for node in nodes: pipe.srem(f'engagement:node:{node}', nameid)
-        pipe.delete(f'interconnection:{nameid}:attribute')
-
-        codec = rdbconn.hset(f'interconnection:{nameid}:classes', 'codec')
-        pipe.srem(f'engagement:codec:{codec}', nameid)
-        capacity = rdbconn.hset(f'interconnection:{nameid}:classes', 'capacity')
-        pipe.srem(f'engagement:capacity:{capacity}', nameid)
-        translations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'translations'))
-        for translation in translations: pipe.srem(f'engagement:translation:{translation}', nameid)
-        manipulations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'manipulations'))
-        for manipulation in manipulations: pipe.srem(f'engagement:manipulation:{manipulation}', nameid)
-        pipe.delete(f'interconnection:{nameid}:classes')
-
-        accesses = rdbconn.smembers(f'interconnection:{nameid}:accesses')
-        for access in accesses:
-            ip = str(access)
-            pipe.delete(f'recognition:{sipprofile}:{ip}')
-            pipe.srem(f'interconnection:{nameid}:accesses', ip)
-        pipe.delete(f'interconnection:{nameid}:medias')
-        pipe.execute()
-
-        response.status_code, result = 200, {'passed': True}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.put("/libresbc/interconnection/inbound/{nameid}", status_code=200)
-def update_inbound_interconnection(reqbody: InboundInterconnection, nameid: str, response: Response):
-    result = None
-    try:
-        name = reqbody.name
-        desc = reqbody.desc
-        sipprofile = reqbody.sipprofile
-        accesses = reqbody.accesses
-        medias = reqbody.medias
-        codec = reqbody.classes.codec
-        capacity = reqbody.classes.capacity
-        translations = reqbody.classes.translations
-        manipulations = reqbody.classes.manipulations
-        nodes = reqbody.nodes
-        enable = reqbody.enable
-        # standardize data form
-        accesses = set(map(str, accesses))
-        medias = set(map(str, medias))
-        nodes = set(map(str, medias))
-
-        if not rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 400, {'error': 'nonexistent interconnection'}; return
-
-        for access in accesses:
-            tmpnameid = rdbconn.exists(f'recognition:{sipprofile}:{str(access)}')
-            if tmpnameid and tmpnameid!=nameid:
-                response.status_code, result = 403, {'error': 'nonunique_ip_access'}; return
-
-        _sipprofile = rdbconn.hget(f'interconnection:{nameid}:attribute', 'sipprofile')
-        pipe.srem(f'engagement:sipprofile:{_sipprofile}', nameid)
-        pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
-        _nodes = set(json.loads(rdbconn.hget(f'interconnection:{nameid}:attribute', 'nodes')))
-        for node in _nodes-nodes: pipe.srem(f'engagement:node:{node}', nameid)
-        for node in nodes-_nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-
-        pipe.hmset(f'interconnection:{nameid}:attribute', {'name': name, 'desc': desc, 'sipprofile': sipprofile, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
-
-        codec = rdbconn.hset(f'interconnection:{nameid}:classes', 'codec')
-        pipe.srem(f'engagement:codec:{codec}', nameid)
-        capacity = rdbconn.hset(f'interconnection:{nameid}:classes', 'capacity')
-        pipe.srem(f'engagement:capacity:{capacity}', nameid)
-        translations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'translations'))
-        for translation in translations: pipe.srem(f'engagement:translation:{translation}', nameid)
-        manipulations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'manipulations'))
-        for manipulation in manipulations: pipe.srem(f'engagement:manipulation:{manipulation}', nameid)
-        pipe.hmset(f'interconnection:{nameid}:classes', {'codec': codec, 'capacity': capacity, 'translations': json.dumps(translations), 'manipulations': json.dumps(manipulations)})
-        pipe.sadd(f'engagement:codec:{codec}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity}', nameid)
-        for translation in translations: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulations: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
-
-        _accesses = set(rdbconn.smembers(f'interconnection:{nameid}:accesses'))
-        for ip in _accesses -  accesses:
-            pipe.delete(f'recognition:{sipprofile}:{ip}')
-            pipe.srem(f'interconnection:{nameid}:accesses', ip)
-        for ip in accesses - _accesses:
-            pipe.sadd(f'interconnection:{nameid}:accesses', ip)
-            pipe.set(f'recognition:{sipprofile}:{ip}', nameid)
-        pipe.delete(f'interconnection:{nameid}:medias')
-        for media in medias:
-            pipe.sadd(f'interconnection:{nameid}:medias', str(media))
-        pipe.execute()
-        response.status_code, result = 200, {'passed': True}
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-@librerouter.get("/libresbc/interconnection/inbound/{nameid}", status_code=200)
-def detail_inbound_interconnection(nameid: str, response: Response):
-    result = None
-    try:
-        if not rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 400, {'error': 'nonexistent interconnection'}; return
-        interconnection = rdbconn.hgetall(f'interconnection:{nameid}:attribute')
-        interconnection['nodes'] = json.loads(interconnection['nodes'])
-        interconnection['enable'] = int2bool(interconnection['enable'])
-        classes = rdbconn.hgetall(f'interconnection:{nameid}:classes')
-        classes['translations'] = json.loads(classes['translations'])
-        classes['manipulations'] = json.loads(classes['manipulations'])
-        medias = rdbconn.smembers(f'interconnection:{nameid}:medias')
-        accesses = rdbconn.smembers(f'interconnection:{nameid}:accesses')
-        engagements = rdbconn.smembers(f'engagement:interconnection:{nameid}')
-        interconnection.update({'accesses': accesses, 'classes': classes, 'medias': medias, 'engagements': engagements})
-        response.status_code, result = 200, interconnection
-    except Exception as e:
-        response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+def check_cluster_node(nodes):
+    for node in nodes:
+        if node != '_ALL_' and node not in CLUSTERMEMBERS:
+            raise ValueError('nonexistent node')
+    return nodes
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# OUTBOUND INTERCONECTION
+# GATEWAY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TransportEnum(str, Enum):
     UDP = "UDP"
     TCP = "TCP"
     TLS = "TLS"
 
-class DistributionEnum(str, Enum):
-    round_robin = 'round_robin'
-    hash_caller = 'hash_caller'
-    hash_callee = 'hash_callee'
-    hash_both = 'hash_both'
-    weight_based = 'weight_based'
-
 class GatewayModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
     ip: IPv4Address = Field(description='farend ip address')
     port: int = Field(ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default=TransportEnum.UDP, description='farend transport protocol')
-    weight: int = Field(default=1, ge=0, le=99, description='weight based load distribution')
     username: str = Field(default='', description='digest auth username')
     password: str = Field(default='', description='digest auth password')
     realm: str = Field(default='', description='digest auth realm')
@@ -844,60 +668,196 @@ class GatewayModel(BaseModel):
     ping_min: int = Field(default=1, ge=1, le=31,description='number of failure pings to declaring a gateway down')
     privacy: str = Field(default='no', description='caller privacy on calls')
 
+
+@librerouter.post("/libresbc/gateway", status_code=200)
+def create_gateway(reqbody: GatewayModel, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        name_key = f'gateway:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent gateway name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.put("/libresbc/gateway/{identifier}", status_code=200)
+def update_gateway(reqbody: GatewayModel, identifier: str, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        _name_key = f'gateway:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'gateway:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent gateway name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                weight = rdbconn.hget(f'intcon:out:{engagement}', identifier)
+                pipe.hget(f'intcon:out:{engagement}', name, weight)
+                pipe.hdel(f'intcon:out:{engagement}', identifier)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.delete("/libresbc/gateway/{identifier}", status_code=200)
+def delete_gateway(identifier: str, response: Response):
+    result = None
+    try:
+        _name_key = f'gateway:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged gateway'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
+        pipe.delete(_engaged_key)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/gateway/{identifier}", status_code=200)
+def detail_gateway(identifier: str, response: Response):
+    result = None
+    try:
+        _name_key = f'gateway:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/gateway", status_code=200)
+def list_gateway(response: Response):
+    result = None
+    try:
+        KEYPATTERN = f'gateway:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'desc', 'ip', 'port', 'transport')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            if detail:
+                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]})
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# OUTBOUND INTERCONECTION
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class Distribution(str, Enum):
+    round_robin = 'round_robin'
+    hash_caller = 'hash_caller'
+    hash_callee = 'hash_callee'
+    hash_both = 'hash_both'
+    hash_callid = 'hash_callid'
+    weight_based = 'weight_based'
+
+def check_existent_gateway(gateway):
+    if not rdbconn.exists(f'gateway:{gateway}'):
+        raise ValueError('nonexistent gateway')
+    return gateway
+
+class GatewayWeightModel(BaseModel):
+    gateway: str = Field(description='outbound gateway name')
+    weight: int = Field(default=1, ge=0, le=99, description='weight based load distribution')
+    # validation
+    _existentgateway = validator('gateway')(check_existent_gateway)
+
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
-    desc: str = Field(max_length=64, description='description')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
-    distribution: DistributionEnum = Field(default=DistributionEnum.round_robin, description='The method selects a destination from addresses set')
-    gateways: List[GatewayModel] = Field(min_items=1, max_item=20, description='list of outbound gateways')
-    medias: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
-    clases: ClassModel = Field(description='an object of class include codec, capacity, translations, manipulations')
+    distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
+    gateways: List[GatewayWeightModel] = Field(min_items=1, max_item=10, description='list of outbound gateways')
+    rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
+    codec_class: str = Field(description='nameid of codec class')
+    capacity_class: str = Field(description='nameid of capacity class')
+    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
+    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
+    # validation
+    _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
+    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
+    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+    _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
+    _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
-    @validator('sipprofile', pre=True)
-    def check_sipprofile(cls, nameid):
-        if not rdbconn.exists(f'sipprofile:{nameid}'):
-            raise ValueError('nonexistent sipprofile')
-        return nameid
 
 @librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        sipprofile = reqbody.sipprofile
-        distribution = reqbody.distribution.name
-        gateways = reqbody.gateways
-        medias = reqbody.medias
-        codec = reqbody.classes.codec
-        capacity = reqbody.classes.capacity
-        translations = reqbody.classes.translations
-        manipulations = reqbody.classes.manipulations
-        nodes = reqbody.nodes
-        enable = reqbody.enable
-        # standardize data form
-        medias = set(map(str, medias))
-        nodes = set(map(str, nodes))
-        nameid = humanrid.generate()
-        if rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 409, {'error': 'human readable id is not unique, please retry'}; return
-
-        pipe.hmset(f'interconnection:{nameid}:attribute', {'name': name, 'desc': desc, 'direction': 'outbound', 'sipprofile': sipprofile, 'distribution': distribution, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
-        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
+        data = jsonable_encoder(reqbody)
+        sipprofile = data.get('sipprofile')
+        gateways = data.get('gateways')
+        rtp_nets = set(data.get('rtp_nets'))
+        codec_class = data.get('codec_class')
+        capacity_class = data.get('capacity_class')
+        translation_classes = data.get('translation_classes')
+        manipulation_classes = data.get('manipulation_classes')
+        nodes = set(data.get('nodes'))
+        # verification
+        nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent outbound interconnection'}; return
+        # processing
+        data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
+        pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
-        pipe.hmset(f'interconnection:{nameid}:classes', {'codec': codec, 'capacity': capacity, 'translations': json.dumps(translations), 'manipulations': json.dumps(manipulations)})
-        pipe.sadd(f'engagement:codec:{codec}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity}', nameid)
-        for translation in translations: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulations: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
-
-        pipe.set(f'interconnection:{nameid}:gateways', json.dumps(gateways.dict()))
-        for media in medias:
-            pipe.sadd(f'interconnection:{nameid}:medias', str(media))
+        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
+        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
+        for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         pipe.execute()
-        response.status_code, result = 200, {'nameid': nameid}
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -905,91 +865,98 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         return result
 
 
-@librerouter.post("/libresbc/interconnection/outbound/{nameid}", status_code=200)
-def update_outbound_interconnection(reqbody: OutboundInterconnection, nameid: str, response: Response):
+@librerouter.post("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier: str, response: Response):
     result = None
     try:
         name = reqbody.name
-        desc = reqbody.desc
-        sipprofile = reqbody.sipprofile
-        distribution = reqbody.distribution.name
-        gateways = reqbody.gateways
-        medias = reqbody.medias
-        codec = reqbody.classes.codec
-        capacity = reqbody.classes.capacity
-        translations = reqbody.classes.translations
-        manipulations = reqbody.classes.manipulations
-        nodes = reqbody.nodes
-        enable = reqbody.enable
-        # standardize data form
-        medias = set(map(str, medias))
-        nodes = set(map(str, nodes))
-
-        if rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 400, {'error': 'nonexistent interconnection'}; return
-
-        _sipprofile = rdbconn.hget(f'interconnection:{nameid}:attribute', 'sipprofile')
-        pipe.srem(f'engagement:sipprofile:{_sipprofile}', nameid)
+        data = jsonable_encoder(reqbody)
+        sipprofile = data.get('sipprofile')
+        gateways = data.get('gateways')
+        rtp_nets = set(data.get('rtp_nets'))
+        codec_class = data.get('codec_class')
+        capacity_class = data.get('capacity_class')
+        translation_classes = data.get('translation_classes')
+        manipulation_classes = data.get('manipulation_classes')
+        nodes = set(data.get('nodes'))
+        # verification
+        nameid = f'out:{name}'; name_key = f'intcon:{nameid}';
+        _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent outbound interconnection name'}; return
+        # get current data
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _sipprofile = _data.get('sipprofile')
+        _nodes = _data.get('nodes')
+        _codec_class = _data.get('codec_class')
+        _capacity_class = _data.get('capacity_class')
+        _translation_classes = _data.get('translation_classes')
+        _manipulation_classes = _data.get('manipulation_classes')
+        _sip_ips = _data.get('sip_ips')
+        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:gateways'))
+        # transaction block
+        pipe.multi()
+        # processing: removing old-one
+        pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
+        for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
+        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
+        pipe.delete(f'intcon:{_nameid}:gateways')
+        # processing: adding new-one
+        data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
+        pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
-        _nodes = set(json.loads(rdbconn.hget(f'interconnection:{nameid}:attribute', 'nodes')))
-        for node in _nodes-nodes: pipe.srem(f'engagement:node:{node}', nameid)
-        for node in nodes-_nodes:pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.hmset(f'interconnection:{nameid}:attribute', {'name': name, 'desc': desc, 'sipprofile': sipprofile, 'distribution': distribution, nodes: json.dumps(nodes), 'enable': bool2int(enable)})
-
-        codec = rdbconn.hset(f'interconnection:{nameid}:classes', 'codec')
-        pipe.srem(f'engagement:codec:{codec}', nameid)
-        capacity = rdbconn.hset(f'interconnection:{nameid}:classes', 'capacity')
-        pipe.srem(f'engagement:capacity:{capacity}', nameid)
-        translations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'translations'))
-        for translation in translations: pipe.srem(f'engagement:translation:{translation}', nameid)
-        manipulations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'manipulations'))
-        for manipulation in manipulations: pipe.srem(f'engagement:manipulation:{manipulation}', nameid)
-        pipe.hmset(f'interconnection:{nameid}:classes', {'codec': codec, 'capacity': capacity, 'translations': json.dumps(translations), 'manipulations': json.dumps(manipulations)})
-        pipe.sadd(f'engagement:codec:{codec}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity}', nameid)
-        for translation in translations: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulations: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
-
-        pipe.set(f'interconnection:{nameid}:gateways', json.dumps(gateways.dict()))
-        pipe.delete(f'interconnection:{nameid}:medias')
-        for media in medias:
-            pipe.sadd(f'interconnection:{nameid}:medias', str(media))
+        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
+        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
+        for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
+        # change identifier
+        if name != identifier:
+            pipe.delete(_name_key)
         pipe.execute()
-        #
-        response.status_code, result = 200, {'nameid': nameid}
+        response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.delete("/libresbc/interconnection/outbound/{nameid}", status_code=200)
-def delete_outbound_interconnection(nameid: str, response: Response):
+@librerouter.delete("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+def delete_outbound_interconnection(identifier: str, response: Response):
     result = None
     try:
-        if not rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 403, {'error': 'nonexistent interconnection'}; return
-
-        sipprofile = rdbconn.hget(f'interconnection:{nameid}:attribute', 'sipprofile')
-        pipe.srem(f'engagement:sipprofile:{sipprofile}', nameid)
-        nodes = json.loads(rdbconn.hget(f'interconnection:{nameid}:attribute', 'nodes'))
-        for node in nodes: pipe.srem(f'engagement:node:{node}', nameid)
-        pipe.delete(f'interconnection:{nameid}:attribute')
-
-        codec = rdbconn.hset(f'interconnection:{nameid}:classes', 'codec')
-        pipe.srem(f'engagement:codec:{codec}', nameid)
-        capacity = rdbconn.hset(f'interconnection:{nameid}:classes', 'capacity')
-        pipe.srem(f'engagement:capacity:{capacity}', nameid)
-        translations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'translations'))
-        for translation in translations: pipe.srem(f'engagement:translation:{translation}', nameid)
-        manipulations = json.loads(rdbconn.hget(f'interconnection:{nameid}:classes', 'manipulations'))
-        for manipulation in manipulations: pipe.srem(f'engagement:manipulation:{manipulation}', nameid)
-        pipe.delete(f'interconnection:{nameid}:classes')
-
-        pipe.delete(f'interconnection:{nameid}:gateways')
-        pipe.delete(f'interconnection:{nameid}:medias')
+        _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
+        # get current data
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _sipprofile = _data.get('sipprofile')
+        _nodes = _data.get('nodes')
+        _codec_class = _data.get('codec_class')
+        _capacity_class = _data.get('capacity_class')
+        _translation_classes = _data.get('translation_classes')
+        _manipulation_classes = _data.get('manipulation_classes')
+        _sip_ips = _data.get('sip_ips')
+        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:gateways'))
+        # processing: removing old-one
+        pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
+        for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
+        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
+        pipe.delete(f'intcon:{_nameid}:gateways')
+        pipe.delete(_name_key)
         pipe.execute()
-
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -997,23 +964,20 @@ def delete_outbound_interconnection(nameid: str, response: Response):
     finally:
         return result
 
-@librerouter.get("/libresbc/interconnection/outbound/{nameid}", status_code=200)
-def detail_outbound_interconnection(nameid: str, response: Response):
+@librerouter.get("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+def detail_outbound_interconnection(identifier: str, response: Response):
     result = None
     try:
-        if not rdbconn.exists(f'interconnection:{nameid}:attribute'):
-            response.status_code, result = 400, {'error': 'nonexistent interconnection'}; return
-        interconnection = rdbconn.hgetall(f'interconnection:{nameid}:attribute')
-        interconnection['nodes'] = json.loads(interconnection['nodes'])
-        interconnection['enable'] = int2bool(interconnection['enable'])
-        classes = rdbconn.hgetall(f'interconnection:{nameid}:classes')
-        classes['translations'] = json.loads(classes['translations'])
-        classes['manipulations'] = json.loads(classes['manipulations'])
-        medias = rdbconn.smembers(f'interconnection:{nameid}:medias')
-        gateways = json.loads(rdbconn.smembers(f'interconnection:{nameid}:gateways'))
-        engagements = rdbconn.smembers(f'engagement:interconnection:{nameid}')
-        interconnection.update({'gateways': gateways, 'classes': classes, 'medias': medias, 'engagements': engagements})
-        response.status_code, result = 200, interconnection
+        _nameid = f'out:{identifier}'
+        _name_key = f'intcon:{_nameid}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
+        result = rdbconn.hgetall(_name_key)
+        gateways = rdbconn.hgetall(f'intcon:{_nameid}:gateways')
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'gateways': gateways, 'engagements': engagements})
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=detail_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1021,27 +985,247 @@ def detail_outbound_interconnection(nameid: str, response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@librerouter.get("/libresbc/interconnection", status_code=200)
+@librerouter.get("/libresbc/interconnection/outbound", status_code=200)
 def list_interconnect(response: Response):
     result = None
     try:
-        KEYPATTERN = 'interconnection:*:attribute'
+        KEYPATTERN = 'intcon:out:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'name', 'desc', 'sipprofile', 'direction')
+            pipe.hmget(mainkey, 'name', 'desc', 'sipprofile')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'nameid': mainkey.split(':')[-1], 'name': detail[0], 'desc': detail[1], 'sipprofile': detail[2], 'direction': detail[3]})
+            data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'sipprofile': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=list_outbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# INBOUND INTERCONECTION
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def check_existent_routing(table):
+    if not rdbconn.exists(f'routing:{table}'):
+        raise ValueError('nonexistent routing')
+    return table
+
+class InboundInterconnection(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
+    sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
+    routing: str = Field(description='routing table that will be used by this inbound interconnection') 
+    sip_ips: List[IPv4Address] = Field(min_items=1, max_item=10, description='a set of signalling that use for SIP')
+    rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
+    codec_class: str = Field(description='nameid of codec class')
+    capacity_class: str = Field(description='nameid of capacity class')
+    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
+    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
+    enable: bool = Field(default=True, description='enable/disable this interconnection')
+    # validation
+    _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
+    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
+    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+    _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
+    _existentrouting = validator('routing')(check_existent_routing)
+    _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
+
+
+@librerouter.post("/libresbc/interconnection/inbound", status_code=200)
+def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        sipprofile = data.get('sipprofile')
+        routing = data.get('routing')
+        sip_ips = set(data.get('sip_ips'))
+        rtp_nets = set(data.get('rtp_nets'))
+        codec_class = data.get('codec_class')
+        capacity_class = data.get('capacity_class')
+        translation_classes = data.get('translation_classes')
+        manipulation_classes = data.get('manipulation_classes')
+        nodes = set(data.get('nodes'))
+        # verification
+        nameid = f'in:{name}'; name_key = f'intcon:{nameid}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent inbound interconnection'}; return
+        for sip_ip in sip_ips:
+            if rdbconn.exists(f'recognition:{sipprofile}:{sip_ip}'):
+                response.status_code, result = 403, {'error': 'existent sip ip'}; return
+        # processing
+        data.update({'sip_ips': sip_ips, 'rtp_nets': rtp_nets, 'nodes': nodes })
+        pipe.hmset(name_key, redishash(data))
+        pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
+        pipe.sadd(f'engagement:routing:{routing}', nameid)
+        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
+        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.put("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+def update_inbound_interconnection(reqbody: InboundInterconnection, identifier: str, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        sipprofile = data.get('sipprofile')
+        sip_ips = set(data.get('sip_ips'))
+        rtp_nets = set(data.get('rtp_nets'))
+        routing = data.get('routing')
+        codec_class = data.get('codec_class')
+        capacity_class = data.get('capacity_class')
+        translation_classes = data.get('translation_classes')
+        manipulation_classes = data.get('manipulation_classes')
+        nodes = set(data.get('nodes'))
+        # verification
+        nameid = f'in:{name}'; name_key = f'intcon:{nameid}';
+        _nameid = f'in:{identifier}'; _name_key = f'intcon:{_nameid}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent inbound interconnection name'}; return
+        for sip_ip in sip_ips:
+            _name = rdbconn.exists(f'recognition:{sipprofile}:{sip_ip}')
+            if _name and _name != name:
+                response.status_code, result = 403, {'error': 'existent sip ip'}; return
+        # get current data
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _sipprofile = _data.get('sipprofile')
+        _routing = _data.get('routing')
+        _nodes = set(_data.get('nodes'))
+        _codec_class = _data.get('codec_class')
+        _capacity_class = _data.get('capacity_class')
+        _translation_classes = _data.get('translation_classes')
+        _manipulation_classes = _data.get('manipulation_classes')
+        _sip_ips = set(_data.get('sip_ips'))
+        # transaction block
+        pipe.multi()
+        # processing: removing old-one
+        pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
+        pipe.srem(f'engagement:routing:{_routing}', _nameid)
+        for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
+        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}') 
+        # processing: adding new-one
+        data.update({'sip_ips': sip_ips, 'rtp_nets': rtp_nets, 'nodes': nodes })
+        pipe.hmset(name_key, redishash(data))
+        pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
+        pipe.sadd(f'engagement:routing:{routing}', nameid)
+        for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
+        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)   
+        # change identifier
+        if name != identifier:
+            pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.delete("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+def delete_inbound_interconnection(identifier: str, response: Response):
+    result = None
+    try:
+        _nameid = f'in:{identifier}'; _name_key = f'intcon:{_nameid}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent inbound interconnection'}; return
+
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _sipprofile = _data.get('sipprofile')
+        _nodes = _data.get('nodes')
+        _codec_class = _data.get('codec_class')
+        _capacity_class = _data.get('capacity_class')
+        _translation_classes = _data.get('translation_classes')
+        _manipulation_classes = _data.get('manipulation_classes')
+        _sip_ips = _data.get('sip_ips')
+
+        pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
+        for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
+        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}')  
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.get("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+def detail_inbound_interconnection(identifier: str, response: Response):
+    result = None
+    try:
+        _name_key = f'intcon:in:{identifier}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
+        result = rdbconn.hgetall(_name_key)
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.get("/libresbc/interconnection/inbound", status_code=200)
+def list_interconnect(response: Response):
+    result = None
+    try:
+        KEYPATTERN = 'intcon:in:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'desc', 'sipprofile', 'routing')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'sipprofile': detail[1], 'routing': detail[2]})
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_inbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
