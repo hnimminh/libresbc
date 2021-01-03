@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
@@ -1235,7 +1235,8 @@ def list_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _QUERY_ = '_QUERY_'
 _BLOCK_ = '_BLOCK_'
-_JUMPS_ = '_JUMPS:'
+_JUMPS_ = '_JUMPS-'
+CONSTROUTE = [_QUERY_, _BLOCK_]
 
 class RoutingVariableEnum(str, Enum):
     _any_ = '_any_'
@@ -1250,6 +1251,7 @@ def check_valid_nexthop_table(nexthop):
     if nexthop not in [_QUERY_, _BLOCK_] and not rdbconn.exists(f'intcon:out:{nexthop}'):
         raise ValueError('nonexistent outbound interconnect')
     return nexthop
+
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Option[str] = Field(default='', max_length=64, description='description')
@@ -1269,7 +1271,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
-        if nexthop not in [_QUERY_, _BLOCK_]: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        if nexthop not in CONSTROUTE: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1299,7 +1301,7 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         pipe.multi()
         pipe.srem(f'egagement:intcon:out:{nexthop}', identifier)
         pipe.hmset(name_key, redishash(data))
-        pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        if nexthop not in CONSTROUTE: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
         if name != identifier:
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
@@ -1398,8 +1400,8 @@ class MatchingEnum(str, Enum):
 
 class RoutingRecordModel(BaseModel):
     table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
-    match: MatchingEnum = Field(regex=_NAME_, max_length=32, description='matching options, include lpm: longest prefix match, em: exact match')
-    value: str = Field(regex=_NAME_, max_length=32, description='value of factor')
+    match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
+    value: str = Field(max_length=32, description='value of factor')
     nexthop1st: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
     nexthop2nd: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
     load: int = Field(default=100, ge=0, le=100, description='call load percentage over total 100, that apply for nexthop1st')
@@ -1426,18 +1428,99 @@ class RoutingRecordModel(BaseModel):
 
         return nexthop
 
-@librerouter.post("/libresbc/routing/record", status_code=200)
-def create_routing_record(table: str, response: Response):
-    pass
+@app.api_route("/test", methods=["GET", "POST", "DELETE"])
+async def test(request: Request):
+    return {"method": request.method}
 
-@librerouter.port("/libresbc/routing/record", status_code=200)
-def update_routing_record(table: str, response: Response):
-    pass
+@librerouter.api_route("/libresbc/routing/record", methods=["PUT", "POST"], status_code=200)
+def define_routing_record(request: Request, reqbody: RoutingRecordModel, response: Response):
+    result = None
+    try:
+        table = reqbody.table
+        match = reqbody.match
+        value = reqbody.value
+        nexthop1st = reqbody.nexthop1st
+        nexthop2nd = reqbody.tanexthop2nd
+        load = reqbody.load
+
+        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        record_exists = rdbconn.exists(record_key)
+        if request.method=='POST':
+            if record_exists:
+                response.status_code, result = 403, {'error': 'existent routing record'}; return
+        else:
+            if not record_exists:
+                response.status_code, result = 403, {'error': 'non existent routing record'}; return
+
+        pipe.hmset(record_key, redishash({'nexthop1st': nexthop1st, 'nexthop2nd': nexthop2nd, 'load': load}))
+        for nexthop in [nexthop1st, nexthop2nd]:
+            if nexthop not in CONSTROUTE:
+                if nexthop.startwiths(_JUMPS_):
+                    nexttable = nexthop.split('-')[1]
+                    pipe.sadd(f'egagement:routing:table:{table}', nexttable)
+                else:
+                    pipe.sadd(f'egagement:intcon:out:{nexthop}', record)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=define_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 @librerouter.delete("/libresbc/routing/record/{table}/{match}:{value}:", status_code=200)
-def delete_routing_record(table: str, response: Response):
-    pass
+def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
+    result = None
+    try:
+        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        record_exists = rdbconn.exists(record_key)
+        if not rdbconn.exists(record_key):
+            response.status_code, result = 403, {'error': 'notexistent routing record'}; return
+
+        _data = jsonhash(rdbconn.hgetall(record_key))
+        _nexthop1st = _data.get('nexthop1st')
+        _nexthop2nd = _data.get('nexthop2nd')
+
+        pipe.delete(record_key)
+        for nexthop in [_nexthop1st, _nexthop2nd]:
+            if nexthop not in CONSTROUTE:
+                if nexthop.startwiths(_JUMPS_):
+                    nexttable = nexthop.split('-')[1]
+                    pipe.srem(f'egagement:routing:table:{table}', nexttable)
+                else:
+                    pipe.srem(f'egagement:intcon:out:{nexthop}', record)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 @librerouter.get("/libresbc/routing/record/{table}:", status_code=200)
-def get_routing_record(table: str, response: Response):
-    pass
+def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        if not rdbconn.exists(f'routing:table:{table}'): 
+            response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
+
+        KEYPATTERN = f'routing:record:{table}:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys: pipe.hgetall(mainkey)
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            detail.update({'match': mainkey.split(':')[-2], 'value': mainkey.split(':')[-1]})
+            data.append(jsonhash(detail))
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
