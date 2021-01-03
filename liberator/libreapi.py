@@ -864,7 +864,6 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     finally:
         return result
 
-
 @librerouter.post("/libresbc/interconnection/outbound/{identifier}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier: str, response: Response):
     result = None
@@ -1229,3 +1228,216 @@ def list_interconnect(response: Response):
     finally:
         return result
 
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ROUTING TABLE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+_QUERY_ = '_QUERY_'
+_BLOCK_ = '_BLOCK_'
+_JUMPS_ = '_JUMPS:'
+
+class RoutingVariableEnum(str, Enum):
+    _any_ = '_any_'
+    destination_number = 'destination_number'
+    caller_id = 'caller_id'
+    auth_user = 'auth_user'
+    from_user = 'from_user'
+    to_user = 'to_user'
+    contact_user = 'contact_user'
+
+def check_valid_nexthop_table(nexthop):
+    if nexthop not in [_QUERY_, _BLOCK_] and not rdbconn.exists(f'intcon:out:{nexthop}'):
+        raise ValueError('nonexistent outbound interconnect')
+    return nexthop
+class RoutingTableModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
+    desc: Option[str] = Field(default='', max_length=64, description='description')
+    variables: List[RoutingVariableEnum] = Field(min_items=1, max_items=1, description='sip variable for routing base')
+    nexthop: str = Field(description=f'{_QUERY_}: query nexthop; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
+    # validation
+    _nexthoptable = validator('nexthop')(check_valid_nexthop_table)
+
+@librerouter.post("/libresbc/routing/table", status_code=200)
+def create_routing_table(reqbody: RoutingTableModel, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        nexthop = reqbody.nexthop
+        data = jsonable_encoder(reqbody)
+        name_key = f'routing:table:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent routing table'}; return
+        pipe.hmset(name_key, redishash(data))
+        if nexthop not in [_QUERY_, _BLOCK_]: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.put("/libresbc/routing/table/{identifier}", status_code=200)
+def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        nexthop = reqbody.nexthop
+        data = jsonable_encoder(reqbody)
+        _name_key = f'routing:table:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        name_key = f'routing:table:{name}'
+        engaged_key = f'engagement:{name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent routing table name'}; return
+        # get current data
+        _nexthop = rdbconn.hget(_name_key, 'nexthop')
+        # transaction block
+        pipe.multi()
+        pipe.srem(f'egagement:intcon:out:{nexthop}', identifier)
+        pipe.hmset(name_key, redishash(data))
+        pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        if name != identifier:
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(f'intcon:in:{engagement}', 'routing', name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.delete("/libresbc/routing/table/{identifier}", status_code=200)
+def delete_routing_table(identifier: str, response: Response):
+    result = None
+    try:
+        _name_key = f'routing:table:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent routing table'}; return
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged routing table'}; return
+        # check if routing records exists in table
+        _ROUTING_KEY_PATTERN = f'routing:record:{identifier}:*'
+        next, records = rdbconn.scan(0, _ROUTING_KEY_PATTERN, SCAN_COUNT)
+        if records:
+            response.status_code, result = 400, {'error': 'routing table in used'}; return
+        else:
+            while next:
+                next, records = rdbconn.scan(next, _ROUTING_KEY_PATTERN, SCAN_COUNT)
+                if records:
+                    response.status_code, result = 400, {'error': 'routing table in used'}; return
+        # process
+        pipe.delete(_engaged_key)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/routing/table/{identifier}", status_code=200)
+def detail_routing_table(identifier: str, response: Response):
+    result = None
+    try:
+        _name_key = f'routing:table:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/routing/table", status_code=200)
+def list_routing_table(response: Response):
+    result = None
+    try:
+        KEYPATTERN = f'routing:table:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys: pipe.hgetall(mainkey)
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            data.append(jsonhash(detail))
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ROUTING RECORD
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class MatchingEnum(str, Enum):
+    lpm = 'lpm'
+    em = 'em'
+
+class RoutingRecordModel(BaseModel):
+    table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
+    match: MatchingEnum = Field(regex=_NAME_, max_length=32, description='matching options, include lpm: longest prefix match, em: exact match')
+    value: str = Field(regex=_NAME_, max_length=32, description='value of factor')
+    nexthop1st: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
+    nexthop2nd: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
+    load: int = Field(default=100, ge=0, le=100, description='call load percentage over total 100, that apply for nexthop1st')
+    # validation
+    @validator(...)
+    def record_agrement(cls, values):
+        table = values.get('table')
+        nexthop1st = values.get('nexthop1st')
+        nexthop2nd = values.get('nexthop2nd')
+
+        if not rdbconn.exists(f'routing:table:{table}'):
+            raise ValueError('nonexistent routing table')
+        for nexthop in [nexthop1st, nexthop2nd]:
+            if nexthop.startwiths(_JUMPS_):
+                nexttable = nexthop.split(':')[1]
+                if not rdbconn.exists(f'routing:table:{nexttable}'): 
+                    raise ValueError('nonexistent routing table for nexthop')
+            else:
+                if nexthop != _BLOCK_ and not rdbconn.exists(f'intcon:out:{nexthop}'):
+                    raise ValueError('nonexistent outbound interconnect')
+        if nexthop1st.startwiths('_') or nexthop2nd.startwiths('_'):
+            if nexthop1st != nexthop2nd: 
+                raise ValueError('nexthops are not the same type')
+
+        return nexthop
+
+@librerouter.post("/libresbc/routing/record", status_code=200)
+def create_routing_record(table: str, response: Response):
+    pass
+
+@librerouter.port("/libresbc/routing/record", status_code=200)
+def update_routing_record(table: str, response: Response):
+    pass
+
+@librerouter.delete("/libresbc/routing/record/{table}/{match}:{value}:", status_code=200)
+def delete_routing_record(table: str, response: Response):
+    pass
+
+@librerouter.get("/libresbc/routing/record/{table}:", status_code=200)
+def get_routing_record(table: str, response: Response):
+    pass
