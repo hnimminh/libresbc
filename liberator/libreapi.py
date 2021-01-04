@@ -39,6 +39,13 @@ try:
 except:
     pass
 
+def listify(string, delimiter=':') -> list:
+    assert isinstance(string, str)
+    return string.split(delimiter)
+
+def getnameid(string) -> str:
+    return string.split(':')
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -229,7 +236,7 @@ def list_sipprofile(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
+                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -354,7 +361,7 @@ def list_codec_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
+                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -475,7 +482,7 @@ def list_capacity_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
+                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -598,7 +605,7 @@ def list_translation_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0]})
+                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
@@ -773,7 +780,7 @@ def list_gateway(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]})
+                data.append({'name': getnameid(mainkey), 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1000,7 +1007,7 @@ def list_outbound_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'sipprofile': detail[1]})
+            data.append({'name': getnameid(mainkey), 'desc': detail[0], 'sipprofile': detail[1]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1219,7 +1226,7 @@ def list_inbound_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'name': mainkey.split(':')[-1], 'desc': detail[0], 'sipprofile': detail[1], 'routing': detail[2]})
+            data.append({'name': getnameid(mainkey), 'desc': detail[0], 'sipprofile': detail[1], 'routing': detail[2]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1416,7 +1423,7 @@ class RoutingRecordModel(BaseModel):
             raise ValueError('nonexistent routing table')
         for nexthop in [nexthop1st, nexthop2nd]:
             if nexthop.startwiths(_JUMPS_):
-                nexttable = nexthop.split(':')[1]
+                nexttable = getnameid(nexthop)
                 if not rdbconn.exists(f'routing:table:{nexttable}'): 
                     raise ValueError('nonexistent routing table for nexthop')
             else:
@@ -1456,7 +1463,7 @@ def define_routing_record(request: Request, reqbody: RoutingRecordModel, respons
         for nexthop in [nexthop1st, nexthop2nd]:
             if nexthop not in CONSTROUTE:
                 if nexthop.startwiths(_JUMPS_):
-                    nexttable = nexthop.split('-')[1]
+                    nexttable = getnameid(nexthop)
                     pipe.sadd(f'egagement:routing:table:{table}', nexttable)
                 else:
                     pipe.sadd(f'egagement:intcon:out:{nexthop}', record)
@@ -1484,7 +1491,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
         for nexthop in [_nexthop1st, _nexthop2nd]:
             if nexthop not in CONSTROUTE:
                 if nexthop.startwiths(_JUMPS_):
-                    nexttable = nexthop.split('-')[1]
+                    nexttable = getnameid(nexthop)
                     pipe.srem(f'egagement:routing:table:{table}', nexttable)
                 else:
                     pipe.srem(f'egagement:intcon:out:{nexthop}', record)
@@ -1514,7 +1521,8 @@ def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            detail.update({'match': mainkey.split(':')[-2], 'value': mainkey.split(':')[-1]})
+            records = listify(mainkey)
+            detail.update({'match': records[-2], 'value': records[-1]})
             data.append(jsonhash(detail))
 
         response.status_code, result = 200, data
