@@ -1254,10 +1254,10 @@ def list_inbound_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROUTING TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_QUERY_ = '_QUERY_'
-_BLOCK_ = '_BLOCK_'
-_JUMPS_ = '_JUMPS:'
-CONSTROUTE = [_QUERY_, _BLOCK_]
+_QUERY = 'query'
+_BLOCK = 'block'
+_JUMPS = 'jumps'
+_ROUTE = 'route'
 
 class RoutingVariableEnum(str, Enum):
     _any_ = '_any_'
@@ -1268,31 +1268,47 @@ class RoutingVariableEnum(str, Enum):
     to_user = 'to_user'
     contact_user = 'contact_user'
 
-def check_valid_nexthop_table(nexthop):
-    if nexthop not in [_QUERY_, _BLOCK_] and not rdbconn.exists(f'intcon:out:{nexthop}'):
-        raise ValueError('nonexistent outbound interconnect')
-    return nexthop
+class RoutingTableActionEnum(str, Enum):
+    query = _QUERY
+    route = _ROUTE
+    block = _BLOCK
+    # request: reseved routing with http api 
 
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: List[RoutingVariableEnum] = Field(min_items=1, max_items=1, description='sip variable for routing base')
-    nexthop: str = Field(description=f'{_QUERY_}: query nexthop; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
+    action: RoutingTableActionEnum = Field(default='query', description=f'routing action, <{_QUERY}>: find nexthop by query routing record; <{_QUERY}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
+    endpoint: Optional[str] = Field(description='designated endpoint for action')
     # validation
-    _nexthoptable = validator('nexthop')(check_valid_nexthop_table)
+    @validator(...)
+    def routing_table_agreement(cls, values):
+        action = values.get('action')
+        endpoint = values.get('endpoint')
+        if action==_ROUTE:
+            if not endpoint:
+                raise ValueError('endpoint must be provided for route action')
+            else:
+                if rdbconn.exists(f'intcon:out:{endpoint}'):
+                    raise ValueError('endpoint must be provided for route action')
+        else:
+            if 'endpoint' in values: values.pop('endpoint')
+        return values
+
 
 @librerouter.post("/libresbc/routing/table", status_code=200)
 def create_routing_table(reqbody: RoutingTableModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        nexthop = reqbody.nexthop
         data = jsonable_encoder(reqbody)
+        endpoint = data.get('endpoint')
         name_key = f'routing:table:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
-        if nexthop not in CONSTROUTE: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        if endpoint: 
+            pipe.sadd(f'egagement:intcon:out:{endpoint}', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1306,8 +1322,8 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
     result = None
     try:
         name = reqbody.name
-        nexthop = reqbody.nexthop
         data = jsonable_encoder(reqbody)
+        endpoint = data.get('endpoint')
         _name_key = f'routing:table:{identifier}'
         name_key = f'routing:table:{name}'
         if not rdbconn.exists(_name_key): 
@@ -1315,12 +1331,12 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table name'}; return
         # get current data
-        _nexthop = rdbconn.hget(_name_key, 'nexthop')
+        _endpoint = rdbconn.hget(_name_key, 'endpoint')
         # transaction block
         pipe.multi()
-        pipe.srem(f'egagement:intcon:out:{nexthop}', identifier)
+        pipe.srem(f'egagement:intcon:out:{_endpoint}', identifier)
         pipe.hmset(name_key, redishash(data))
-        if nexthop not in CONSTROUTE: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
+        if endpoint: pipe.sadd(f'egagement:intcon:out:{endpoint}', name)
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -1419,72 +1435,130 @@ class MatchingEnum(str, Enum):
     lpm = 'lpm'
     em = 'em'
 
+class RoutingRecordActionEnum(str, Enum): 
+    route = 'route'
+    block = 'block'
+    jumps = 'jumps'
+
 class RoutingRecordModel(BaseModel):
     table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
-    value: str = Field(max_length=32, description='value of factor')
-    nexthop1st: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
-    nexthop2nd: str = Field(description=f'{_JUMPS_}:TABLE jumps to other routing table; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
-    load: int = Field(default=100, ge=0, le=100, description='call load percentage over total 100, that apply for nexthop1st')
+    value: str = Field(max_length=32, description='value of variable that declared in routing table')
+    action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action, <{_JUMPS}>: jumps to other routing table; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
+    endpoints: List[str] = Field(max_items=2, description='designated endpoint for action')
+    load: Optional[int] = Field(ge=0, le=100, description='call load percentage over total 100, that apply for endpoints')
     # validation
     @validator(...)
-    def record_agrement(cls, values):
+    def routing_record_agreement(cls, values):
         table = values.get('table')
-        nexthop1st = values.get('nexthop1st')
-        nexthop2nd = values.get('nexthop2nd')
+        action = values.get('action')
+        endpoints = values.get('endpoints')
 
         if not rdbconn.exists(f'routing:table:{table}'):
             raise ValueError('nonexistent routing table')
-        for nexthop in [nexthop1st, nexthop2nd]:
-            if nexthop.startwiths(_JUMPS_):
-                nexttable = getnameid(nexthop)
-                if not rdbconn.exists(f'routing:table:{nexttable}'): 
-                    raise ValueError('nonexistent routing table for nexthop')
+        
+        if action==_BLOCK: 
+            values.update({'endpoints': []})
+            values.pop('load')
+        if action==_JUMPS: 
+            if len(endpoints)<1:
+                raise ValueError(f'{_JUMPS} action require at least 1 routing table in endpoints')
             else:
-                if nexthop != _BLOCK_ and not rdbconn.exists(f'intcon:out:{nexthop}'):
+                values.update({'endpoints': endpoints[0]})
+                value.pop('load')
+        if action==_ROUTE:
+            if len(endpoints)!=2:
+                raise ValueError(f'{_ROUTE} action require 2 outbound interconnections in endpoints')
+            if load==None:
+                raise ValueError(f'{_ROUTE} action require load param')
+
+        for endpoint in endpoints:
+            if action==_JUMPS:
+                if not rdbconn.exists(f'routing:table:{endpoint}'): 
+                    raise ValueError('nonexistent routing table for nexthop')
+            if action==_ROUTE:
+                if not rdbconn.exists(f'intcon:out:{endpoint}'):
                     raise ValueError('nonexistent outbound interconnect')
-        if nexthop1st.startwiths('_') or nexthop2nd.startwiths('_'):
-            if nexthop1st != nexthop2nd: 
-                raise ValueError('nexthops are not the same type')
-
-        return nexthop
+        return values
 
 
-@librerouter.api_route("/libresbc/routing/record", methods=["PUT", "POST"], status_code=200)
-def define_routing_record(request: Request, reqbody: RoutingRecordModel, response: Response):
+@librerouter.post("/libresbc/routing/record", status_code=200)
+def create_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
-        table = reqbody.table
-        match = reqbody.match
-        value = reqbody.value
-        nexthop1st = reqbody.nexthop1st
-        nexthop2nd = reqbody.tanexthop2nd
-        load = reqbody.load
+        data = jsonable_encoder(reqbody)
+        table = data.get('table')
+        match = data.get('match')
+        value = data.get('value')
+        action = data.get('action')
+        endpoints = data.get('endpoints')
+        load = data.get('load')
 
         record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
-        record_exists = rdbconn.exists(record_key)
-        if request.method=='POST':
-            if record_exists:
-                response.status_code, result = 403, {'error': 'existent routing record'}; return
-        else:
-            if not record_exists:
-                response.status_code, result = 403, {'error': 'non existent routing record'}; return
+        if rdbconn.exists(record_key):
+            response.status_code, result = 403, {'error': 'existent routing record'}; return
+        
+        data.pop('table'); data.pop('match'); data.pop('value')
+        pipe.hmset(record_key, redishash(data))
+        if action==_ROUTE:
+            for endpoint in endpoints:
+                pipe.sadd(f'egagement:intcon:out:{endpoint}', record)
+        if action==_JUMPS:
+            for endpoint in endpoints:
+                pipe.sadd(f'egagement:routing:table:{table}', endpoint)
 
-        pipe.hmset(record_key, redishash({'nexthop1st': nexthop1st, 'nexthop2nd': nexthop2nd, 'load': load}))
-        for nexthop in [nexthop1st, nexthop2nd]:
-            if nexthop not in CONSTROUTE:
-                if nexthop.startwiths(_JUMPS_):
-                    nexttable = getnameid(nexthop)
-                    pipe.sadd(f'egagement:routing:table:{table}', nexttable)
-                else:
-                    pipe.sadd(f'egagement:intcon:out:{nexthop}', record)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=define_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=create_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+
+@librerouter.put("/libresbc/routing/record", status_code=200)
+def update_routing_record(reqbody: RoutingRecordModel, response: Response):
+    result = None
+    try:
+        data = jsonable_encoder(reqbody)
+        table = data.get('table')
+        match = data.get('match')
+        value = data.get('value')
+        action = data.get('action')
+        endpoints = data.get('endpoints')
+        load = data.get('load')
+
+        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        if not rdbconn.exists(record_key):
+            response.status_code, result = 403, {'error': 'non existent routing record'}; return
+        # get current data
+        _data = jsonhash(rdbconn.hgetall(record_key))
+        _action = _data.get('action')
+        _endpoints = _data.get('endpoints')
+        # update new-one
+        data.pop('table'); data.pop('match'); data.pop('value')
+        pipe.hmset(record_key, redishash(data))
+        if action==_ROUTE:
+            for endpoint in endpoints:
+                pipe.sadd(f'egagement:intcon:out:{endpoint}', record)
+        if action==_JUMPS:
+            for endpoint in endpoints:
+                pipe.sadd(f'egagement:routing:table:{table}', endpoint)
+        # remove new-one
+        if _action==_ROUTE:
+            for endpoint in _endpoints:
+                pipe.srem(f'egagement:intcon:out:{endpoint}', record)
+        if _action==_JUMPS:
+            for endpoint in _endpoints:
+                pipe.srem(f'egagement:routing:table:{table}', endpoint)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
 
 @librerouter.delete("/libresbc/routing/record/{table}/{match}:{value}:", status_code=200)
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
@@ -1495,17 +1569,16 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
 
         _data = jsonhash(rdbconn.hgetall(record_key))
-        _nexthop1st = _data.get('nexthop1st')
-        _nexthop2nd = _data.get('nexthop2nd')
+        _action = _data.get('action')
+        _endpoints = _data.get('endpoints')
 
         pipe.delete(record_key)
-        for nexthop in [_nexthop1st, _nexthop2nd]:
-            if nexthop not in CONSTROUTE:
-                if nexthop.startwiths(_JUMPS_):
-                    nexttable = getnameid(nexthop)
-                    pipe.srem(f'egagement:routing:table:{table}', nexttable)
-                else:
-                    pipe.srem(f'egagement:intcon:out:{nexthop}', record)
+        if _action==_ROUTE:
+            for endpoint in _endpoints:
+                pipe.srem(f'egagement:intcon:out:{endpoint}', record)
+        if _action==_JUMPS:
+            for endpoint in _endpoints:
+                pipe.srem(f'egagement:routing:table:{table}', endpoint)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
