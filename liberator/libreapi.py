@@ -1435,7 +1435,7 @@ class RoutingRecordModel(BaseModel):
 
         return nexthop
 
-@app.api_route("/test", methods=["GET", "POST", "DELETE"])
+@librerouter.api_route("/test", methods=["GET", "POST", "DELETE"])
 async def test(request: Request):
     return {"method": request.method}
 
