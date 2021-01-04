@@ -1235,7 +1235,7 @@ def list_inbound_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _QUERY_ = '_QUERY_'
 _BLOCK_ = '_BLOCK_'
-_JUMPS_ = '_JUMPS-'
+_JUMPS_ = '_JUMPS:'
 CONSTROUTE = [_QUERY_, _BLOCK_]
 
 class RoutingVariableEnum(str, Enum):
@@ -1473,7 +1473,6 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
     result = None
     try:
         record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
-        record_exists = rdbconn.exists(record_key)
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
 
