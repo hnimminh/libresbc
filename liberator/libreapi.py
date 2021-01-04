@@ -104,7 +104,7 @@ def get_cluster(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class SIPProfileModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
     disable_transfer: bool = Field(default=False, description='true mean disable call transfer')
     manual_redirect: bool = Field(default=False, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
@@ -248,7 +248,7 @@ class CodecEnum(str, Enum):
 
 class CodecModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of codec class (identifier)')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
 
 
@@ -368,7 +368,7 @@ def list_codec_class(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS//2, description='call per second')
     ccs: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_ACTIVE_SESSION//2, description='concurrent calls')
 
@@ -490,7 +490,7 @@ def list_capacity_class(response: Response):
 
 class TranslationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     caller_pattern: str = Field(max_length=128, description='caller pattern use pcre')
     callee_pattern: str = Field(max_length=128, description='callee pattern use pcre')
     caller_replacement: str = Field(max_length=128, description='replacement that refer to caller pattern use pcre')
@@ -652,7 +652,7 @@ class TransportEnum(str, Enum):
 
 class GatewayModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     ip: IPv4Address = Field(description='farend ip address')
     port: int = Field(ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default=TransportEnum.UDP, description='farend transport protocol')
@@ -807,7 +807,7 @@ class GatewayWeightModel(BaseModel):
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[GatewayWeightModel] = Field(min_items=1, max_item=10, description='list of outbound gateways')
@@ -1020,7 +1020,7 @@ def check_existent_routing(table):
 
 class InboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     routing: str = Field(description='routing table that will be used by this inbound interconnection') 
     sip_ips: List[IPv4Address] = Field(min_items=1, max_item=10, description='a set of signalling that use for SIP')
@@ -1254,7 +1254,7 @@ def check_valid_nexthop_table(nexthop):
 
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
-    desc: Option[str] = Field(default='', max_length=64, description='description')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: List[RoutingVariableEnum] = Field(min_items=1, max_items=1, description='sip variable for routing base')
     nexthop: str = Field(description=f'{_QUERY_}: query nexthop; {_BLOCK_}: block the call; INTERCONNECTION: dirrect nexthop')
     # validation
