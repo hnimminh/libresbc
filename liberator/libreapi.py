@@ -700,19 +700,19 @@ def update_gateway(reqbody: GatewayModel, identifier: str, response: Response):
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'gateway:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'gateway:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 weight = rdbconn.hget(f'intcon:out:{engagement}', identifier)
-                pipe.hget(f'intcon:out:{engagement}', name, weight)
+                pipe.hset(f'intcon:out:{engagement}', name, weight)
                 pipe.hdel(f'intcon:out:{engagement}', identifier)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
@@ -886,7 +886,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
         # verification
-        nameid = f'out:{name}'; name_key = f'intcon:{nameid}';
+        nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
         _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
@@ -925,6 +925,20 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier
         pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         # change identifier
+        if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(f'intcon:out:{engagement}', name, weight)
+                pipe.hdel(f'intcon:out:{engagement}', identifier)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()        
+        
+        
+        
         if name != identifier:
             pipe.delete(_name_key)
         pipe.execute()
@@ -1295,9 +1309,7 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         nexthop = reqbody.nexthop
         data = jsonable_encoder(reqbody)
         _name_key = f'routing:table:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'routing:table:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -1310,9 +1322,11 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         pipe.hmset(name_key, redishash(data))
         if nexthop not in CONSTROUTE: pipe.sadd(f'egagement:intcon:out:{nexthop}', name)
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'intcon:in:{engagement}', 'routing', name)
+                pipe.hset(f'routing:record:{engagement}', 'routing', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1435,9 +1449,6 @@ class RoutingRecordModel(BaseModel):
 
         return nexthop
 
-@librerouter.api_route("/test", methods=["GET", "POST", "DELETE"])
-async def test(request: Request):
-    return {"method": request.method}
 
 @librerouter.api_route("/libresbc/routing/record", methods=["PUT", "POST"], status_code=200)
 def define_routing_record(request: Request, reqbody: RoutingRecordModel, response: Response):
