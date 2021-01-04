@@ -1099,7 +1099,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, identifier: 
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
         # verification
-        nameid = f'in:{name}'; name_key = f'intcon:{nameid}';
+        nameid = f'in:{name}'; name_key = f'intcon:{nameid}'
         _nameid = f'in:{identifier}'; _name_key = f'intcon:{_nameid}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
