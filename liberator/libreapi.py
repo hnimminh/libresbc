@@ -1204,7 +1204,7 @@ def detail_inbound_interconnection(identifier: str, response: Response):
 
 
 @librerouter.get("/libresbc/interconnection/inbound", status_code=200)
-def list_interconnect(response: Response):
+def list_inbound_interconnect(response: Response):
     result = None
     try:
         KEYPATTERN = 'intcon:in:*'
