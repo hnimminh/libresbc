@@ -930,6 +930,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
+                rdbconn.hgetall('')
                 pipe.hset(f'intcon:out:{engagement}', name, weight)
                 pipe.hdel(f'intcon:out:{engagement}', identifier)
             if rdbconn.exists(_engaged_key):
@@ -1303,12 +1304,12 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         endpoint = data.get('endpoint')
-        name_key = f'routing:table:{name}'
+        nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
         if endpoint: 
-            pipe.sadd(f'egagement:intcon:out:{endpoint}', name)
+            pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1324,8 +1325,8 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         endpoint = data.get('endpoint')
-        _name_key = f'routing:table:{identifier}'
-        name_key = f'routing:table:{name}'
+        _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
+        nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -1334,9 +1335,9 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         _endpoint = rdbconn.hget(_name_key, 'endpoint')
         # transaction block
         pipe.multi()
-        pipe.srem(f'egagement:intcon:out:{_endpoint}', identifier)
+        if _endpoint: pipe.srem(f'egagement:intcon:out:{_endpoint}', _nameid)
         pipe.hmset(name_key, redishash(data))
-        if endpoint: pipe.sadd(f'egagement:intcon:out:{endpoint}', name)
+        if endpoint: pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -1358,7 +1359,7 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
 def delete_routing_table(identifier: str, response: Response):
     result = None
     try:
-        _name_key = f'routing:table:{identifier}'
+        _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent routing table'}; return
@@ -1374,7 +1375,9 @@ def delete_routing_table(identifier: str, response: Response):
                 next, records = rdbconn.scan(next, _ROUTING_KEY_PATTERN, SCAN_COUNT)
                 if records:
                     response.status_code, result = 400, {'error': 'routing table in used'}; return
-        # process
+        # get current data
+        _endpoint = rdbconn.hget(_name_key, 'endpoint')
+        if _endpoint: pipe.srem(f'egagement:intcon:out:{_endpoint}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -1492,9 +1495,8 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         value = data.get('value')
         action = data.get('action')
         endpoints = data.get('endpoints')
-        load = data.get('load')
 
-        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'existent routing record'}; return
         
@@ -1502,10 +1504,10 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         pipe.hmset(record_key, redishash(data))
         if action==_ROUTE:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:intcon:out:{endpoint}', record)
+                pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
         if action==_JUMPS:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:routing:table:{table}', endpoint)
+                pipe.sadd(f'egagement:routing:table:{endpoint}', nameid)
 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -1526,9 +1528,8 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         value = data.get('value')
         action = data.get('action')
         endpoints = data.get('endpoints')
-        load = data.get('load')
 
-        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'non existent routing record'}; return
         # get current data
@@ -1540,17 +1541,17 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         pipe.hmset(record_key, redishash(data))
         if action==_ROUTE:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:intcon:out:{endpoint}', record)
+                pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
         if action==_JUMPS:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:routing:table:{table}', endpoint)
+                pipe.sadd(f'egagement:routing:table:{endpoint}', nameid)
         # remove new-one
         if _action==_ROUTE:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:intcon:out:{endpoint}', record)
+                pipe.srem(f'egagement:intcon:out:{endpoint}', nameid)
         if _action==_JUMPS:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:routing:table:{table}', endpoint)
+                pipe.srem(f'egagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1564,7 +1565,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
     result = None
     try:
-        record = f'{table}:{match}:{value}'; record_key = f'routing:record:{record}'
+        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
 
@@ -1575,10 +1576,10 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
         pipe.delete(record_key)
         if _action==_ROUTE:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:intcon:out:{endpoint}', record)
+                pipe.srem(f'egagement:intcon:out:{endpoint}', nameid)
         if _action==_JUMPS:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:routing:table:{table}', endpoint)
+                pipe.srem(f'egagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
