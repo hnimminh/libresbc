@@ -158,15 +158,15 @@ def update_sipprofile(reqbody: SIPProfileModel, identifier: str, response: Respo
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'sipprofile:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'sipprofile:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 pipe.hset(engagement, name)
@@ -283,15 +283,15 @@ def update_codec_class(reqbody: CodecModel, identifier: str, response: Response)
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:codec:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'class:codec:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 pipe.hset(engagement, name)
@@ -404,15 +404,15 @@ def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Res
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:capacity:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'class:capacity:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 pipe.hset(engagement, name)
@@ -527,15 +527,15 @@ def update_translation_class(reqbody: TranslationModel, identifier: str, respons
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:translation:{identifier}'
-        _engaged_key = f'engagement:{_name_key}'
         name_key = f'class:translation:{name}'
-        engaged_key = f'engagement:{name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(name_key, data)
         if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 pipe.hset(engagement, name)
@@ -930,18 +930,16 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                rdbconn.hgetall('')
-                pipe.hset(f'intcon:out:{engagement}', name, weight)
-                pipe.hdel(f'intcon:out:{engagement}', identifier)
+                if engagement.starwiths('table'):
+                    pipe.hset(f'routing:{engagement}', 'endpoint', name)
+                if engagement.startwiths('record'):
+                    endpoints = rdbconn.hget(f'routing:{engagement}', 'endpoints')
+                    pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{endpoints[6:].replace(identifier, name)}')
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()        
-        
-        
-        
-        if name != identifier:
-            pipe.delete(_name_key)
+            pipe.execute()
+
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -955,8 +953,11 @@ def delete_outbound_interconnection(identifier: str, response: Response):
     result = None
     try:
         _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
+        _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged outbound interconnection'}; return
         # get current data
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
@@ -966,7 +967,7 @@ def delete_outbound_interconnection(identifier: str, response: Response):
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
         _sip_ips = _data.get('sip_ips')
-        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:gateways'))
+        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways'))
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
@@ -1343,7 +1344,7 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'routing:record:{engagement}', 'routing', name)
+                pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{name}')
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
