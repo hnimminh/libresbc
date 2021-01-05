@@ -42,14 +42,13 @@ def rembytes(data):
 
 def redishash(data: dict) -> dict:
     if isinstance(data, dict):
-        for key in list(data):
-            value = data.get(key)
+        for key, value in data.items():
             if isinstance(value, bool):
                 if value: data.update({key: ':bool:true'})
                 else: data.update({key: ':bool:false'})
             elif isinstance(value, int): data.update({key: f':int:{value}'})
             if isinstance(value, (list,set)): data.update({key: f':list:{_delimiter_.join(value)}'})
-            if value is None: data.pop(key)
+            if value is None: data.update({key: ':none:'})
     return data
 
 
@@ -61,4 +60,5 @@ def jsonhash(data: dict) -> dict:
                 if value == ':bool:false': data.update({key: False})
                 if value.startswith(':int:'): data.update({key: int(value[5:])}) 
                 if value.startswith(':list:'): data.update({key: value[6:].split(_delimiter_)})
+                if value.startswith(':none:'): data.update({key: None})
     return data
