@@ -59,6 +59,8 @@ def jsonhash(data: dict) -> dict:
                 if value == ':bool:true': data.update({key: True})
                 if value == ':bool:false': data.update({key: False})
                 if value.startswith(':int:'): data.update({key: int(value[5:])}) 
-                if value.startswith(':list:'): data.update({key: value[6:].split(_delimiter_)})
+                if value.startswith(':list:'): 
+                    if value==':list:': data.update({key: []})
+                    else: data.update({key: value[6:].split(_delimiter_)})
                 if value.startswith(':none:'): data.update({key: None})
     return data
