@@ -3,7 +3,7 @@ import re
 import json
 
 import redis
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, root_validator
 from typing import Optional, List
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
@@ -44,7 +44,7 @@ def listify(string, delimiter=':') -> list:
     return string.split(delimiter)
 
 def getnameid(string) -> str:
-    return string.split(':')
+    return string.split(':')[-1]
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
@@ -657,6 +657,11 @@ class TransportEnum(str, Enum):
     TCP = "TCP"
     TLS = "TLS"
 
+class CidTypeEnum(str, Enum):
+    none = 'none'
+    rpid = 'rpid'
+    pidd = 'pid'
+
 class GatewayModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
@@ -668,11 +673,12 @@ class GatewayModel(BaseModel):
     realm: str = Field(default='', description='digest auth realm')
     reigister: bool = Field(default=False, description='register')
     register_proxy: str = Field(default='', description='proxy address to register')
-    sip_cid_type: str = Field(default='none', description='caller id type: rpid, pid, none')
+    sip_cid_type: CidTypeEnum = Field(default='none', description='caller id type: rpid, pid, none')
     caller_id_in_from: bool = Field(default=False, description='caller id in from hearder')
-    ping: int = Field(default=0, ge=5, le=3600, description='the period (second) to send SIP OPTION')
-    ping_max: int = Field(default=1, ge=1, le=31, description='number of success pings to declaring a gateway up')
-    ping_min: int = Field(default=1, ge=1, le=31,description='number of failure pings to declaring a gateway down')
+    healthcheck: bool = Field(default=True, description='healthcheck this gateway by ping SIP OPTION')
+    ping: Optional[int] = Field(default=300, ge=5, le=3600, description='the period (second) to send SIP OPTION')
+    ping_max: Optional[int] = Field(default=1, ge=1, le=31, description='number of success pings to declaring a gateway up')
+    ping_min: Optional[int] = Field(default=1, ge=1, le=31,description='number of failure pings to declaring a gateway down')
     privacy: str = Field(default='no', description='caller privacy on calls')
 
 
@@ -1262,7 +1268,7 @@ _JUMPS = 'jumps'
 _ROUTE = 'route'
 
 class RoutingVariableEnum(str, Enum):
-    _any_ = '_any_'
+    DONTCARE = 'DONTCARE'
     destination_number = 'destination_number'
     caller_id = 'caller_id'
     auth_user = 'auth_user'
@@ -1283,7 +1289,7 @@ class RoutingTableModel(BaseModel):
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action, <{_QUERY}>: find nexthop by query routing record; <{_QUERY}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
     endpoint: Optional[str] = Field(description='designated endpoint for action')
     # validation
-    @validator(...)
+    @root_validator(pre=True)
     def routing_table_agreement(cls, values):
         action = values.get('action')
         endpoint = values.get('endpoint')
@@ -1452,7 +1458,7 @@ class RoutingRecordModel(BaseModel):
     endpoints: List[str] = Field(max_items=2, description='designated endpoint for action')
     load: Optional[int] = Field(ge=0, le=100, description='call load percentage over total 100, that apply for endpoints')
     # validation
-    @validator(...)
+    @root_validator(pre=True)
     def routing_record_agreement(cls, values):
         table = values.get('table')
         action = values.get('action')
