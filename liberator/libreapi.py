@@ -4,7 +4,7 @@ import json
 
 import redis
 from pydantic import BaseModel, Field, validator, root_validator
-from typing import Optional, List
+from typing import Optional, List, Dict
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response, Path
@@ -615,41 +615,6 @@ def list_translation_class(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def check_existent_codec(nameid):
-    if not rdbconn.exists(f'class:codec:{nameid}'):
-        raise ValueError('nonexistent class')
-    return nameid
-
-def check_existent_capacity(nameid):
-    if not rdbconn.exists(f'class:capacity:{nameid}'):
-        raise ValueError('nonexistent class')
-    return nameid
-
-def check_existent_manipulation(nameids):
-    for nameid in nameids:
-        if not rdbconn.exists(f'class:manipulation:{nameid}'):
-            raise ValueError('nonexistent class')
-        return nameid
-
-def check_existent_translation(nameids):
-    for nameid in nameids:
-        if not rdbconn.exists(f'class:translation:{nameid}'):
-            raise ValueError('nonexistent class')
-        return nameids
-
-def check_existent_sipprofile(nameid):
-    if not rdbconn.exists(f'sipprofile:{nameid}'):
-        raise ValueError('nonexistent sipprofile')
-    return nameid
-
-def check_cluster_node(nodes):
-    for node in nodes:
-        if node != '_ALL_' and node not in CLUSTERMEMBERS:
-            raise ValueError('nonexistent node')
-    return nodes
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # GATEWAY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TransportEnum(str, Enum):
@@ -799,6 +764,43 @@ def list_gateway(response: Response):
     finally:
         return result
 
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def check_existent_codec(codec):
+    if not rdbconn.exists(f'class:codec:{codec}'):
+        raise ValueError('nonexistent class')
+    return codec
+
+def check_existent_capacity(capacity):
+    if not rdbconn.exists(f'class:capacity:{capacity}'):
+        raise ValueError('nonexistent class')
+    return capacity
+
+def check_existent_manipulation(manipulations):
+    for manipulation in manipulations:
+        if not rdbconn.exists(f'class:manipulation:{manipulation}'):
+            raise ValueError('nonexistent class')
+    return manipulations
+
+def check_existent_translation(translations):
+    for translation in translations:
+        if not rdbconn.exists(f'class:translation:{translation}'):
+            raise ValueError('nonexistent class')
+    return translations
+
+def check_existent_sipprofile(sipprofile):
+    if not rdbconn.exists(f'sipprofile:{sipprofile}'):
+        raise ValueError('nonexistent sipprofile')
+    return sipprofile
+
+def check_cluster_node(nodes):
+    for node in nodes:
+        if node != '_ALL_' and node not in CLUSTERMEMBERS:
+            raise ValueError('nonexistent node')
+    return nodes
+
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OUTBOUND INTERCONECTION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -811,23 +813,24 @@ class Distribution(str, Enum):
     hash_callid = 'hash_callid'
     weight_based = 'weight_based'
 
-def check_existent_gateway(gateway):
-    if not rdbconn.exists(f'gateway:{gateway}'):
-        raise ValueError('nonexistent gateway')
-    return gateway
+def check_existent_gateway(gateways):
+    for gateway in gateways:
+        if not rdbconn.exists(f'gateway:{gateway}'):
+            raise ValueError('nonexistent gateway')
+    return gateways
 
 class GatewayWeightModel(BaseModel):
     gateway: str = Field(description='outbound gateway name')
     weight: int = Field(default=1, ge=0, le=99, description='weight based load distribution')
     # validation
-    _existentgateway = validator('gateway')(check_existent_gateway)
+    #_existentgateway = validator('gateway')(check_existent_gateway)
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
-    gateways: List[GatewayWeightModel] = Field(min_items=1, max_item=10, description='list of outbound gateways')
+    gateways: Dict[str, int] = Field(description='gateways hash map with gateway name and weight')
     rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     codec_class: str = Field(description='nameid of codec class')
     capacity_class: str = Field(description='nameid of capacity class')
@@ -839,10 +842,10 @@ class OutboundInterconnection(BaseModel):
     _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
-
+    _existentgateway = validator('gateways')(check_existent_gateway)
 
 @librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
@@ -858,6 +861,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
+        logify(f'{data}')
         # verification
         nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
         if rdbconn.exists(name_key):
