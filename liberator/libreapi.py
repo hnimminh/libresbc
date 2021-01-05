@@ -861,7 +861,6 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
-        logify(f'{data}')
         # verification
         nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
         if rdbconn.exists(name_key):
