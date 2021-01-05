@@ -40,18 +40,20 @@ def rembytes(data):
     if isinstance(data, set):         return set(map(rembytes, data))
 
 
-def redishash(data):
+def redishash(data: dict) -> dict:
     if isinstance(data, dict):
-        for key, value in data.items():
+        for key in list(data):
+            value = data.get(key)
             if isinstance(value, bool):
                 if value: data.update({key: ':bool:true'})
                 else: data.update({key: ':bool:false'})
             elif isinstance(value, int): data.update({key: f':int:{value}'})
             if isinstance(value, (list,set)): data.update({key: f':list:{_delimiter_.join(value)}'})
+            if value is None: data.pop(key)
     return data
 
 
-def jsonhash(data):
+def jsonhash(data: dict) -> dict:
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, str):
