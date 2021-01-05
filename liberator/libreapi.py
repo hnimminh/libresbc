@@ -813,24 +813,24 @@ class Distribution(str, Enum):
     hash_callid = 'hash_callid'
     weight_based = 'weight_based'
 
+class WeightType(int):
+    int = Field(default=1, ge=0, le=99, description='weight value use for distribution')
+
+class GatewayName(str):
+    str = Field(regex=_NAME_, max_length=32, description='gateway name')
+
 def check_existent_gateway(gateways):
     for gateway in gateways:
         if not rdbconn.exists(f'gateway:{gateway}'):
             raise ValueError('nonexistent gateway')
     return gateways
 
-class GatewayWeightModel(BaseModel):
-    gateway: str = Field(description='outbound gateway name')
-    weight: int = Field(default=1, ge=0, le=99, description='weight based load distribution')
-    # validation
-    #_existentgateway = validator('gateway')(check_existent_gateway)
-
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
-    gateways: Dict[str, int] = Field(description='gateways hash map with gateway name and weight')
+    gateways: Dict[GatewayName, WeightType] = Field(description='hash map with key is gateway name value is weight')
     rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     codec_class: str = Field(description='nameid of codec class')
     capacity_class: str = Field(description='nameid of capacity class')
@@ -862,6 +862,8 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
         # verification
+        logify(f'{data}')
+        logify(f'{gateways}')
         nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent outbound interconnection'}; return
@@ -1008,8 +1010,8 @@ def detail_outbound_interconnection(identifier: str, response: Response):
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
-        result = rdbconn.hgetall(_name_key)
-        gateways = rdbconn.hgetall(f'intcon:{_nameid}:gateways')
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways'))
         engagements = rdbconn.smembers(_engaged_key)
         result.update({'gateways': gateways, 'engagements': engagements})
         response.status_code = 200
@@ -1036,7 +1038,7 @@ def list_outbound_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'name': getnameid(mainkey), 'desc': detail[0], 'sipprofile': detail[1]})
+            data.append({'name': detail[0], 'desc': detail[1], 'sipprofile': detail[2]})
 
         response.status_code, result = 200, data
     except Exception as e:
