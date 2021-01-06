@@ -152,7 +152,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/sipprofile/{identifier}", status_code=200)
-def update_sipprofile(reqbody: SIPProfileModel, identifier: str, response: Response):
+def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -182,7 +182,7 @@ def update_sipprofile(reqbody: SIPProfileModel, identifier: str, response: Respo
         return result
 
 @librerouter.delete("/libresbc/sipprofile/{identifier}", status_code=200)
-def delete_sipprofile(identifier: str, response: Response):
+def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'sipprofile:{identifier}'
@@ -202,7 +202,7 @@ def delete_sipprofile(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/sipprofile/{identifier}", status_code=200)
-def detail_sipprofile(identifier: str, response: Response):
+def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'sipprofile:{identifier}'
@@ -277,7 +277,7 @@ def create_codec_class(reqbody: CodecModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/class/codec/{identifier}", status_code=200)
-def update_codec_class(reqbody: CodecModel, identifier: str, response: Response):
+def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -307,7 +307,7 @@ def update_codec_class(reqbody: CodecModel, identifier: str, response: Response)
         return result
 
 @librerouter.delete("/libresbc/class/codec/{identifier}", status_code=200)
-def delete_codec_class(identifier: str, response: Response):
+def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:codec:{identifier}'
@@ -327,7 +327,7 @@ def delete_codec_class(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/class/codec/{identifier}", status_code=200)
-def detail_codec_class(identifier: str, response: Response):
+def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:codec:{identifier}'
@@ -398,7 +398,7 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/class/capacity/{identifier}", status_code=200)
-def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Response):
+def update_capacity_class(reqbody: CapacityModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -428,7 +428,7 @@ def update_capacity_class(reqbody: CapacityModel, identifier: str, response: Res
         return result
 
 @librerouter.delete("/libresbc/class/capacity/{identifier}", status_code=200)
-def delete_capacity_class(identifier: str, response: Response):
+def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:capacity:{identifier}'
@@ -448,7 +448,7 @@ def delete_capacity_class(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/class/capacity/{identifier}", status_code=200)
-def detail_capacity_class(identifier: str, response: Response):
+def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:capacity:{identifier}'
@@ -521,7 +521,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/class/translation/{identifier}", status_code=200)
-def update_translation_class(reqbody: TranslationModel, identifier: str, response: Response):
+def update_translation_class(reqbody: TranslationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -551,7 +551,7 @@ def update_translation_class(reqbody: TranslationModel, identifier: str, respons
         return result
 
 @librerouter.delete("/libresbc/class/translation/{identifier}", status_code=200)
-def delete_translation_class(identifier: str, response: Response):
+def delete_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:translation:{identifier}'
@@ -571,7 +571,7 @@ def delete_translation_class(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/class/translation/{identifier}", status_code=200)
-def detail_translation_class(identifier: str, response: Response):
+def detail_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'class:translation:{identifier}'
@@ -669,7 +669,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/gateway/{identifier}", status_code=200)
-def update_gateway(reqbody: GatewayModel, identifier: str, response: Response):
+def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -701,7 +701,7 @@ def update_gateway(reqbody: GatewayModel, identifier: str, response: Response):
         return result
 
 @librerouter.delete("/libresbc/gateway/{identifier}", status_code=200)
-def delete_gateway(identifier: str, response: Response):
+def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'gateway:{identifier}'
@@ -721,7 +721,7 @@ def delete_gateway(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/gateway/{identifier}", status_code=200)
-def detail_gateway(identifier: str, response: Response):
+def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'gateway:{identifier}'
@@ -820,9 +820,11 @@ class GatewayName(str):
     str = Field(regex=_NAME_, max_length=32, description='gateway name')
 
 def check_existent_gateway(gateways):
-    for gateway in gateways:
+    for gateway, weight in gateways:
         if not rdbconn.exists(f'gateway:{gateway}'):
             raise ValueError('nonexistent gateway')
+        if weight < 0 or weight > 127:
+            raise ValueError('weight must in range 0-127')
     return gateways
 
 class OutboundInterconnection(BaseModel):
@@ -887,7 +889,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         return result
 
 @librerouter.post("/libresbc/interconnection/outbound/{identifier}", status_code=200)
-def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier: str, response: Response):
+def update_outbound_interconnection(reqbody: OutboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -964,7 +966,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, identifier
         return result
 
 @librerouter.delete("/libresbc/interconnection/outbound/{identifier}", status_code=200)
-def delete_outbound_interconnection(identifier: str, response: Response):
+def delete_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
@@ -1002,7 +1004,7 @@ def delete_outbound_interconnection(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/interconnection/outbound/{identifier}", status_code=200)
-def detail_outbound_interconnection(identifier: str, response: Response):
+def detail_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _nameid = f'out:{identifier}'
@@ -1036,9 +1038,10 @@ def list_outbound_interconnect(response: Response):
             pipe.hmget(mainkey, 'name', 'desc', 'sipprofile')
         details = pipe.execute()
 
-        data = list()
+        data = list(); PYPATTERN = re.compile('^intcon:out:[^:]+$')
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'name': detail[0], 'desc': detail[1], 'sipprofile': detail[2]})
+            if PYPATTERN.match(mainkey):
+                data.append({'name': detail[0], 'desc': detail[1], 'sipprofile': detail[2]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1122,7 +1125,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
 
 
 @librerouter.put("/libresbc/interconnection/inbound/{identifier}", status_code=200)
-def update_inbound_interconnection(reqbody: InboundInterconnection, identifier: str, response: Response):
+def update_inbound_interconnection(reqbody: InboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -1192,7 +1195,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, identifier: 
 
 
 @librerouter.delete("/libresbc/interconnection/inbound/{identifier}", status_code=200)
-def delete_inbound_interconnection(identifier: str, response: Response):
+def delete_inbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _nameid = f'in:{identifier}'; _name_key = f'intcon:{_nameid}'
@@ -1226,7 +1229,7 @@ def delete_inbound_interconnection(identifier: str, response: Response):
 
 
 @librerouter.get("/libresbc/interconnection/inbound/{identifier}", status_code=200)
-def detail_inbound_interconnection(identifier: str, response: Response):
+def detail_inbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'intcon:in:{identifier}'
@@ -1265,7 +1268,6 @@ def list_inbound_interconnect(response: Response):
         logify(f"module=liberator, space=libreapi, action=list_inbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1335,7 +1337,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         return result
 
 @librerouter.put("/libresbc/routing/table/{identifier}", status_code=200)
-def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: Response):
+def update_routing_table(reqbody: RoutingTableModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
@@ -1372,7 +1374,7 @@ def update_routing_table(reqbody: RoutingTableModel, identifier: str, response: 
         return result
 
 @librerouter.delete("/libresbc/routing/table/{identifier}", status_code=200)
-def delete_routing_table(identifier: str, response: Response):
+def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
@@ -1405,7 +1407,7 @@ def delete_routing_table(identifier: str, response: Response):
         return result
 
 @librerouter.get("/libresbc/routing/table/{identifier}", status_code=200)
-def detail_routing_table(identifier: str, response: Response):
+def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         _name_key = f'routing:table:{identifier}'
