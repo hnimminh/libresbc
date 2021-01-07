@@ -44,7 +44,9 @@ def listify(string, delimiter=':') -> list:
     return string.split(delimiter)
 
 def getnameid(string) -> str:
-    return string.split(':')[-1]
+    array = string.split(':')
+    if array[-1]: return array[-1]
+    else: return array[-2]
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
@@ -813,26 +815,25 @@ class Distribution(str, Enum):
     hash_callid = 'hash_callid'
     weight_based = 'weight_based'
 
-class WeightType(int):
-    int = Field(default=1, ge=0, le=99, description='weight value use for distribution')
 
-class GatewayName(str):
-    str = Field(regex=_NAME_, max_length=32, description='gateway name')
+def check_existent_gateway(gateway):
+    if not rdbconn.exists(f'gateway:{gateway}'):
+        raise ValueError('nonexistent gateway')
+    return gateway
 
-def check_existent_gateway(gateways):
-    for gateway, weight in gateways:
-        if not rdbconn.exists(f'gateway:{gateway}'):
-            raise ValueError('nonexistent gateway')
-        if weight < 0 or weight > 127:
-            raise ValueError('weight must in range 0-127')
-    return gateways
+class DistributedGatewayModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='gateway name')
+    weight:  int = Field(default=1, ge=0, le=127, description='weight value use for distribution')
+    # validation
+    _existentgateway = validator('name')(check_existent_gateway)
+
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
-    gateways: Dict[GatewayName, WeightType] = Field(description='hash map with key is gateway name value is weight')
+    gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
     rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     codec_class: str = Field(description='nameid of codec class')
     capacity_class: str = Field(description='nameid of capacity class')
@@ -847,7 +848,6 @@ class OutboundInterconnection(BaseModel):
     _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
-    _existentgateway = validator('gateways')(check_existent_gateway)
 
 @librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
@@ -856,7 +856,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
-        gateways = data.get('gateways')
+        gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtp_nets = set(data.get('rtp_nets'))
         codec_class = data.get('codec_class')
         capacity_class = data.get('capacity_class')
@@ -864,8 +864,6 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
         # verification
-        logify(f'{data}')
-        logify(f'{gateways}')
         nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent outbound interconnection'}; return
@@ -874,10 +872,10 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
-        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         pipe.execute()
@@ -888,14 +886,14 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     finally:
         return result
 
-@librerouter.post("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+@librerouter.put("/libresbc/interconnection/outbound/{identifier}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
-        gateways = data.get('gateways')
+        gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtp_nets = set(data.get('rtp_nets'))
         codec_class = data.get('codec_class')
         capacity_class = data.get('capacity_class')
@@ -924,10 +922,10 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
-        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
-        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
         pipe.delete(f'intcon:{_nameid}:gateways')
         # processing: adding new-one
@@ -935,10 +933,10 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
-        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         # change identifier
@@ -988,10 +986,10 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
-        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
-        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
         pipe.delete(f'intcon:{_nameid}:gateways')
         pipe.delete(_name_key)
@@ -1013,7 +1011,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways'))
+        gateways = [{'name': k, 'weigth': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways')).items()]
         engagements = rdbconn.smembers(_engaged_key)
         result.update({'gateways': gateways, 'engagements': engagements})
         response.status_code = 200
@@ -1110,10 +1108,10 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
-        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -1166,10 +1164,10 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         pipe.srem(f'engagement:routing:{_routing}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
-        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
-        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}') 
         # processing: adding new-one
         data.update({'sip_ips': sip_ips, 'rtp_nets': rtp_nets, 'nodes': nodes })
@@ -1177,10 +1175,10 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:capacity:{capacity_class}', nameid)
-        for translation in translation_classes: pipe.sadd(f'engagement:translation:{translation}', nameid)
-        for manipulation in manipulation_classes: pipe.sadd(f'engagement:manipulation:{manipulation}', nameid)
+        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
+        for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
+        for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)   
         # change identifier
         if name != identifier:
@@ -1213,10 +1211,10 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
 
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:capacity:{_capacity_class}', _nameid)
-        for translation in _translation_classes: pipe.srem(f'engagement:translation:{translation}', _nameid)
-        for manipulation in _manipulation_classes: pipe.srem(f'engagement:manipulation:{manipulation}', _nameid)
+        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
+        for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
+        for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}')  
         pipe.delete(_name_key)
         pipe.execute()
