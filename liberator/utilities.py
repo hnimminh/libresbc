@@ -47,8 +47,10 @@ def redishash(data: dict) -> dict:
                 if value: data.update({key: ':bool:true'})
                 else: data.update({key: ':bool:false'})
             elif isinstance(value, int): data.update({key: f':int:{value}'})
-            if isinstance(value, (list,set)): data.update({key: f':list:{_delimiter_.join(value)}'})
-            if value is None: data.update({key: ':none:'})
+            elif isinstance(value, float): data.update({key: f':float:{value}'})
+            elif isinstance(value, (list,set)): data.update({key: f':list:{_delimiter_.join(value)}'})
+            elif value is None: data.update({key: ':none:'})
+            else: pass
     return data
 
 
@@ -56,11 +58,14 @@ def jsonhash(data: dict) -> dict:
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, str):
-                if value == ':bool:true': data.update({key: True})
-                if value == ':bool:false': data.update({key: False})
-                if value.startswith(':int:'): data.update({key: int(value[5:])}) 
-                if value.startswith(':list:'): 
+                if value.startswith(':bool:'):
+                    if value == ':bool:true': data.update({key: True})
+                    if value == ':bool:false': data.update({key: False})
+                elif value.startswith(':int:'): data.update({key: int(value[5:])}) 
+                elif value.startswith(':float:'): data.update({key: float(value[7:])}) 
+                elif value.startswith(':list:'): 
                     if value==':list:': data.update({key: []})
                     else: data.update({key: value[6:].split(_delimiter_)})
-                if value.startswith(':none:'): data.update({key: None})
+                elif value.startswith(':none:'): data.update({key: None})
+                else: pass
     return data
