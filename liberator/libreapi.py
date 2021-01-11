@@ -1472,6 +1472,7 @@ class RoutingRecordModel(BaseModel):
         table = values.get('table')
         action = values.get('action')
         endpoints = values.get('endpoints')
+        load = values.get('load')
 
         if not rdbconn.exists(f'routing:table:{table}'):
             raise ValueError('nonexistent routing table')
@@ -1484,18 +1485,18 @@ class RoutingRecordModel(BaseModel):
                 raise ValueError(f'{_JUMPS} action require at least 1 routing table in endpoints')
             else:
                 values.update({'endpoints': endpoints[0]})
-                value.pop('load')
+                values.pop('load')
+            # check endpoint of _JUMP
+            endpoint = endpoints[0]
+            if not rdbconn.exists(f'routing:table:{endpoint}'): 
+                raise ValueError('nonexistent routing table for nexthop')
         if action==_ROUTE:
             if len(endpoints)!=2:
                 raise ValueError(f'{_ROUTE} action require 2 outbound interconnections in endpoints')
             if load==None:
                 raise ValueError(f'{_ROUTE} action require load param')
-
-        for endpoint in endpoints:
-            if action==_JUMPS:
-                if not rdbconn.exists(f'routing:table:{endpoint}'): 
-                    raise ValueError('nonexistent routing table for nexthop')
-            if action==_ROUTE:
+            # check endpoint of _ROUTE
+            for endpoint in endpoints:
                 if not rdbconn.exists(f'intcon:out:{endpoint}'):
                     raise ValueError('nonexistent outbound interconnect')
         return values
