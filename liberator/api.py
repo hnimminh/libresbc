@@ -58,4 +58,4 @@ def heartbeat():
 # ROUTER SEGMENTS API
 # ------------------------------------------------------
 httpapi.include_router(librerouter, dependencies=[Depends(reqjson)])
-httpapi.include_router(provisioning.router)
+httpapi.include_router(fsxmlrouter)
