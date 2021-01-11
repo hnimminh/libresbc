@@ -1,0 +1,11 @@
+<!-- File for setting global variables -->
+<include>
+  <X-PRE-PROCESS cmd="set" data="elsuser={{user}}"/>
+  <X-PRE-PROCESS cmd="set" data="elspasswd={{password}}"/>
+  <X-PRE-PROCESS cmd="set" data="console_loglevel=info"/>
+  <X-PRE-PROCESS cmd="set" data="fsxmlapi=http://127.0.0.1:8080/fsxmlapi"/>
+  <X-PRE-PROCESS cmd="set" data="db_location=/dev/shm"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_start_port={{sip.rtp_start_port}}"/>
+  <X-PRE-PROCESS cmd="set" data="rtp_end_port={{sip.rtp_end_port}}"/>
+  <X-PRE-PROCESS cmd="set" data="call_duration_limit=86400"/>
+</include>
