@@ -1306,7 +1306,7 @@ class RoutingTableModel(BaseModel):
             if not endpoint:
                 raise ValueError('endpoint must be provided for route action')
             else:
-                if rdbconn.exists(f'intcon:out:{endpoint}'):
+                if not rdbconn.exists(f'intcon:out:{endpoint}'):
                     raise ValueError('endpoint must be provided for route action')
         else:
             if 'endpoint' in values: values.pop('endpoint')
