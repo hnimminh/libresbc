@@ -1,9 +1,10 @@
 ## REFERENCE:
-* [RFC3261])(https://tools.ietf.org/html/rfc3261)
+* [RFC3261](https://tools.ietf.org/html/rfc3261)
 * [FAST API](https://fastapi.tiangolo.com/)
 * [PYDANTIC](https://github.com/samuelcolvin/pydantic/)
 * [LUA WIKI](https://en.wikipedia.org/wiki/Lua_(programming_language)) 
 * [LUA CHEATSHEET](https://devhints.io/luas)
+* [FREESWITCH](https://freeswitch.org/confluence/display/FREESWITCH/Configuring+FreeSWITCH)
 * [REDIS](https://redis.io/commands/)
 * [CODEC](https://freeswitch.org/confluence/display/FREESWITCH/Codec+Negotiation)
 * [SOFIA CONFIG](https://freeswitch.org/confluence/display/FREESWITCH/Sofia+Configuration+Files)
@@ -31,4 +32,3 @@
 * [CHANNEL STATE](https://freeswitch.org/confluence/display/FREESWITCH/Channel+States)
 * [EVENT LIST](https://freeswitch.org/confluence/display/FREESWITCH/Event+List#EventList-1.20CHANNEL_ORIGINATEevent) 
 * [COMMANDS](https://freeswitch.org/confluence/display/FREESWITCH/mod_commands)
-s
