@@ -1,0 +1,5 @@
+<list name="INTERCONNECTION" default="deny">
+{% for ip_address in ip_addresses %}  
+  <node type="allow" cidr="{{ip_address}}/32"/>
+{% endfor %}
+</list>
