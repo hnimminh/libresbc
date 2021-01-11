@@ -1275,6 +1275,8 @@ _QUERY = 'query'
 _BLOCK = 'block'
 _JUMPS = 'jumps'
 _ROUTE = 'route'
+# reserved for value empty string
+__EMPTY_STRING__ = '__empty_string__'
 
 class RoutingVariableEnum(str, Enum):
     DONTCARE = 'DONTCARE'
@@ -1462,7 +1464,7 @@ class RoutingRecordActionEnum(str, Enum):
 class RoutingRecordModel(BaseModel):
     table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
-    value: str = Field(max_length=32, description='value of variable that declared in routing table')
+    value: str = Field(max_length=128, description='value of variable that declared in routing table')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action, <{_JUMPS}>: jumps to other routing table; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
     endpoints: List[str] = Field(max_items=2, description='designated endpoint for action')
     load: Optional[int] = Field(default=100, ge=0, le=100, description='call load percentage over total 100, that apply for endpoints')
@@ -1582,6 +1584,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
     result = None
     try:
+        if value == __EMPTY_STRING__: value = ''
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
