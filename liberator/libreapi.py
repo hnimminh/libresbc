@@ -1489,7 +1489,7 @@ class RoutingRecordModel(BaseModel):
             # check endpoint of _JUMP
             endpoint = endpoints[0]
             if not rdbconn.exists(f'routing:table:{endpoint}'): 
-                raise ValueError('nonexistent routing table for nexthop')
+                raise ValueError('nonexistent routing table in first endpoint')
         if action==_ROUTE:
             if len(endpoints)!=2:
                 raise ValueError(f'{_ROUTE} action require 2 outbound interconnections in endpoints')
