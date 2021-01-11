@@ -1578,7 +1578,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         return result
 
 
-@librerouter.delete("/libresbc/routing/record/{table}/{match}:{value}:", status_code=200)
+@librerouter.delete("/libresbc/routing/record/{table}/{match}/{value}", status_code=200)
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
     result = None
     try:
@@ -1605,7 +1605,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
     finally:
         return result
 
-@librerouter.get("/libresbc/routing/record/{table}:", status_code=200)
+@librerouter.get("/libresbc/routing/record/{table}", status_code=200)
 def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
     result = None
     try:
