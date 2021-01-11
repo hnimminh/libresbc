@@ -1053,7 +1053,7 @@ def list_outbound_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def check_existent_routing(table):
-    if not rdbconn.exists(f'routing:{table}'):
+    if not rdbconn.exists(f'routing:table:{table}'):
         raise ValueError('nonexistent routing')
     return table
 
