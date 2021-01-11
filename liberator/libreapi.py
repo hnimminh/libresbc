@@ -945,9 +945,9 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                if engagement.starwiths('table'):
+                if engagement.startswith('table'):
                     pipe.hset(f'routing:{engagement}', 'endpoint', name)
-                if engagement.startwiths('record'):
+                if engagement.startswith('record'):
                     endpoints = rdbconn.hget(f'routing:{engagement}', 'endpoints')
                     pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{endpoints[6:].replace(identifier, name)}')
             if rdbconn.exists(_engaged_key):
