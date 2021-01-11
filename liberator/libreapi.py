@@ -1327,7 +1327,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
         if endpoint: 
-            pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
+            pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1353,9 +1353,9 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         _endpoint = rdbconn.hget(_name_key, 'endpoint')
         # transaction block
         pipe.multi()
-        if _endpoint: pipe.srem(f'egagement:intcon:out:{_endpoint}', _nameid)
+        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.hmset(name_key, redishash(data))
-        if endpoint: pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
+        if endpoint: pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -1395,7 +1395,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
                     response.status_code, result = 400, {'error': 'routing table in used'}; return
         # get current data
         _endpoint = rdbconn.hget(_name_key, 'endpoint')
-        if _endpoint: pipe.srem(f'egagement:intcon:out:{_endpoint}', _nameid)
+        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -1523,10 +1523,10 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         pipe.hmset(record_key, redishash(data))
         if action==_ROUTE:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if action==_JUMPS:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:routing:table:{endpoint}', nameid)
+                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -1560,17 +1560,17 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         pipe.hmset(record_key, redishash(data))
         if action==_ROUTE:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:intcon:out:{endpoint}', nameid)
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if action==_JUMPS:
             for endpoint in endpoints:
-                pipe.sadd(f'egagement:routing:table:{endpoint}', nameid)
+                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
         # remove new-one
         if _action==_ROUTE:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:intcon:out:{endpoint}', nameid)
+                pipe.srem(f'engagement:intcon:out:{endpoint}', nameid)
         if _action==_JUMPS:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:routing:table:{endpoint}', nameid)
+                pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1596,10 +1596,10 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
         pipe.delete(record_key)
         if _action==_ROUTE:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:intcon:out:{endpoint}', nameid)
+                pipe.srem(f'engagement:intcon:out:{endpoint}', nameid)
         if _action==_JUMPS:
             for endpoint in _endpoints:
-                pipe.srem(f'egagement:routing:table:{endpoint}', nameid)
+                pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
