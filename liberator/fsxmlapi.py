@@ -6,7 +6,7 @@ import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from configuration import (ESL_HOST, ESL_PORT, ESL_USER, ESL_SECRET,
+from configuration import (ESL_HOST, ESL_PORT, ESL_SECRET,
                            MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 

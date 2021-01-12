@@ -32,7 +32,6 @@ CLUSTERMEMBERS = {NODEID}
 #-----------------------------------------------------------------------------------------------------
 # CALL ENGINE
 #-----------------------------------------------------------------------------------------------------
-ESL_HOST = '{{callengine.socket.host}}'
-ESL_PORT = {{callengine.socket.port}}
-ESL_USER = '{{callengine.socket.user}}'
-ESL_SECRET = '{{callengine.socket.secret}}'
+ESL_HOST = '127.0.0.1'
+ESL_PORT = 8021
+ESL_SECRET = '{{callengine.secret}}'
