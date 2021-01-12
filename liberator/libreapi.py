@@ -12,7 +12,7 @@ from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, CLUSTERNAME, CLUSTERMEMBERS,
-                           SWCODECS, MAX_CPS, MAX_SESSION, 
+                           SWCODECS, MAX_SPS, MAX_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash
 
@@ -378,7 +378,7 @@ def list_codec_class(response: Response):
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_CPS//2, description='call per second')
+    cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_SPS//2, description='call per second')
     ccs: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_SESSION//2, description='concurrent calls')
 
 

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from configuration import (ESL_HOST, ESL_PORT, ESL_USER, ESL_SECRET,
-                           MAX_CPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
+                           MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
 from utilities import logify, get_request_uuid
@@ -25,7 +25,7 @@ templates = Jinja2Templates(directory="templates/fsxml")
 def switch(request: Request, response: Response):
     try:
         result = templates.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "max_sessions":MAX_SESSION, "sessions_per_second":MAX_CPS, "rtp_start_port":FIRST_RTP_PORT, "rtp_end_port":LAST_RTP_PORT},
+                                            {"request": request, "max_sessions":MAX_SESSION, "sessions_per_second":MAX_SPS, "rtp_start_port":FIRST_RTP_PORT, "rtp_end_port":LAST_RTP_PORT},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
