@@ -23,8 +23,8 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 pipe = rdbconn.pipeline()
 
 # PATTERN
-_NAME_ = '^[a-zA-Z][a-zA-Z0-9_]+$'; _NAME_PATTERN = re.compile(_NAME_)
-_DIAL_ = '^[a-zA-Z0-9+#*]*$'; _DIAL_PATTERN = re.compile(_DIAL_)
+_NAME_ = '^[a-zA-Z][a-zA-Z0-9_]+$'
+_DIAL_ = '^[a-zA-Z0-9+#*@]*$'
 
 # API ROUTER DECLARATION
 librerouter = APIRouter()
