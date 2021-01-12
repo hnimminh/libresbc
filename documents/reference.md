@@ -1,6 +1,7 @@
 ## REFERENCE:
 * [RFC3261](https://tools.ietf.org/html/rfc3261)
 * [FAST API](https://fastapi.tiangolo.com/)
+* [STARLETTE](https://www.starlette.io/templates/)
 * [PYDANTIC](https://github.com/samuelcolvin/pydantic/)
 * [LUA WIKI](https://en.wikipedia.org/wiki/Lua_(programming_language)) 
 * [LUA CHEATSHEET](https://devhints.io/luas)
