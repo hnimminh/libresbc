@@ -1,0 +1,89 @@
+{% for sipprofile in sipprofiles %}
+        <profile name="{{sipprofile.name}}">
+          <gateways>
+{% for outsignalling in sipprofile.gateways %}  
+            <gateway name="{{gateway.name}}_{{gateway.transport}}_{{gateway.ip}}_{{gateway.port}}">
+              <param name="username" value="{{outparams[gateway.name].username}}"/>
+              <param name="password" value="{{outparams[gateway.name].password}}"/>
+              <param name="caller-id-in-from" value="true"/>
+              <param name="proxy" value="{{gateway.ip}}:{{gateway.port}};transport={{gateway.transport}}"/>
+              <param name="register" value="false"/>
+              <param name="extension-in-contact" value="true"/>
+              <param name="register-transport" value="{{gateway.transport}}"/>
+              <param name="ping" value="{{gateway.ping}}"/>
+            </gateway>
+{% endfor %}
+          </gateways>
+          <settings>
+            <param name="debug" value="0"/>
+            <param name="sip-trace" value="yes"/>
+            <param name="sip-capture" value="no"/>
+            <param name="user-agent-string" value="{{user_agent}}"/>
+            <!-- sdp username in o= and s= fields -->
+            <param name="username" value="root" />
+            <!-- call transfer and call forward setting -->
+            <param name="disable-transfer" value="true"/>
+            <param name="manual-redirect" value="true"/>
+            <!-- Do not send UPDATE after session established -->
+            <param name="send-display-update" value="false"/>
+            <!-- disable proxy media -->
+            <param name="inbound-proxy-media" value="false"/>
+            <!--  
+              'generous' permits the remote codec list have precedence and 'win' the codec negotiation and selection process
+              'greedy' forces a win by the local FreeSWITCH preference list
+              'scrooge' takes 'greedy' a step further, so that the FreeSWITCH wins even when the far side lies about capabilities during the negotiation process
+            -->
+            <param name="inbound-codec-negotiation" value="generous"/>
+            <!-- outbound profile need to be in late negotiation -->
+            <param name="inbound-late-negotiation" value="true"/>
+            <!-- turn of music-on-hold feature -->
+            <param name="disable-hold" value="true"/>
+            <!-- re-INVITE for hold/unhold is proxied to other end -->
+            <param name="proxy-hold" value="true"/>
+            <!-- Not use cng at the moment -->
+            <param name="suppress-cng" value="true"/>
+            <!-- Disable sending X-FS-Support header -->
+            <param name="pass-callee-id" value="false" />
+            <!-- Do not support session timer yet -->
+            <param name="enable-timer" value="false"/>
+            <!-- disable stun -->
+            <param name="stun-enabled" value="false"/>
+            <!-- let t38 passthrough for outfax -->
+            <param name="t38-passthru" value="true"/>
+            <!-- <param name="outbound-use-uuid-as-callid" value="true"/> -->
+            <param name="disable-register" value="true"/>
+            <param name="rtp-timer-name" value="soft"/>
+            <param name="media_timeout" value="900"/>
+            <param name="dtmf-type" value="rfc2833"/>
+            <param name="pass-rfc2833" value="true"/>
+            <param name="rtp-digit-delay" value="20"/>
+            <!--If you don't want to pass through timestamps from 1 RTP call to another (on a per call basis with rtp_rewrite_timestamps chanvar)-->
+            <param name="rtp-rewrite-timestamps" value="true"/>
+            <param name="local-network-acl" value="{{sipprofile.natspace|default('rfc1918.auto')}}"/>
+            <param name="dialplan" value="XML"/>
+            <param name="context" value="librectx"/>
+            <param name="dbname" value="/dev/shm/fs_sip_{{sipprofile.name}}.db"/>
+            <param name="enable-100rel" value="{{sipprofile.rel100|default('false')}}"/>
+            <param name="session-timeout" value="{{sipprofile.session_expires|default('1800')}}"/>
+            <param name="minimum-session-expires" value="{{sipprofile.min_se|default('120')}}"/>
+            <param name="sip-options-respond-503-on-busy" value="true"/>
+            <!-- set all listening ip by profile -->
+            <param name="rtp-ip" value="{{sipprofile.rtp_listen_ip}}"/>
+            <param name="sip-ip" value="{{sipprofile.sip_listen_ip}}"/>
+            <param name="ext-rtp-ip" value="autonat:{{sipprofile.rtp_advertising_ip}}"/>
+            <param name="ext-sip-ip" value="autonat:{{sipprofile.sip_advertising_ip}}"/>
+            <param name="sip-port" value="{{sipprofile.sip_port}}"/>
+            <!--TLS: BEGIN -->
+            <param name="tls" value="true"/>
+            <!--<param name="tls-only" value="true"/> -->
+            <param name="tls-bind-params" value="transport=tls"/>
+            <param name="tls-sip-port" value="{{sipprofile.sips_port}}"/>
+            <param name="tls-cert-dir" value="{{SIPS_CERT_DIRECTORY}}"/>
+            <param name="tls-verify-date" value="true"/>
+            <param name="tls-version" value="tlsv1.1,tlsv1.2"/>
+            <param name="tls-ciphers" value="ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"/>
+            <param name="tls-verify-policy" value="none"/>
+            <!--TLS: END -->
+          </settings>
+        </profile>
+{% endfor %}

@@ -19,6 +19,8 @@ REDIS_TIMEOUT = 5
 SWCODECS = ['ALAW', 'ULAW', 'G729']
 MAX_CPS = 200
 MAX_ACTIVE_SESSION = 60000
+FIRST_RTP_PORT = 10000
+LAST_RTP_PORT = 60000
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------
@@ -30,7 +32,7 @@ CLUSTERMEMBERS = {NODEID}
 #-----------------------------------------------------------------------------------------------------
 # CALL ENGINE
 #-----------------------------------------------------------------------------------------------------
-CES_HOST = '{{callengine.socket.host}}'
-CES_PORT = {{callengine.socket.port}}
-CES_USER = '{{callengine.socket.user}}'
-CES_SECRET = '{{callengine.socket.secret}}'
+ESL_HOST = '{{callengine.socket.host}}'
+ESL_PORT = {{callengine.socket.port}}
+ESL_USER = '{{callengine.socket.user}}'
+ESL_SECRET = '{{callengine.socket.secret}}'

@@ -1,7 +1,0 @@
-{% for peername in outsignallings %}
-<list name="{{peername}}">
-{% for outsignalling in outsignallings[peername] %}
-  <node name="{{outsignalling.name}}_{{outsignalling.transport}}_{{outsignalling.ip}}_{{outsignalling.port}}" weight="1"/>
-{% endfor %}
-</list>
-{% endfor %}

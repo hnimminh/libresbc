@@ -1,12 +1,132 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
   <X-PRE-PROCESS cmd="include" data="vars.xml"/>
-  <!--- BEGIN: CONFIGURATION PART -->
+  <!-- BEGIN: CONFIGURATION SECTION -->
   <section name="configuration" description="Various Configuration">
-    <X-PRE-PROCESS cmd="include" data="*.conf.xml"/>
+    <!-- ACL ACCESS CONTROL LIST -->
+    <configuration name="acl.conf" description="Network Lists">
+      <network-lists>
+        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/acl"/>
+      </network-lists>
+    </configuration>
+    <!-- CONSOLE LOGGER -->
+    <configuration name="console.conf" description="Console Logger">
+      <mappings>
+        <map name="all" value="console,debug,info,notice,warning,err,crit,alert"/>
+      </mappings>
+      <settings>
+        <param name="colorize" value="true"/>
+        <param name="loglevel" value="info"/>
+      </settings>
+    </configuration>
+    <!-- DISTRIBUTOR -->
+    <configuration name="distributor.conf" description="Distributor Configuration">
+      <lists>
+        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/distributor"/>
+      </lists>
+    </configuration>
+    <!-- EVENT SOCKET -->
+    <configuration name="event_socket.conf" description="Socket Client">
+      <settings>
+        <param name="nat-map" value="false"/>
+        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/event-socket"/>
+      </settings>
+    </configuration>
+    <!--- LOGFILE -->
+    <configuration name="logfile.conf" description="File Logging">
+      <settings>
+        <param name="rotate-on-hup" value="true"/>
+      </settings>
+      <profiles>
+        <profile name="default">
+          <settings>
+            <!-- At this length in bytes rotate the log file (0 for never) -->
+            <param name="rollover" value="104857600"/> 
+            	<!-- Maximum number of log files to keep before wrapping -->
+              <!-- If this parameter is enabled, the log filenames will not include a date stamp -->
+              <param name="maximum-rotate" value="32"/>
+            <param name="uuid" value="true" />
+          </settings>
+          <mappings>
+            <map name="all" value="console,info,notice,warning,err,crit,alert"/>
+          </mappings>
+        </profile>
+      </profiles>
+    </configuration>
+    <!--- AWESOME LUA -->
+    <configuration name="lua.conf" description="LUA Configuration">
+      <settings>
+        <!--
+        The following options identifies a lua script that is launched
+        at startup and may live forever in the background.
+        You can define multiple lines, one for each script you need to run.
+        <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/>
+        -->
+        <param name="startup-script" value="/opt/b3networks/edge/run/callflow/startupctl.lua"/>
+        <hook event="CHANNEL_CREATE" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
+        <hook event="CHANNEL_UUID" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
+        <hook event="CHANNEL_DESTROY" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
+      </settings>
+    </configuration>
+    <!--- MODULES -->  
+    <configuration name="modules.conf" description="Modules">
+      <modules>
+        <load module="mod_console"/>
+        <load module="mod_logfile"/>
+        <load module="mod_sofia"/>
+        <load module="mod_distributor"/>
+        <load module="mod_event_socket"/>
+        <load module="mod_lua"/>
+        <load module="mod_commands"/>
+        <load module="mod_dptools"/>
+        <load module="mod_dialplan_xml"/>
+        <load module="mod_bcg729"/>
+        <load module="mod_spandsp"/>
+        <load module="mod_sndfile"/>
+      </modules>
+    </configuration>
+    <!--- SOFIA SIP -->  
+    <configuration name="sofia.conf" description="sofia Endpoint">
+      <global_settings>
+        <param name="log-level" value="0"/>
+        <param name="debug-presence" value="0"/>
+      </global_settings>
+      <profiles>
+        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/sip-setting"/>
+      </profiles>
+    </configuration>
+    <!--- SPANDSP  -->
+    <configuration name="spandsp.conf" description="FAX application configuration">
+    </configuration>
+    <!-- FREESWITCH DEFAULT CONFIGURATION -->
+    <configuration name="switch.conf" description="Core Configuration">
+      <settings>
+        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/switch"/>
+        <param name="core-db-name" value="/dev/shm/freeswitch/core.db"/>
+      </settings>
+    </configuration>
   </section>
-  <!--- END: CONFIGURATION PART -->
+  <!-- END: CONFIGURATION SECTION -->
+
+  <!-- BEGIN: DIALPLAN SECTION -->
   <section name="dialplan" description="Regex/XML Dialplan">
-    <X-PRE-PROCESS cmd="include" data="dialplan.xml"/>
+    <context name="redirected">
+      <extension name="any_to_any">
+        <condition field="destination_number" expression="^.+$">
+          <action application="lua" data="callengine/redirectctl.lua"/>
+        </condition>
+      </extension>
+    </context>
+    <context name="librectx">
+      <extension name="any_to_any">
+        <condition regex="all">
+          <regex field="${acl(${network_addr} INTERCONNECTION)}" expression="true"/>
+          <action application="lua" data="callengine/callctl.lua"/>
+          <anti-action application="hangup" data="CALL_REJECTED"/>
+        </condition>
+      </extension>
+    </context>
   </section>
+  <!-- END: DIALPLAN SECTION -->
 </document>

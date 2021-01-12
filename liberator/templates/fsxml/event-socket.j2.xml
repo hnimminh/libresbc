@@ -1,0 +1,3 @@
+        <param name="listen-ip" value="{{host}}"/>
+        <param name="listen-port" value="{{port}}"/>
+        <param name="password" value="{{password}}"/>

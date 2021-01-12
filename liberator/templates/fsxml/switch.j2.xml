@@ -1,0 +1,4 @@
+        <param name="max-sessions" value="{{max_sessions}}"/>
+        <param name="sessions-per-second" value="{{sessions_per_second}}"/>
+        <param name="rtp-start-port" value="{{rtp_start_port}}"/>
+        <param name="rtp-end-port" value="{{rtp_end_port}}"/>
