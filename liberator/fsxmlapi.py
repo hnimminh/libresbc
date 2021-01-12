@@ -20,6 +20,31 @@ fsxmlrouter = APIRouter()
 templates = Jinja2Templates(directory="templates/fsxml")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@fsxmlrouter.get("/fsxmlapi/acl", include_in_schema=False)
+def esl(request: Request, response: Response):
+    try:
+        result = templates.TemplateResponse("acl.j2.xml",
+                                            {"request": request, "ips": []},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@fsxmlrouter.get("/fsxmlapi/event-socket", include_in_schema=False)
+def esl(request: Request, response: Response):
+    try:
+        result = templates.TemplateResponse("switch.j2.xml",
+                                            {"request": request, "host": ESL_HOST, "port": ESL_PORT, "password": ESL_SECRET},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=event-socket, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 @fsxmlrouter.get("/fsxmlapi/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
@@ -35,16 +60,4 @@ def switch(request: Request, response: Response):
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/event-socket", include_in_schema=False)
-def esl(request: Request, response: Response):
-    try:
-        result = templates.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "host": ESL_HOST, "port": ESL_PORT, "password": ESL_SECRET},
-                                            media_type="application/xml")
-        response.status_code = 200
-    except Exception as e:
-        response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=event-socket, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
 
