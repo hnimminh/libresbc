@@ -56,17 +56,12 @@
     <!--- AWESOME LUA -->
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
-        <!--
-        The following options identifies a lua script that is launched
-        at startup and may live forever in the background.
-        You can define multiple lines, one for each script you need to run.
-        <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/>
-        -->
-        <param name="startup-script" value="/opt/b3networks/edge/run/callflow/startupctl.lua"/>
-        <hook event="CHANNEL_CREATE" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
-        <hook event="CHANNEL_UUID" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
-        <hook event="CHANNEL_DESTROY" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
-        <hook event="CHANNEL_HANGUP_COMPLETE" script="/opt/b3networks/edge/run/callflow/eventctl.lua"/>
+        <!-- <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/> -->
+        <param name="startup-script" value="startupctl.lua"/>
+        <hook event="CHANNEL_CREATE" script="eventctl.lua"/>
+        <hook event="CHANNEL_UUID" script="eventctl.lua"/>
+        <hook event="CHANNEL_DESTROY" script="eventctl.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="eventctl.lua"/>
       </settings>
     </configuration>
     <!--- MODULES -->  
