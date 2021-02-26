@@ -74,3 +74,14 @@ def jsonhash(data: dict) -> dict:
                 elif value.startswith(':none:'): data.update({key: None})
                 else: pass
     return data
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def listify(string, delimiter=':') -> list:
+    assert isinstance(string, str)
+    return string.split(delimiter)
+
+def getnameid(string) -> str:
+    array = string.split(':')
+    if array[-1]: return array[-1]
+    else: return array[-2]s

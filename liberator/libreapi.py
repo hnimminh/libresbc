@@ -14,7 +14,7 @@ from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION,
                            NODEID, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_CPS, MAX_ACTIVE_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash, listify, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -38,15 +38,6 @@ try:
     if _clustermembers: CLUSTERMEMBERS = _clustermembers
 except:
     pass
-
-def listify(string, delimiter=':') -> list:
-    assert isinstance(string, str)
-    return string.split(delimiter)
-
-def getnameid(string) -> str:
-    array = string.split(':')
-    if array[-1]: return array[-1]
-    else: return array[-2]
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
