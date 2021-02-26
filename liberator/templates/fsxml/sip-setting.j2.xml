@@ -1,7 +1,6 @@
-{% for sipprofile in sipprofiles %}
-        <profile name="{{sipprofile.name}}">
+{%- for sipprofile in sipprofiles %}        <profile name="{{sipprofile.name}}">
           <gateways>
-{% for outsignalling in sipprofile.gateways %}  
+{%- for outsignalling in sipprofile.gateways %}  
             <gateway name="{{gateway.name}}_{{gateway.transport}}_{{gateway.ip}}_{{gateway.port}}">
               <param name="username" value="{{outparams[gateway.name].username}}"/>
               <param name="password" value="{{outparams[gateway.name].password}}"/>
@@ -12,7 +11,7 @@
               <param name="register-transport" value="{{gateway.transport}}"/>
               <param name="ping" value="{{gateway.ping}}"/>
             </gateway>
-{% endfor %}
+{%- endfor %}
           </gateways>
           <settings>
             <param name="debug" value="0"/>
@@ -86,4 +85,5 @@
             <!--TLS: END -->
           </settings>
         </profile>
-{% endfor %}
+{%- endfor %}
+

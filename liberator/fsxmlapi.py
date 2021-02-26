@@ -108,3 +108,74 @@ def distributor(request: Request, response: Response):
         logify(f"module=liberator, space=fsxmlapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+
+@fsxmlrouter.get("/fsxmlapi/sip-setting", include_in_schema=False)
+def sip(request: Request, response: Response):
+    try:
+        KEYPATTERN = f'sipprofile:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hgetall(mainkey)
+        details = pipe.execute()
+
+        sipprofiles = dict()
+        for mainkey, detail in zip(mainkeys, details):
+            sipprofiles[getnameid(mainkey)] = jsonhash(detail)
+
+        KEYPATTERN = f'intcon:out:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hget(mainkey, 'sipprofile')
+        profilenames = pipe.execute()
+
+        intcon_profile_maps = dict()
+        for mainkey, profilename in zip(mainkeys, profilenames):
+            intconname = getnameid(mainkey)
+            if profilename not in intcon_profile_maps:
+                intcon_profile_maps[profilename] = [intconname]
+            else:
+                if profilename not in intcon_profile_maps[profilename]:
+                    intcon_profile_maps[profilename].append(profilename)
+
+        
+
+        KEYPATTERN = f'gateway:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hgetall(mainkey)
+
+        gateways = list()
+        for gateway in pipe.execute():
+            gateways.append(jsonhash(gateway))
+
+        for sipprofile in sipprofiles:
+            name = sipprofile.get('name')
+            _gateways = filter(lambda _gw: _gw[''])
+
+        # template
+        result = templates.TemplateResponse("sip-setting.j2.xml",
+                                            {"request": request, "sipprofiles": sipprofiles},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
