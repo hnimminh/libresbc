@@ -17,8 +17,8 @@ REDIS_TIMEOUT = 5
 # VOICE ATTRIBUTE
 #-----------------------------------------------------------------------------------------------------
 SWCODECS = ['ALAW', 'ULAW', 'G729']
-MAX_CPS = 200
-MAX_ACTIVE_SESSION = 60000
+MAX_SPS = 200
+MAX_SESSION = 6000
 FIRST_RTP_PORT = 10000
 LAST_RTP_PORT = 60000
 #-----------------------------------------------------------------------------------------------------
@@ -30,9 +30,8 @@ NODEID = '{{nodeid}}'
 CLUSTERNAME = _DEFAULT_CLUSTERNAME
 CLUSTERMEMBERS = {NODEID}
 #-----------------------------------------------------------------------------------------------------
-# CALL ENGINE
+# CALL ENGINE EVENT SOCKET
 #-----------------------------------------------------------------------------------------------------
-ESL_HOST = '{{callengine.socket.host}}'
-ESL_PORT = {{callengine.socket.port}}
-ESL_USER = '{{callengine.socket.user}}'
-ESL_SECRET = '{{callengine.socket.secret}}'
+ESL_HOST = '127.0.0.1'
+ESL_PORT = 8021
+ESL_SECRET = '{{callengine.secret}}'
