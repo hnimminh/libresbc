@@ -40,6 +40,11 @@ def rembytes(data):
     if isinstance(data, set):         return set(map(rembytes, data))
 
 
+def hashlistify(string):
+    if string.startswith(':list:'):
+        return string[6:].split(_delimiter_)
+    else: return list()
+
 def redishash(data: dict) -> dict:
     if isinstance(data, dict):
         for key, value in data.items():
