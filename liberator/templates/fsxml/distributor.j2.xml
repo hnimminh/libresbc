@@ -1,5 +1,4 @@
-{%- for intconname, gateways in interconnections.items() %}
-        <list name="{{intconname}}">
+{%- for intconname, gateways in interconnections.items() %}        <list name="{{intconname}}">
 {%- for gateway, weight in gateways.items() %}
           <node name="{{gateway}}" weight="{{weight}}"/>
 {%- endfor %}
