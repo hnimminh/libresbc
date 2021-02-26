@@ -3,3 +3,4 @@
           <node type="allow" cidr="{{ip_address}}/32"/>
 {%- endfor %}
         </list>
+
