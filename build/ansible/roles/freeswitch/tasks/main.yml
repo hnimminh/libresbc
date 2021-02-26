@@ -1,21 +1,21 @@
 ---
 # tasks file for freeswitch
-- name: Symbolic link for freeswitch
+- name: Symbolic link freeswitch configuration
   file:
-    src: "{{rundir}}/freeswitch"
+    src: "{{rundir}}/platform/freeswitch"
     dest: /usr/local/etc/freeswitch
     state: link
     force: true
 
-- name: Template update SBC VARS IP address per server
+- name: Template update freeswitch vars.xml
   template:
-    src: "{{sourcedir}}/freeswitch/vars.xml"
-    dest: "{{destinationdir}}/freeswitch/vars.xml"
+    src: "{{sourcedir}}/platform/freeswitch/vars.xml"
+    dest: "{{destinationdir}}/platform/freeswitch/vars.xml"
     owner: root
     group: root
     mode: 0754
 
-- name: Copy a fs_cli.conf to etc
+- name: configure fs_cli in etc 
   template:
     src: fs_cli.conf
     dest: /etc/fs_cli.conf
