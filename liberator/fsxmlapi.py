@@ -41,7 +41,7 @@ def esl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/acl", include_in_schema=False)
 def acl(request: Request, response: Response):
     try:
-        KEYPATTERN = f'intcon:in:*'
+        KEYPATTERN = 'intcon:in:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -69,7 +69,7 @@ def acl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/distributor", include_in_schema=False)
 def distributor(request: Request, response: Response):
     try:
-        KEYPATTERN = f'intcon:out:*:_gateways'
+        KEYPATTERN = 'intcon:out:*:_gateways'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -98,7 +98,7 @@ def distributor(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/sip-setting", include_in_schema=False)
 def sip(request: Request, response: Response):
     try:
-        KEYPATTERN = f'sipprofile:*'
+        KEYPATTERN = 'sipprofile:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -112,7 +112,7 @@ def sip(request: Request, response: Response):
         for mainkey, detail in zip(mainkeys, details):
             sipprofiles[getnameid(mainkey)] = jsonhash(detail)
 
-        KEYPATTERN = f'intcon:out:*'
+        KEYPATTERN = 'intcon:out:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
