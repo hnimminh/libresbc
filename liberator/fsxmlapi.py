@@ -10,7 +10,7 @@ from configuration import (ESL_HOST, ESL_PORT, ESL_USER, ESL_SECRET,
                            MAX_CPS, MAX_ACTIVE_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, hashlistify
+from utilities import logify, get_request_uuid, hashlistify, jsonhash
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -77,5 +77,36 @@ def acl(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logify(f"module=liberator, space=fsxmlapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@fsxmlrouter.get("/fsxmlapi/distributor", include_in_schema=False)
+def distributor(request: Request, response: Response):
+    try:
+        KEYPATTERN = f'intcon:out:*:gateways'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hgetall(mainkey)
+        details = pipe.execute()
+
+        interconnections = dict()
+        for mainkey, detail in zip(mainkeys, details):
+            intconname = mainkey.split(':')[-2]
+            interconnections[intconname] = jsonhash(detail)
+        
+        #logify(f'{mainkeys} \n{interconnections}')
+
+        result = templates.TemplateResponse("distributor.j2.xml",
+                                            {"request": request, "interconnections": interconnections},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
