@@ -10,7 +10,7 @@ from configuration import (ESL_HOST, ESL_PORT, ESL_USER, ESL_SECRET,
                            MAX_CPS, MAX_ACTIVE_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, hashlistify, jsonhash
+from utilities import logify, get_request_uuid, hashlistify, jsonhash, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -84,7 +84,7 @@ def acl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/distributor", include_in_schema=False)
 def distributor(request: Request, response: Response):
     try:
-        KEYPATTERN = f'intcon:out:*:gateways'
+        KEYPATTERN = f'intcon:out:*:_gateways'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -96,7 +96,7 @@ def distributor(request: Request, response: Response):
 
         interconnections = dict()
         for mainkey, detail in zip(mainkeys, details):
-            intconname = mainkey.split(':')[-2]
+            intconname = getnameid(mainkey)
             interconnections[intconname] = jsonhash(detail)
 
         result = templates.TemplateResponse("distributor.j2.xml",
