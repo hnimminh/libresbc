@@ -83,5 +83,5 @@ def listify(string, delimiter=':') -> list:
 
 def getnameid(string) -> str:
     array = string.split(':')
-    if array[-1]: return array[-1]
-    else: return array[-2]
+    if array[-1].startswith('_'): return array[-2]
+    else: return array[-1]

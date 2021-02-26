@@ -867,7 +867,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
+        pipe.hmset(f'intcon:{nameid}:_gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -907,7 +907,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
         _sip_ips = _data.get('sip_ips')
-        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:gateways'))
+        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:_gateways'))
         # transaction block
         pipe.multi()
         # processing: removing old-one
@@ -918,7 +918,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
-        pipe.delete(f'intcon:{_nameid}:gateways')
+        pipe.delete(f'intcon:{_nameid}:_gateways')
         # processing: adding new-one
         data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
@@ -928,7 +928,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        pipe.hmset(f'intcon:{nameid}:gateways', redishash(gateways))
+        pipe.hmset(f'intcon:{nameid}:_gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
         # change identifier
         if name != identifier:
@@ -973,7 +973,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
         _sip_ips = _data.get('sip_ips')
-        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways'))
+        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways'))
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
@@ -982,7 +982,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
-        pipe.delete(f'intcon:{_nameid}:gateways')
+        pipe.delete(f'intcon:{_nameid}:_gateways')
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -1002,7 +1002,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        gateways = [{'name': k, 'weigth': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:gateways')).items()]
+        gateways = [{'name': k, 'weigth': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways')).items()]
         engagements = rdbconn.smembers(_engaged_key)
         result.update({'gateways': gateways, 'engagements': engagements})
         response.status_code = 200
