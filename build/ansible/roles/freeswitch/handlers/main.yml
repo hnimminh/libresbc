@@ -4,5 +4,5 @@
   systemd:
     name: freeswitch
     enabled: true
-    state: restart
+    state: restarted
     daemon_reload: true
