@@ -37,8 +37,6 @@ def switch(request: Request, response: Response):
         logify(f"module=liberator, space=fsxmlapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-
-
 @fsxmlrouter.get("/fsxmlapi/event-socket", include_in_schema=False)
 def esl(request: Request, response: Response):
     try:
