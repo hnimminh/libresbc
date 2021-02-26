@@ -25,6 +25,20 @@ fsxmlrouter = APIRouter()
 templates = Jinja2Templates(directory="templates/fsxml")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@fsxmlrouter.get("/fsxmlapi/switch", include_in_schema=False)
+def switch(request: Request, response: Response):
+    try:
+        result = templates.TemplateResponse("switch.j2.xml",
+                                            {"request": request, "max_sessions": MAX_SESSION, "sessions_per_second": MAX_SPS, "rtp_start_port": FIRST_RTP_PORT, "rtp_end_port": LAST_RTP_PORT},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
 @fsxmlrouter.get("/fsxmlapi/event-socket", include_in_schema=False)
 def esl(request: Request, response: Response):
     try:
@@ -112,7 +126,9 @@ def sip(request: Request, response: Response):
         for mainkey, detail in zip(mainkeys, details):
             sipprofiles[getnameid(mainkey)] = jsonhash(detail)
 
-        KEYPATTERN = 'intcon:out:*'
+        logify(f'sipprofiles {sipprofiles}')
+
+        KEYPATTERN = 'intcon:out:*[^:]*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -131,17 +147,23 @@ def sip(request: Request, response: Response):
                 if profilename not in profile_intcons_maps[profilename]:
                     profile_intcons_maps[profilename].append(profilename)
 
+        logify(f'profile_intcons_maps {profile_intcons_maps}')
+
         profile_gwnames_maps = dict()
         for profile, intcons in profile_intcons_maps.items():
             for intcon in intcons:
                 pipe.hkeys(f'intcon:out:{intcon}:_gateways')
             profile_gwnames_maps[profile] = list(set(pipe.execute()))
 
+        logify(f'profile_gwnames_maps {profile_gwnames_maps}')
+
         profile_gateways_maps = dict()
         for profile, gwnames in profile_gwnames_maps.items():
             for gwname in gwnames:
                 pipe.hgetall(f'gateway:{gwname}')
             profile_gateways_maps[profile] = list(map(jsonhash, pipe.execute()))
+
+        logify(f'profile_gateways_maps {profile_gateways_maps}')
 
         for sipprofile in sipprofiles:
             sipprofiles[sipprofile]['gateways'] = profile_gateways_maps[sipprofile]
