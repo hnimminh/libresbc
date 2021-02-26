@@ -122,33 +122,31 @@ def sip(request: Request, response: Response):
             pipe.hget(mainkey, 'sipprofile')
         profilenames = pipe.execute()
 
-        intcon_profile_maps = dict()
+        profile_intcons_maps = dict()
         for mainkey, profilename in zip(mainkeys, profilenames):
             intconname = getnameid(mainkey)
-            if profilename not in intcon_profile_maps:
-                intcon_profile_maps[profilename] = [intconname]
+            if profilename not in profile_intcons_maps:
+                profile_intcons_maps[profilename] = [intconname]
             else:
-                if profilename not in intcon_profile_maps[profilename]:
-                    intcon_profile_maps[profilename].append(profilename)
+                if profilename not in profile_intcons_maps[profilename]:
+                    profile_intcons_maps[profilename].append(profilename)
 
-        
+        profile_gwnames_maps = dict()
+        for profile, intcons in profile_intcons_maps.items():
+            for intcon in intcons:
+                pipe.hkeys(f'intcon:out:{intcon}:_gateways')
+            profile_gwnames_maps[profile] = list(set(pipe.execute()))
 
-        KEYPATTERN = f'gateway:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-
-        for mainkey in mainkeys:
-            pipe.hgetall(mainkey)
-
-        gateways = list()
-        for gateway in pipe.execute():
-            gateways.append(jsonhash(gateway))
+        profile_gateways_maps = dict()
+        for profile, gwnames in profile_gwnames_maps.items():
+            for gwname in gwnames:
+                pipe.hgetall(f'gateway:{gwname}')
+            profile_gateways_maps[profile] = list(map(jsonhash, pipe.execute()))
 
         for sipprofile in sipprofiles:
-            name = sipprofile.get('name')
-            _gateways = filter(lambda _gw: _gw[''])
+            sipprofiles[sipprofile]['gateways'] = profile_gateways_maps[sipprofile]
+
+        logify(f'{sipprofiles}')
 
         # template
         result = templates.TemplateResponse("sip-setting.j2.xml",
