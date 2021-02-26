@@ -14,7 +14,7 @@
     - nginx
     - liberator
     #- corectl
-    #- freeswitch
+    - freeswitch
     - netfilter
     #- captagent
     - linking
