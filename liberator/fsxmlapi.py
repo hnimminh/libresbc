@@ -98,8 +98,6 @@ def distributor(request: Request, response: Response):
         for mainkey, detail in zip(mainkeys, details):
             intconname = mainkey.split(':')[-2]
             interconnections[intconname] = jsonhash(detail)
-        
-        #logify(f'{mainkeys} \n{interconnections}')
 
         result = templates.TemplateResponse("distributor.j2.xml",
                                             {"request": request, "interconnections": interconnections},
