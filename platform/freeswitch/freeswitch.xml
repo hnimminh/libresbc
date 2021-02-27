@@ -98,7 +98,7 @@
     <configuration name="switch.conf" description="Core Configuration">
       <settings>
         <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/switch"/>
-        <param name="core-db-name" value="/dev/shm/freeswitch/core.db"/>
+        <param name="core-db-name" value="/dev/shm/libresbc/core.db"/>
       </settings>
     </configuration>
   </section>
