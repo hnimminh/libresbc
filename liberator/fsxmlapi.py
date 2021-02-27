@@ -138,7 +138,7 @@ def sip(request: Request, response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            if not mainkey.endswitch('_gateways'):
+            if not mainkey.endswith('_gateways'):
                 pipe.hget(mainkey, 'sipprofile')
         profilenames = pipe.execute()
 
@@ -169,8 +169,6 @@ def sip(request: Request, response: Response):
         for sipprofile in sipprofiles:
             sipprofiles[sipprofile]['gateways'] = profile_gateways_maps[sipprofile]
 
-        logify(f'{sipprofiles}')
-
         # template
         result = templates.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles},
@@ -181,7 +179,4 @@ def sip(request: Request, response: Response):
         logify(f"module=liberator, space=fsxmlapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
