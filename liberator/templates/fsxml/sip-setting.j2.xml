@@ -72,7 +72,7 @@
             <param name="local-network-acl" value="{{sipprofile.natspnat_spaceace|default('rfc1918.auto')}}"/>
             <param name="dialplan" value="XML"/>
             <param name="context" value="librectx"/>
-            <param name="dbname" value="/dev/shm/freeswitch/sip_{{sipprofile.name}}.db"/>
+            <param name="dbname" value="/dev/shm/libresbc/sip_{{sipprofile.name}}.db"/>
             <param name="enable-100rel" value="{{sipprofile.enable_100rel|default('false')}}"/>
             <param name="session-timeout" value="{{sipprofile.session_timeout|default('1800')}}"/>
             <param name="minimum-session-expires" value="{{sipprofile.minimum_session_expires|default('120')}}"/>
