@@ -113,6 +113,8 @@ def distributor(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/sip-setting", include_in_schema=False)
 def sip(request: Request, response: Response):
     try:
+        # get the maping siprofile and data
+        # {profilename1: profiledata1, profilename2: profiledata2}
         KEYPATTERN = 'sipprofile:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -127,16 +129,17 @@ def sip(request: Request, response: Response):
         for mainkey, detail in zip(mainkeys, details):
             sipprofiles[getnameid(mainkey)] = jsonhash(detail)
 
-        logify(f'sipprofiles {sipprofiles}')
-
-        KEYPATTERN = 'intcon:out:*[^:]*'
+        # get the mapping siprofile name and interconnection name
+        # {profilename1: [intconname,...], profilename2: [intconname,...]}
+        KEYPATTERN = 'intcon:out:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hget(mainkey, 'sipprofile')
+            if not mainkey.endswitch('_gateways'):
+                pipe.hget(mainkey, 'sipprofile')
         profilenames = pipe.execute()
 
         profile_intcons_maps = dict()
@@ -148,23 +151,20 @@ def sip(request: Request, response: Response):
                 if profilename not in profile_intcons_maps[profilename]:
                     profile_intcons_maps[profilename].append(profilename)
 
-        logify(f'profile_intcons_maps {profile_intcons_maps}')
-
+        # get the mapping siprofile name and gateway name
+        # {profilename1: [gateway,...], profilename2: [gateway,...]}
         profile_gwnames_maps = dict()
         for profile, intcons in profile_intcons_maps.items():
             for intcon in intcons:
                 pipe.hkeys(f'intcon:out:{intcon}:_gateways')
-            profile_gwnames_maps[profile] = list(set(pipe.execute()))
+            profile_gwnames_maps[profile] = list(set([gw for gws in pipe.execute() for gw in gws]))
 
-        logify(f'profile_gwnames_maps {profile_gwnames_maps}')
-
+        # add gateway data to sip profile data
         profile_gateways_maps = dict()
         for profile, gwnames in profile_gwnames_maps.items():
             for gwname in gwnames:
                 pipe.hgetall(f'gateway:{gwname}')
             profile_gateways_maps[profile] = list(map(jsonhash, pipe.execute()))
-
-        logify(f'profile_gateways_maps {profile_gateways_maps}')
 
         for sipprofile in sipprofiles:
             sipprofiles[sipprofile]['gateways'] = profile_gateways_maps[sipprofile]
