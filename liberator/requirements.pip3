@@ -14,5 +14,6 @@ schedule==0.6.0
 pytz==2020.1
 nameid==0.2.2
 # 
-pygments
-prompt_toolkit
+#pygments
+#prompt_toolkit
+#asciimatics
