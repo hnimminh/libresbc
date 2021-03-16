@@ -11,20 +11,26 @@ from configuration import (NODEID, ESL_HOST, ESL_PORT, ESL_SECRET,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy
 
-REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
-                                                     decode_responses=True, max_connections=5, timeout=5)
 
-def fssocket(command):
+REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
+                                                     decode_responses=True, max_connections=5, timeout=REDIS_TIMEOUT)
+
+
+def fssocket(reqdata):
+    result = False
     try:
+        command = reqdata.get('command')
         fs = greenswitch.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET)
         fs.connect()
-        result = fs.send(f'api {command}')
-        if result:
-            print(result.data)
+        response = fs.send(f'api {command}')
+        if response:
+            resultstr = response.data
+            if '+OK' in resultstr[:3].upper(): result = True
     except Exception as e:
-        logify(f"module=liberator, space=bases, action=fssocket, command={command}, exception={e}, tracings={traceback.format_exc()}")
+        logify(f"module=liberator, space=bases, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
     finally:
-        pass    
+        return result    
+
 
 def netfilter():
     pass
