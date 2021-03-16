@@ -1,5 +1,5 @@
-dofile("/opt/libresbc/run/callengine/configuration.lua")
-dofile("/opt/libresbc/run/callengine/utilities.lua")
+dofile("/opt/libresbc/run/callcontrol/configuration.lua")
+dofile("/opt/libresbc/run/callcontrol/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function cdrreporter(event_name, event)
