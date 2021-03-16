@@ -27,6 +27,7 @@
       - rsyslog
       - logrotate
       - rsync
+      - lsof
     state: present
 
 - name: Remove useless packages from the cache
