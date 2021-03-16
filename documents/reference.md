@@ -33,3 +33,5 @@
 * [CHANNEL STATE](https://freeswitch.org/confluence/display/FREESWITCH/Channel+States)
 * [EVENT LIST](https://freeswitch.org/confluence/display/FREESWITCH/Event+List#EventList-1.20CHANNEL_ORIGINATEevent) 
 * [COMMANDS](https://freeswitch.org/confluence/display/FREESWITCH/mod_commands)
+* [NFTABLES](https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks)
+* [NFTABLE BEST PRACTICE](https://blog.samuel.domains/blog/security/nftables-hardening-rules-and-good-practices)
