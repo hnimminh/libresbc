@@ -25,7 +25,6 @@ pipe = rdbconn.pipeline()
 # PATTERN
 _NAME_ = '^[a-zA-Z][a-zA-Z0-9_]+$'
 _DIAL_ = '^[a-zA-Z0-9+#*@]*$'
-
 # API ROUTER DECLARATION
 librerouter = APIRouter()
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -98,6 +97,138 @@ def get_cluster(response: Response):
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+
+class ACLActionEnum(str, Enum):
+    allow = 'allow'
+    deny = 'deny'
+
+class ACLTypeEnum(str, Enum):
+    cidr = 'cidr'
+    domain = 'domain'
+
+class ACLNodeModel(BaseModel):
+    action: ACLActionEnum = Field(default='allow', description='associate action for node')
+    _type: ACLTypeEnum = Field(default='cidr', description='type of acl node', alias='type')
+    value: str = Field(description='node value')
+
+class ACLModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of acl (identifier)')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
+    default: RuleActionEnum = Field(default='deny', description='default action')
+    nodes: List[ACLNodeModel] = Field(min_items=1, max_items=64, description='default action')
+
+@librerouter.post("/libresbc/class/ringtone", status_code=200)
+def create_ringtone_class(reqbody: RingtoneModel, response: Response):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        name_key = f'class:ringtone:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.put("/libresbc/class/ringtone/{identifier}", status_code=200)
+def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        _name_key = f'class:ringtone:{identifier}'
+        name_key = f'class:ringtone:{name}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.delete("/libresbc/class/ringtone/{identifier}", status_code=200)
+def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'class:ringtone:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engage_key): 
+            response.status_code, result = 403, {'error': 'engaged class'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(_engage_key)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/class/ringtone/{identifier}", status_code=200)
+def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'class:ringtone:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engage_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/class/ringtone", status_code=200)
+def list_ringtone_class(response: Response):
+    result = None
+    try:
+        KEYPATTERN = f'class:ringtone:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'desc')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            if detail:
+                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SIP PROFILES 
@@ -357,7 +488,6 @@ def list_ringtone_class(response: Response):
         logify(f"module=liberator, space=libreapi, action=list_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CODEC CLASS 
