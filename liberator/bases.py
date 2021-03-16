@@ -5,9 +5,9 @@ import json
 from threading import Thread
 
 import redis
-import ESL
+import greenswitch  
 
-from configuration import (CES_HOST, CES_PORT, CES_SECRET, 
+from configuration import (NODEID, ESL_HOST, ESL_PORT, ESL_SECRET, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy
 
@@ -15,36 +15,52 @@ REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS
                                                      decode_responses=True, max_connections=5, timeout=5)
 
 def fssocket(command):
-    result, error = None, None
-    con = ESL.ESLconnection(CES_HOST, CES_PORT, CES_SECRET)
-    if con.connected(): result = con.api(command)
-    else: error = 'Call Engine is not ready'
-    return result, error
+    try:
+        fs = greenswitch.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET)
+        fs.connect()
+        result = fs.send(f'api {command}')
+        if result:
+            print(result.data)
+    except Exception as e:
+        logify(f"module=liberator, space=bases, action=fssocket, command={command}, exception={e}, tracings={traceback.format_exc()}")
+    finally:
+        pass    
 
-
-def firewall():
-    # This library is implemented in pure-python and does not interface with C library libiptc 
-    # using libiptc directly is not recommended by netfilter development team
-    # http://www.netfilter.org/documentation/FAQ/netfilter-faq-4.html#ss4.5
-    # thus eliminating a number of issues arising from interface changes while staying compatible with different versions of iptables.
+def netfilter():
     pass
 
 
 
-class EventControl(Thread):
+class BaseEventHandler(Thread):
     def __init__(self):
         Thread.__init__(self)
         self.stop = False
         self.daemon = True
-        self.setName('EventControl')
+        self.setName('BaseEventHandler')
 
     def run(self):
-        rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL) 
+        logify(f"module=liberator, space=bases, action=start_base_event_handler_thread")
+        rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
         while not self.stop:
-            events = rdbconn.blpop('event', REDIS_TIMEOUT)
+            events = list()
             try:
-                pass
+                intcon_api_event = f'event:api:peer:{NODEID}'
+
+                events = rdbconn.blpop([intcon_api_event], REDIS_TIMEOUT)
+                if events:
+                    eventkey, eventvalue = events[0], json.loads(events[1])
+                    logify(f"module=liberator, space=bases, action=catch_event, eventkey={eventkey}, eventvalue={eventvalue}")
+                    if eventkey in [intcon_api_event]:
+                        subevent = eventvalue.get('subevent')
+                        prewait = eventvalue.get('prewait')
+                        requestid = eventvalue.get('requestid')
+                        data = eventvalue.get('data')
+                        # make the node run this task in different timestamp
+                        time.sleep(int(prewait))
+                    else:
+                        pass
             except Exception as e:
-                logify(f"module=liberator, space=callenginectl, exception={e}")  
+                logify(f"module=liberator, space=bases, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
+                time.sleep(5)
             finally:
                 pass
