@@ -23,8 +23,10 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 pipe = rdbconn.pipeline()
 
 # PATTERN
-_NAME_ = '^[a-zA-Z][a-zA-Z0-9_]+$'
-_DIAL_ = '^[a-zA-Z0-9+#*@]*$'
+_NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
+_DOMAIN_ = r'^(((([A-Za-z0-9]+){1,63}\.)|(([A-Za-z0-9]+(\-)+[A-Za-z0-9]+){1,63}\.))+){1,255}$'
+
 # API ROUTER DECLARATION
 librerouter = APIRouter()
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -107,46 +109,64 @@ class ACLTypeEnum(str, Enum):
     cidr = 'cidr'
     domain = 'domain'
 
-class ACLNodeModel(BaseModel):
+
+class ACLRuleCIDR(BaseModel):
+    action: ACLActionEnum = Field(default='allow', description='associate action for node')
+    _type: 'cidr' = Field(alias='type')
+    value: IPv4Network = Field(description='IPv4 address or IPv4 network')
+
+class ACLRuleDomain(BaseModel):
+    action: ACLActionEnum = Field(default='allow', description='associate action for node')
+    _type: 'domain' = Field(alias='type')
+    value: str = Field(regexp=_DOMAIN_, description='domain name')
+
+class ACLRuleModel(BaseModel):
     action: ACLActionEnum = Field(default='allow', description='associate action for node')
     _type: ACLTypeEnum = Field(default='cidr', description='type of acl node', alias='type')
-    value: str = Field(description='node value')
+    value: str = Field(description='acl rule value depend on type')
 
 class ACLModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of acl (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    default: ACLActionEnum = Field(default='deny', description='default action')
-    nodes: List[ACLNodeModel] = Field(min_items=1, max_items=64, description='default action')
+    action: ACLActionEnum = Field(default='deny', description='default action')
+    rules: List[ACLRuleCIDR, ACLRuleDomain] = Field(min_items=1, max_items=64, description='default action')
 
-@librerouter.post("/libresbc/class/ringtone", status_code=200)
-def create_ringtone_class(reqbody: ACLModel, response: Response):
+
+@librerouter.post("/libresbc/base/acl", status_code=200)
+def create_acl(reqbody: ACLModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
-        name_key = f'class:ringtone:{name}'
+        name_key = f'base:acl:{name}'
         if rdbconn.exists(name_key):
-            response.status_code, result = 403, {'error': 'existent class name'}; return
+            response.status_code, result = 403, {'error': 'existent acl name'}; return
+        data = jsonable_encoder(reqbody)
+        rules = data.get('rules')
+        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('type')}:{rule.get('value')}", rules))
+        data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=create_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libresbc/class/ringtone/{identifier}", status_code=200)
-def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.put("/libresbc/base/acl/{identifier}", status_code=200)
+def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
-        _name_key = f'class:ringtone:{identifier}'
-        name_key = f'class:ringtone:{name}'
+        _name_key = f'base:acl:{identifier}'
+        name_key = f'base:acl:{name}'
         if not rdbconn.exists(_name_key): 
-            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+            response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
+        data = jsonable_encoder(reqbody)
+        rules = data.get('rules')
+        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('type')}:{rule.get('value')}", rules))
+        data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
@@ -161,53 +181,56 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=update_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/ringtone/{identifier}", status_code=200)
-def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.delete("/libresbc/base/acl/{identifier}", status_code=200)
+def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
-        _name_key = f'class:ringtone:{identifier}'
+        _name_key = f'base:acl:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
-            response.status_code, result = 403, {'error': 'engaged class'}; return
+            response.status_code, result = 403, {'error': 'engaged acl'}; return
         if not rdbconn.exists(_name_key):
-            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+            response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libresbc/class/ringtone/{identifier}", status_code=200)
-def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.get("/libresbc/base/acl/{identifier}", status_code=200)
+def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
-        _name_key = f'class:ringtone:{identifier}'
+        _name_key = f'base:acl:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
-            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+            response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
+        rulestrs = listify(result.get('rules'))
+        rules = list(map(lambda ruletrs: {'action': rulestrs[0], 'type': rulestrs[1], 'value': rulestrs[2]}, rulestrs))
+        result.update({'rules': rules})
         engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=detail_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libresbc/class/ringtone", status_code=200)
-def list_ringtone_class(response: Response):
+@librerouter.get("/libresbc/base/acl", status_code=200)
+def list_acl(response: Response):
     result = None
     try:
-        KEYPATTERN = f'class:ringtone:*'
+        KEYPATTERN = f'base:acl:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -225,7 +248,7 @@ def list_ringtone_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=list_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -233,6 +256,14 @@ def list_ringtone_class(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SIP PROFILES 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+_BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto']
+
+def check_existent_acl(acl_name):
+    if acl_name not in _BUILTIN_ACLS_:
+        if not rdbconn.exists(f'base:acl:{acl_name}'):
+            raise ValueError('nonexistent acl')
+    return acl_name
+
 class SIPProfileModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
@@ -256,6 +287,8 @@ class SIPProfileModel(BaseModel):
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
     tls_version: str = Field(default='tlsv1.2', description='TLS version')
     tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
+    # validation
+    _existentacl = validator('nat_space')(check_existent_acl)
 
 
 @librerouter.post("/libresbc/sipprofile", status_code=200)
@@ -267,7 +300,10 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         name_key = f'sipprofile:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        rdbconn.hmset(name_key, redishash(data))
+        nat_space = data.get('nat_space')
+        pipe.hmset(name_key, redishash(data))
+        if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -287,7 +323,12 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        rdbconn.hmset(name_key, redishash(data))
+        _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        nat_space = data.get('nat_space')
+        if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
+        if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        pipe.hmset(name_key, redishash(data))
+        pipe.execute()
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -315,6 +356,8 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
             response.status_code, result = 403, {'error': 'engaged sipprofile'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
+        _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
         pipe.execute()
