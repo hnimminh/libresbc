@@ -1,4 +1,4 @@
-dofile("/opt/libresbc/run/callengine/configuration.lua")
+dofile("/opt/libresbc/run/callcontrol/configuration.lua")
 
 -- REQUIRE
 redis = require("redis")

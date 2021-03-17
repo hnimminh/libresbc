@@ -1,11 +1,13 @@
 /var/log/freeswitch/*.log {
 	rotate 100
 	daily
+	missingok
 	compress
 	delaycompress
 	copytruncate
-
+	sharedscripts
+	nocreate
 	postrotate
-        	/bin/kill -HUP `cat /usr/local/freeswitch/run/freeswitch.pid` 2> /dev/null || true
+		#/usr/bin/fscli -x 'fsctl send_sighup' > /dev/null 2> /dev/null
+        /bin/kill -HUP `cat /var/run/freeswitch.pid 2>/dev/null` 2> /dev/null || true
 	endscript
-}
