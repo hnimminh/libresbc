@@ -3,6 +3,7 @@ import re
 import json
 
 import redis
+import validators
 from pydantic import BaseModel, Field, validator, root_validator
 from typing import Optional, List, Dict
 from enum import Enum
@@ -109,17 +110,6 @@ class ACLTypeEnum(str, Enum):
     cidr = 'cidr'
     domain = 'domain'
 
-
-class ACLRuleCIDR(BaseModel):
-    action: ACLActionEnum = Field(default='allow', description='associate action for node')
-    _type: 'cidr' = Field(alias='type')
-    value: IPv4Network = Field(description='IPv4 address or IPv4 network')
-
-class ACLRuleDomain(BaseModel):
-    action: ACLActionEnum = Field(default='allow', description='associate action for node')
-    _type: 'domain' = Field(alias='type')
-    value: str = Field(regexp=_DOMAIN_, description='domain name')
-
 class ACLRuleModel(BaseModel):
     action: ACLActionEnum = Field(default='allow', description='associate action for node')
     _type: ACLTypeEnum = Field(default='cidr', description='type of acl node', alias='type')
@@ -129,7 +119,19 @@ class ACLModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of acl (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     action: ACLActionEnum = Field(default='deny', description='default action')
-    rules: List[ACLRuleCIDR, ACLRuleDomain] = Field(min_items=1, max_items=64, description='default action')
+    rules: List[ACLRuleModel] = Field(min_items=1, max_items=64, description='default action')
+    # validation
+    @root_validator(pre=True)
+    def acl_agreement(cls, values):
+        _type = values.get('type')
+        value = values.get('value')
+        if _type=='cidr':
+            if not IPv4Address(value):
+                raise ValueError('for cidr type, value must be IPv4Network or IPv4Address')
+        else:
+            if not validators.domain(value):
+                raise ValueError('for cidr type, value must be domain')
+        return values
 
 
 @librerouter.post("/libresbc/base/acl", status_code=200)

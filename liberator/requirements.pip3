@@ -17,3 +17,4 @@ cryptography==3.2.1
 greenswitch==0.0.11                                                                                                   │                                                                │
 #six==1.12.0                                                                                                           │                                                              │
 #gevent==21.1.2
+validators==0.18.2
