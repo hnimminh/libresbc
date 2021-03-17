@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------
 _APPLICATION = 'LIBRESBC'
 _SWVERSION = '{{version}}'
-_DESCRIPTION = 'Freedom Land For Your Voice Infrastructures'
+_DESCRIPTION = 'A Free Session Border Controller (SBC) For Large-Scale Voice Infrastructures'
 #-----------------------------------------------------------------------------------------------------
 # REDIS ENDPOINT
 #-----------------------------------------------------------------------------------------------------
