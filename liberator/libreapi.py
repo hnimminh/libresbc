@@ -940,7 +940,7 @@ class GatewayModel(BaseModel):
     privacy: Optional[str] = Field(default='no', description='caller privacy on calls')
 
 
-@librerouter.post("/libresbc/interconnection/gateway", status_code=200)
+@librerouter.post("/libresbc/gateway", status_code=200)
 def create_gateway(reqbody: GatewayModel, response: Response):
     result = None
     try:
@@ -957,7 +957,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/interconnection/gateway/{identifier}", status_code=200)
+@librerouter.put("/libresbc/gateway/{identifier}", status_code=200)
 def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -989,7 +989,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
     finally:
         return result
 
-@librerouter.delete("/libresbc/interconnection/gateway/{identifier}", status_code=200)
+@librerouter.delete("/libresbc/gateway/{identifier}", status_code=200)
 def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1009,7 +1009,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/interconnection/gateway/{identifier}", status_code=200)
+@librerouter.get("/libresbc/gateway/{identifier}", status_code=200)
 def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1027,7 +1027,7 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/interconnection/gateway", status_code=200)
+@librerouter.get("/libresbc/gateway", status_code=200)
 def list_gateway(response: Response):
     result = None
     try:
