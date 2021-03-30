@@ -1,4 +1,5 @@
 import syslog
+from threading import Thread
 from uuid import uuid4
 from hashlib import md5
 from contextvars import ContextVar
@@ -85,3 +86,7 @@ def getnameid(string) -> str:
     array = string.split(':')
     if array[-1].startswith('_'): return array[-2]
     else: return array[-1]
+
+def threaded(func, *params):
+    th = Thread(target=func, args=params)
+    th.start()
