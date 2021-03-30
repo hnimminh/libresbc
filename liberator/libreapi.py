@@ -20,7 +20,7 @@ from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, huma
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=10, timeout=5)
-rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)                                                    
+rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 pipe = rdbconn.pipeline()
 
 # CONSTANCE
