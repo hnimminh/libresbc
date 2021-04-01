@@ -323,7 +323,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'name': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -363,7 +363,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         # fire-event sip profile update
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:sipprofile:{node}'
-            value = {'action': 'update', 'name': name, '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value))
     except Exception as e:
         response.status_code, result = 500, None
@@ -390,7 +390,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -981,7 +981,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'name': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))        
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))        
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1016,7 +1016,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'name': name, '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1040,7 +1040,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1176,6 +1176,7 @@ class OutboundInterconnection(BaseModel):
 
 @librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
+    requestid = get_request_uuid()
     result = None
     try:
         name = reqbody.name
@@ -1207,15 +1208,16 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'name': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 @librerouter.put("/libresbc/interconnection/outbound/{identifier}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid = get_request_uuid()
     result = None
     try:
         name = reqbody.name
@@ -1286,16 +1288,17 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         # fire-event outbound interconnect update
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:outbound:intcon:{node}'
-            value = {'action': 'update', 'name': name, '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value))        
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 @librerouter.delete("/libresbc/interconnection/outbound/{identifier}", status_code=200)
 def delete_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid = get_request_uuid()
     result = None
     try:
         _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
@@ -1328,10 +1331,10 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))  
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))  
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1462,7 +1465,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'name': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1541,7 +1544,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         # fire-event inbound interconnect update
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:inbound:intcon:{node}'
-            value = {'action': 'update', 'name': name, '_name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value))
     except Exception as e:
         response.status_code, result = 500, None
@@ -1582,7 +1585,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', 'name': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
