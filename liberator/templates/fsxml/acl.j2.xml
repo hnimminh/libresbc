@@ -1,6 +1,7 @@
-        <list name="INTERCONNECTION" default="deny">
-{%- for ip_address in ip_addresses %}  
-          <node type="allow" cidr="{{ip_address}}/32"/>
+        <list name="INBOUNDINTERCONNECT" default="deny">
+{%- for inbound_ipaddr in inbound_ipaddrs %}  
+          <node type="allow" cidr="{{inbound_ipaddr}}/32"/>
 {%- endfor %}
         </list>
+
 

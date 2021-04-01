@@ -68,10 +68,10 @@ def acl(request: Request, response: Response):
         data = list()
         for detail in pipe.execute():
             if detail: data += hashlistify(detail)
-        ip_addresses = set(data)
+        inbound_ipaddrs = set(data)
 
         result = templates.TemplateResponse("acl.j2.xml",
-                                            {"request": request, "ip_addresses": ip_addresses},
+                                            {"request": request, "inbound_ipaddrs": inbound_ipaddrs},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
