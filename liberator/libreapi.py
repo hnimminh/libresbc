@@ -229,8 +229,8 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        rulestrs = listify(result.get('rules'))
-        rules = list(map(lambda ruletrs: {'action': rulestrs[0], 'type': rulestrs[1], 'value': rulestrs[2]}, rulestrs))
+        rulestrs = result.get('rules')
+        rules = list(map(lambda rulestr: {'action': rulestr[0], 'type': rulestr[1], 'value': rulestr[2]}, rulestrs))
         result.update({'rules': rules})
         engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
