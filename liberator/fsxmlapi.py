@@ -10,7 +10,7 @@ from configuration import (ESL_HOST, ESL_PORT, ESL_SECRET,
                            MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, hashlistify, jsonhash, getnameid
+from utilities import logify, get_request_uuid, hashlistify, jsonhash, getnameid, listify
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -56,6 +56,7 @@ def esl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/acl", include_in_schema=False)
 def acl(request: Request, response: Response):
     try:
+        # IP LIST OF INBOUND INTERCONNECTION
         KEYPATTERN = 'intcon:in:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -70,8 +71,25 @@ def acl(request: Request, response: Response):
             if detail: data += hashlistify(detail)
         inbound_ipaddrs = set(data)
 
+        # DEFINED ACL LIST
+        KEYPATTERN = 'base:acl:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+        for mainkey in mainkeys:
+            pipe.hgetall(mainkey)
+        defined_acls = list()
+        for detail in pipe.execute():
+            if detail:
+                name = detail.get('name')
+                action = detail.get('action')
+                rulestrs = detail.get('rules')
+                rules = list(map(lambda rulestr: {'action': rulestr[0], 'type': rulestr[1], 'value': rulestr[2]}, rulestrs))
+                defined_acls.append({'name': name, 'action': action, 'rules': rules})
+
         result = templates.TemplateResponse("acl.j2.xml",
-                                            {"request": request, "inbound_ipaddrs": inbound_ipaddrs},
+                                            {"request": request, "inbound_ipaddrs": inbound_ipaddrs, "defined_acls": defined_acls},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
