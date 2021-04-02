@@ -16,11 +16,11 @@ from bases import BaseEventHandler
 if __name__ == '__main__':
     try:
         debugy('module=liberator, space=main, action=initialize')
-        # HTTP API
-        uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, reload=True )
         # EVENT HANDLER
         eventthead = BaseEventHandler()
         eventthead.start()
+        # HTTP API
+        uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, reload=True )
     except Exception as e:
         logify(f'module=liberator, space=main, exception: {e}, traceback: {traceback.format_exc()}')
     finally:
