@@ -1691,7 +1691,7 @@ class RoutingTableModel(BaseModel):
     @root_validator(pre=True)
     def routing_table_agreement(cls, values):
         action = values.get('action')
-        endpoints = values.get('endpoint')
+        endpoints = values.get('endpoints')
         weights = values.get('weights')
         if action==_ROUTE:
             endpointsize = len(endpoints)
