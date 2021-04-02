@@ -21,7 +21,6 @@ from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, huma
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
-pipe = rdbconn.pipeline()
 
 # CONSTANCE
 COEFFICIENT = 0
@@ -70,6 +69,7 @@ class ClusterModel(BaseModel):
 def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         members = set(reqbody.members)
         _members = set(rdbconn.smembers('cluster:members'))
@@ -140,6 +140,7 @@ def create_acl(reqbody: ACLModel, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         name_key = f'base:acl:{name}'
         if rdbconn.exists(name_key):
@@ -152,7 +153,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -164,6 +165,8 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
+        #
         name = reqbody.name
         _name_key = f'base:acl:{identifier}'
         name_key = f'base:acl:{name}'
@@ -189,7 +192,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -201,6 +204,8 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
+        #
         _name_key = f'base:acl:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
@@ -213,7 +218,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -245,6 +250,7 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
 def list_acl(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'base:acl:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -306,6 +312,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         name_key = f'sipprofile:{name}'
@@ -318,7 +325,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -330,6 +337,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'sipprofile:{identifier}'
@@ -359,7 +367,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:sipprofile:{node}'
             value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value))
+            pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -371,6 +379,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'sipprofile:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
@@ -385,7 +394,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -414,6 +423,7 @@ def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
 def list_sipprofile(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'sipprofile:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -466,6 +476,7 @@ def create_ringtone_class(reqbody: RingtoneModel, response: Response):
 def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:ringtone:{identifier}'
@@ -496,6 +507,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
 def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'class:ringtone:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
@@ -534,6 +546,7 @@ def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_N
 def list_ringtone_class(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'class:ringtone:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -591,6 +604,7 @@ def create_codec_class(reqbody: CodecModel, response: Response):
 def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:codec:{identifier}'
@@ -621,6 +635,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
 def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'class:codec:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
@@ -659,6 +674,7 @@ def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME
 def list_codec_class(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'class:codec:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -712,6 +728,7 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
 def update_capacity_class(reqbody: CapacityModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:capacity:{identifier}'
@@ -742,6 +759,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
 def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'class:capacity:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engaged_key): 
@@ -780,6 +798,7 @@ def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_N
 def list_capacity_class(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'class:capacity:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -835,6 +854,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
 def update_translation_class(reqbody: TranslationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'class:translation:{identifier}'
@@ -865,6 +885,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
 def delete_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'class:translation:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engaged_key): 
@@ -903,6 +924,7 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
 def list_translation_class(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'class:translation:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -967,6 +989,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         name_key = f'gateway:{name}'
@@ -976,7 +999,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))        
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -988,6 +1011,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         _name_key = f'gateway:{identifier}'
@@ -1011,7 +1035,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1023,6 +1047,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _name_key = f'gateway:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engaged_key): 
@@ -1035,7 +1060,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})) 
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1064,6 +1089,7 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
 def list_gateway(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'gateway:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -1174,6 +1200,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     requestid = get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
@@ -1203,7 +1230,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1215,6 +1242,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     requestid = get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
@@ -1284,7 +1312,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:outbound:intcon:{node}'
             value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value))        
+            pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1296,6 +1324,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
     requestid = get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
@@ -1326,7 +1355,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))  
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1358,6 +1387,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
 def list_outbound_interconnect(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = 'intcon:out:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -1425,6 +1455,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
@@ -1460,7 +1491,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1473,6 +1504,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
@@ -1540,7 +1572,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         for index, node in enumerate(CLUSTERMEMBERS):
             key = f'event:callengine:inbound:intcon:{node}'
             value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value))
+            pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1553,6 +1585,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _nameid = f'in:{identifier}'; _name_key = f'intcon:{_nameid}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent inbound interconnection'}; return
@@ -1580,7 +1613,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect delete
         for index, node in enumerate(CLUSTERMEMBERS):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}))
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1608,6 +1641,7 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
 def list_inbound_interconnect(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = 'intcon:in:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -1683,6 +1717,7 @@ class RoutingTableModel(BaseModel):
 def create_routing_table(reqbody: RoutingTableModel, response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         endpoint = data.get('endpoint')
@@ -1704,6 +1739,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
 def update_routing_table(reqbody: RoutingTableModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         endpoint = data.get('endpoint')
@@ -1741,6 +1777,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
 def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
@@ -1792,6 +1829,7 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
 def list_routing_table(response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = f'routing:table:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -1875,6 +1913,7 @@ class RoutingRecordModel(BaseModel):
 def create_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         data = jsonable_encoder(reqbody)
         table = data.get('table')
         match = data.get('match')
@@ -1908,6 +1947,7 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
 def update_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         data = jsonable_encoder(reqbody)
         table = data.get('table')
         match = data.get('match')
@@ -1951,6 +1991,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         if value == __EMPTY_STRING__: value = ''
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
@@ -1979,6 +2020,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
 def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
     result = None
     try:
+        pipe = rdbconn.pipeline()
         if not rdbconn.exists(f'routing:table:{table}'): 
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
 

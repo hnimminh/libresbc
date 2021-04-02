@@ -16,7 +16,6 @@ from utilities import logify, get_request_uuid, hashlistify, jsonhash, getnameid
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)                                                    
-pipe = rdbconn.pipeline()
 
 # api router declaration
 fsxmlrouter = APIRouter()
@@ -56,6 +55,7 @@ def esl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/acl", include_in_schema=False)
 def acl(request: Request, response: Response):
     try:
+        pipe = rdbconn.pipeline()
         # IP LIST OF INBOUND INTERCONNECTION
         KEYPATTERN = 'intcon:in:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
@@ -102,6 +102,7 @@ def acl(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/distributor", include_in_schema=False)
 def distributor(request: Request, response: Response):
     try:
+        pipe = rdbconn.pipeline()
         KEYPATTERN = 'intcon:out:*:_gateways'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -131,6 +132,7 @@ def distributor(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/sip-setting", include_in_schema=False)
 def sip(request: Request, response: Response):
     try:
+        pipe = rdbconn.pipeline()
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
         KEYPATTERN = 'sipprofile:*'
