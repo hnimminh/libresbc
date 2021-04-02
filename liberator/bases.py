@@ -33,9 +33,9 @@ def fssocket(reqdata):
                     _result = True
                 else: 
                     _result = False
-                    #logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+                    logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                 result = bool(result and _result)
-                logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+        logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, commands={commands}, result={result}")
     except Exception as e:
         logify(f"module=liberator, space=bases, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
     finally:
@@ -55,7 +55,7 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=bases, action=start_base_event_handler_thread")
+        logify(f"module=liberator, space=bases, node={NODEID}, action=start_base_event_handler_thread")
         callengine_acl_event = f'event:callengine:acl:{NODEID}'
         callengine_sipprofile_event = f'event:callengine:sipprofile:{NODEID}'
         callengine_gateway_event = f'event:callengine:gateway:{NODEID}'
