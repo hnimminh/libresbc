@@ -33,8 +33,9 @@ def fssocket(reqdata):
                     _result = True
                 else: 
                     _result = False
-                    logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+                    #logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                 result = bool(result and _result)
+                logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
     except Exception as e:
         logify(f"module=liberator, space=bases, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
     finally:
@@ -73,12 +74,12 @@ class BaseEventHandler(Thread):
                     eventkey, eventvalue = events[0], json.loads(events[1])
                     logify(f"module=liberator, space=bases, action=catch_event, eventkey={eventkey}, eventvalue={eventvalue}")
                     prewait = eventvalue.get('prewait')
-                    requestid = eventvalue.get('requestid')
+                    # requestid = eventvalue.get('requestid')
                     # make the node run this task in different timestamp
                     time.sleep(int(prewait))
                     # specify event 
                     if eventkey in [callengine_acl_event, callengine_incon_event]:
-                        eventvalue.update({'commands': ['reloadacl', 'reloadxml']})
+                        eventvalue.update({'commands': ['reloadacl']})
                         threaded(fssocket, eventvalue)
                     elif eventkey==callengine_sipprofile_event:
                         action = eventvalue.get('action')
@@ -96,14 +97,14 @@ class BaseEventHandler(Thread):
                         gateway = eventvalue.get('gateway')
                         _gateway = eventvalue.get('_gateway')
                         if action=='create':
-                            eventvalue.update({'commands': [f'sofia profile {sipprofile} rescan', 'reloadxml']})
+                            eventvalue.update({'commands': [f'sofia profile {sipprofile} rescan']})
                         elif action=='delete':
-                            eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}', 'reloadxml']})
+                            eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}']})
                         elif action=='update':
-                            eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']})
+                            eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}', f'sofia profile {sipprofile} rescan']})
                         threaded(fssocket, eventvalue)
                     elif eventkey==callengine_outcon_event:
-                        eventvalue.update({'commands': ['distributor_ctl reload', 'reloadxml']})
+                        eventvalue.update({'commands': ['distributor_ctl reload']})
                         threaded(fssocket, eventvalue)
                     elif eventvalue==callengine_startup_event:
                         # doing reload firewall
