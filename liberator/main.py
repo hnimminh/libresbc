@@ -8,6 +8,7 @@ import uvicorn
 
 from utilities import logify, debugy
 from api import httpapi
+from bases import BaseEventHandler
 
 #---------------------------------------------------------------------------------------------------------------------------
 # MAIN APPLICATION
@@ -17,6 +18,9 @@ if __name__ == '__main__':
         debugy('module=liberator, space=main, action=initialize')
         # HTTP API
         uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, reload=True )
+        # EVENT HANDLER
+        eventthead = BaseEventHandler()
+        eventthead.start()
     except Exception as e:
         logify(f'module=liberator, space=main, exception: {e}, traceback: {traceback.format_exc()}')
     finally:

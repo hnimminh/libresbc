@@ -105,10 +105,12 @@ class BaseEventHandler(Thread):
                     elif eventkey==callengine_outcon_event:
                         eventvalue.update({'commands': ['distributor_ctl reload', 'reloadxml']})
                         threaded(fssocket, eventvalue)
+                    elif eventvalue==callengine_startup_event:
+                        # doing reload firewall
+                        pass
                     else:
                         pass
                     # firewall reload
-                    
             except Exception as e:
                 logify(f"module=liberator, space=bases, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
                 time.sleep(5)
