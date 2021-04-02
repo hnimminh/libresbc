@@ -7,7 +7,7 @@
 {%- for defined_acl in defined_acls %} 
         <list name="{{defined_acl.name}}" default="{{defined_acl.action}}">
 {%- for rule in defined_acl.rules %}  
-          <node type="{{rule.action}}" {{rule.type}}="{{rule.value}}"/>
+          <node type="{{rule.action}}" {{rule.key}}="{{rule.value}}"/>
 {%- endfor %}
         </list>
 {%- endfor %}

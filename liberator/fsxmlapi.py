@@ -84,8 +84,8 @@ def acl(request: Request, response: Response):
             if detail:
                 name = detail.get('name')
                 action = detail.get('action')
-                rulestrs = detail.get('rules')
-                rules = list(map(lambda rulestr: {'action': rulestr[0], 'type': rulestr[1], 'value': rulestr[2]}, rulestrs))
+                rulestrs = hashlistify(detail.get('rules'))
+                rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
                 defined_acls.append({'name': name, 'action': action, 'rules': rules})
 
         result = templates.TemplateResponse("acl.j2.xml",

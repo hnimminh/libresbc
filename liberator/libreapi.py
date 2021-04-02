@@ -113,26 +113,26 @@ class ACLTypeEnum(str, Enum):
 
 class ACLRuleModel(BaseModel):
     action: ACLActionEnum = Field(default='allow', description='associate action for node')
-    _type: ACLTypeEnum = Field(default='cidr', description='type of acl node', alias='type')
+    key: ACLTypeEnum = Field(default='cidr', description='type of acl node: cidr, domain')
     value: str = Field(description='acl rule value depend on type')
+
+    @root_validator()
+    def acl_rule_agreement(cls, rule):
+        key = rule.get('key'); logify(f"key={key}, rule={rule}")
+        value = rule.get('value')
+        if key=='cidr':
+            if not IPv4Network(value):
+                raise ValueError('for cidr key, value must be IPv4Network or IPv4Address')
+        else:
+            if not validators.domain(value):
+                raise ValueError('for domain key, value must be domain')
+        return rule
 
 class ACLModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of acl (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     action: ACLActionEnum = Field(default='deny', description='default action')
     rules: List[ACLRuleModel] = Field(min_items=1, max_items=64, description='default action')
-    # validation
-    @root_validator(pre=True)
-    def acl_agreement(cls, values):
-        _type = values.get('type')
-        value = values.get('value')
-        if _type=='cidr':
-            if not IPv4Address(value):
-                raise ValueError('for cidr type, value must be IPv4Network or IPv4Address')
-        else:
-            if not validators.domain(value):
-                raise ValueError('for cidr type, value must be domain')
-        return values
 
 
 @librerouter.post("/libresbc/base/acl", status_code=200)
@@ -146,7 +146,7 @@ def create_acl(reqbody: ACLModel, response: Response):
             response.status_code, result = 403, {'error': 'existent acl name'}; return
         data = jsonable_encoder(reqbody)
         rules = data.get('rules')
-        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('type')}:{rule.get('value')}", rules))
+        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('key')}:{rule.get('value')}", rules))
         data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
@@ -173,7 +173,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             response.status_code, result = 403, {'error': 'existent class name'}; return
         data = jsonable_encoder(reqbody)
         rules = data.get('rules')
-        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('type')}:{rule.get('value')}", rules))
+        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('key')}:{rule.get('value')}", rules))
         data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         if name != identifier:
@@ -230,7 +230,7 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         rulestrs = result.get('rules')
-        rules = list(map(lambda rulestr: {'action': rulestr[0], 'type': rulestr[1], 'value': rulestr[2]}, rulestrs))
+        rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
         result.update({'rules': rules})
         engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
@@ -252,14 +252,9 @@ def list_acl(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'desc')
-        details = pipe.execute()
-
-        data = list()
-        for mainkey, detail in zip(mainkeys, details):
-            if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
-
+            pipe.hget(mainkey, 'desc')
+        descs = pipe.execute()
+        data = [{'name': getnameid(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
