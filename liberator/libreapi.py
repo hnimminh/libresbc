@@ -118,7 +118,7 @@ class ACLRuleModel(BaseModel):
 
     @root_validator()
     def acl_rule_agreement(cls, rule):
-        key = rule.get('key'); logify(f"key={key}, rule={rule}")
+        key = rule.get('key')
         value = rule.get('value')
         if key=='cidr':
             if not IPv4Network(value):
