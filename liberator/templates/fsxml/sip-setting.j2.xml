@@ -29,7 +29,7 @@
             <param name="sip-capture" value="no"/>
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             {# <!-- sdp username in o= and s= fields --> #}
-            <param name="username" value="root" />
+            <param name="username" value="libresbc" />
             {# <!-- call transfer and call forward setting --> #}
             <param name="disable-transfer" value="{{sipprofile.disable_transfer}}"/>
             <param name="manual-redirect" value="{{sipprofile.manual_redirect}}"/>
