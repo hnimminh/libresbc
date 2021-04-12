@@ -99,7 +99,15 @@ make install
 #------------------------------------------------------------------------------------------------------------
 #                   PYTHON3
 #------------------------------------------------------------------------------------------------------------
-apt-get install -y python3 python3-dev python3-pip
+#apt-get install -y python3 python3-dev python3-pip
+wget https://www.python.org/ftp/python/3.8.9/Python-3.8.9.tar.xz
+tar -xf Python-3.8.9.tar.xz 
+cd Python-3.8.9/
+./configure --enable-optimizations
+make altinstall
+ln -snf /usr/local/bin/python3.8 /usr/bin/python3
+ln -snf /usr/local/bin/pip3.8 /usr/bin/pip3
+
 pip3 install --user -r /opt/libresbc/run/liberator/requirements.pip3
 #------------------------------------------------------------------------------------------------------------
 #                   NGINX
