@@ -15,7 +15,7 @@ from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION,
                            NODEID, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_SPS, MAX_SESSION, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, humanrid, redishash, jsonhash, listify, getnameid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, listify, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
