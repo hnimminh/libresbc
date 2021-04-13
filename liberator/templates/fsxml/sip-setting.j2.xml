@@ -29,7 +29,9 @@
             <param name="sip-capture" value="no"/>
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             {# <!-- sdp username in o= and s= fields --> #}
-            <param name="username" value="libresbc" />
+            <param name="username" value="libresbc"/>
+            <param name="apply-inbound-acl" value="{{profilename|upper}}ACL"/>
+            <param name="auth-calls" value="true"/>
             {# <!-- call transfer and call forward setting --> #}
             <param name="disable-transfer" value="{{sipprofile.disable_transfer}}"/>
             <param name="manual-redirect" value="{{sipprofile.manual_redirect}}"/>

@@ -1243,7 +1243,6 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     result = None
     try:
         pipe = rdbconn.pipeline()
-        name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
@@ -1437,6 +1436,8 @@ class InboundInterconnection(BaseModel):
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
     ringtone_class: str = Field(default=None, description='nameid of ringtone class')
+    auth_username: str = Field(default=None, min_length=8, max_length=32, description='username of digest auth for inbound, if set to not-null call will will challenge')
+    auth_password: str = Field(default=None, min_length=16, max_length=32, description='password of digest auth for inbound')
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
