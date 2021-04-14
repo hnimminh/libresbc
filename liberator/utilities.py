@@ -35,11 +35,19 @@ def rembytes(data):
     if isinstance(data, list):        return list(map(rembytes, data))
     if isinstance(data, set):         return set(map(rembytes, data))
 
-
-def hashlistify(string):
-    if string.startswith(':list:'):
-        return string[6:].split(_delimiter_)
-    else: return list()
+def hashfieldify(data):
+    if isinstance(data, str):
+        if data.startswith(':bool:'):
+            if data == ':bool:true': return True
+            if data == ':bool:false': return False
+        elif data.startswith(':int:'): return int(data[5:]) 
+        elif data.startswith(':float:'): return float(data[7:])
+        elif data.startswith(':list:'): 
+            if data==':list:': return []
+            else: return data[6:].split(_delimiter_)
+        elif data.startswith(':none:'): return None
+        else: return data
+    else: return data
 
 def redishash(data: dict) -> dict:
     if isinstance(data, dict):

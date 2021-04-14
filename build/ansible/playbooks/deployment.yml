@@ -15,6 +15,6 @@
     - liberator
     #- corectl
     - freeswitch
-    - netfilter
+    #- netfilter
     #- captagent
     - linking

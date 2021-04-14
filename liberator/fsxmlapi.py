@@ -10,7 +10,7 @@ from configuration import (ESL_HOST, ESL_PORT, ESL_SECRET,
                            MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, hashlistify, jsonhash, getnameid, listify
+from utilities import logify, get_request_uuid, hashfieldify, jsonhash, getnameid, listify
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -57,21 +57,25 @@ def acl(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
         # IP LIST OF INBOUND INTERCONNECTION
+        # {sipprofile: [list of ips]}
         KEYPATTERN = 'intcon:in:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
-
         for mainkey in mainkeys:
-            pipe.hget(mainkey, 'sip_ips')
-
-        data = list()
-        for detail in pipe.execute():
-            if detail: data += hashlistify(detail)
-        inbound_ipaddrs = set(data)
+            pipe.hmget(mainkey, 'sipprofile', 'sip_ips', 'auth_username')
+        sipprofile_ips = dict()
+        for details in pipe.execute():
+            if details:
+                if not hashfieldify(details[2]):
+                    sipprofile = details[0]
+                    sip_ips = hashfieldify(details[1])
+                    if sipprofile in sipprofile_ips: sipprofile_ips[sipprofile] += sip_ips
+                    else: sipprofile_ips[sipprofile] = sip_ips
 
         # DEFINED ACL LIST
+        # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
         KEYPATTERN = 'base:acl:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
@@ -84,12 +88,12 @@ def acl(request: Request, response: Response):
             if detail:
                 name = detail.get('name')
                 action = detail.get('action')
-                rulestrs = hashlistify(detail.get('rules'))
+                rulestrs = hashfieldify(detail.get('rules'))
                 rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
                 defined_acls.append({'name': name, 'action': action, 'rules': rules})
 
         result = templates.TemplateResponse("acl.j2.xml",
-                                            {"request": request, "inbound_ipaddrs": inbound_ipaddrs, "defined_acls": defined_acls},
+                                            {"request": request, "sipprofile_ips": sipprofile_ips, "defined_acls": defined_acls},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:

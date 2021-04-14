@@ -1,8 +1,10 @@
-        <list name="INBOUNDINTERCONNECT" default="deny">
+{%- for profilename, inbound_ipaddrs in sipprofile_ips.items() %} 
+        <list name="{{profilename|upper}}ACL" default="deny">
 {%- for inbound_ipaddr in inbound_ipaddrs %}  
           <node type="allow" cidr="{{inbound_ipaddr}}/32"/>
 {%- endfor %}
         </list>
+{%- endfor %}
 
 {%- for defined_acl in defined_acls %} 
         <list name="{{defined_acl.name}}" default="{{defined_acl.action}}">
