@@ -1,3 +1,4 @@
+        <param name="core-db-name" value="/dev/shm/libresbc/core.db"/>
         <param name="max-sessions" value="{{max_sessions}}"/>
         <param name="sessions-per-second" value="{{sessions_per_second}}"/>
         <param name="rtp-start-port" value="{{rtp_start_port}}"/>

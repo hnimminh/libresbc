@@ -3,7 +3,7 @@
 #-----------------------------------------------------------------------------------------------------
 _APPLICATION = 'LIBRESBC'
 _SWVERSION = '{{version}}'
-_DESCRIPTION = 'A Free Session Border Controller (SBC) For Large-Scale Voice Infrastructures'
+_DESCRIPTION = 'A Free Session Border Controller (SBC) for Large-Scale Voice Infrastructures'
 #-----------------------------------------------------------------------------------------------------
 # REDIS ENDPOINT
 #-----------------------------------------------------------------------------------------------------
@@ -17,17 +17,15 @@ REDIS_TIMEOUT = 5
 # VOICE ATTRIBUTE
 #-----------------------------------------------------------------------------------------------------
 SWCODECS = ['ALAW', 'ULAW', 'G729']
-MAX_SPS = 200
-MAX_SESSION = 6000
-FIRST_RTP_PORT = 10000
-LAST_RTP_PORT = 60000
+MAX_SPS = 0
+MAX_SESSION = 0
+FIRST_RTP_PORT = 0
+LAST_RTP_PORT = 0
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------
-_DEFAULT_CLUSTERNAME = 'LIBRE-DEFAULT-CLUSTERNAME'
-#-----------------------------------------------------------------------------------------------------
 NODEID = '{{nodeid}}'
-CLUSTERNAME = _DEFAULT_CLUSTERNAME
+CLUSTERNAME = 'DEFAULT-CLUSTERNAME'
 CLUSTERMEMBERS = {NODEID}
 #-----------------------------------------------------------------------------------------------------
 # CALL ENGINE EVENT SOCKET

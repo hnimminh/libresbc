@@ -13,7 +13,7 @@ from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, CLUSTERNAME, CLUSTERMEMBERS,
-                           SWCODECS, MAX_SPS, MAX_SESSION, 
+                           SWCODECS, MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, listify, getnameid
 
@@ -34,12 +34,21 @@ librerouter = APIRouter()
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 try:
+    rdbconn.sadd('nodespool', NODEID)
     _clustername = rdbconn.get('cluster:name')
     if _clustername: CLUSTERNAME = _clustername
     _clustermembers = set(rdbconn.smembers('cluster:members')) 
-    if _clustermembers: CLUSTERMEMBERS = _clustermembers
-except:
-    pass
+    if _clustermembers: CLUSTERMEMBERS = list(_clustermembers)
+    _rtp_start_port = rdbconn.hget('cluster:attributes', 'rtp_start_port')
+    if _rtp_start_port: FIRST_RTP_PORT = int(_rtp_start_port)
+    _rtp_end_port = rdbconn.hget('cluster:attributes', 'rtp_end_port')
+    if _rtp_end_port: LAST_RTP_PORT = int(_rtp_end_port)
+    _active_session = rdbconn.hget('cluster:attributes', 'active_session')
+    if _active_session: MAX_SESSION = int(_active_session)
+    _sessions_per_second = rdbconn.hget('cluster:attributes', 'sessions_per_second')
+    if _sessions_per_second: MAX_SPS = int(_sessions_per_second)
+except Exception as e:
+    logify(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
@@ -52,6 +61,7 @@ def predefine():
             "name": CLUSTERNAME,
             "members": CLUSTERMEMBERS
         },
+        'nodespool': rdbconn.smembers('nodespool'),
         "application": _APPLICATION,
         'swversion': _SWVERSION,
         "description": _DESCRIPTION
@@ -60,9 +70,22 @@ def predefine():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def check_valid(members):
+    for member in members:
+        if not rdbconn.ismembers('nodespool', member):
+            raise ValueError('member is not in nodespool')
+    return members
+
 class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
     members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
+    rtp_start_port: int = Field(default=10000, min=0, max=65535, description='start of rtp port range')
+    rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
+    active_session: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) session that one cluster member can handle')
+    sessions_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of session attempt in one second that one cluster member can handle')
+    # validation
+    _validmember = validator('members')(check_valid)
 
 
 @librerouter.put("/libresbc/cluster", status_code=200)
@@ -72,8 +95,12 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         pipe = rdbconn.pipeline()
         name = reqbody.name
         members = set(reqbody.members)
+        rtp_start_port = reqbody.rtp_start_port
+        rtp_end_port = reqbody.rtp_end_port
+        active_session = reqbody.active_session
+        sessions_per_second = reqbody.sessions_per_second
+
         _members = set(rdbconn.smembers('cluster:members'))
-  
         removed_members = _members - members
         for removed_member in removed_members:
             if rdbconn.scard(f'engagement:node:{removed_member}'):
@@ -81,8 +108,11 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 
         pipe.set('cluster:name', name)
         for member in members: pipe.sadd('cluster:members', member)
+        pipe.hmset('cluster:attributes', {'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second })
         pipe.execute()
         CLUSTERNAME, CLUSTERMEMBERS = name, members
+        FIRST_RTP_PORT, LAST_RTP_PORT = rtp_start_port, rtp_end_port
+        MAX_SPS, MAX_SESSION = sessions_per_second, active_session
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -95,7 +125,13 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        response.status_code, result = 200, {'name': CLUSTERNAME, 'members': CLUSTERMEMBERS}
+        result = {'name': CLUSTERNAME, 
+                  'members': CLUSTERMEMBERS,
+                  'rtp_start_port': FIRST_RTP_PORT,
+                  'rtp_end_port': LAST_RTP_PORT,
+                  'active_session': MAX_SESSION,
+                  'sessions_per_second': MAX_SPS}
+        response.status_code = 200, 
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
