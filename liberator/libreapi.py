@@ -77,6 +77,22 @@ def check_valid(members):
             raise ValueError('member is not in nodespool')
     return members
 
+class IPSuite(BaseModel):
+    listen: IPv4Address = Field(description='the listen ip address')
+    advertising: IPv4Address = Field(description='the advertising ip address')
+
+class MemberID(BaseModel):
+    __root__: str = Field(regex=_NAME_, description='NodeID of member in cluster')
+
+class MemberIPSuite(BaseModel):
+    __root__: Dict[MemberID, IPSuite]
+
+class AliasName(BaseModel):
+    __root__: str = Field(regex=_NAME_, description='Name of Alias')
+
+class AliasIPSuite(BaseModel):
+    __root__: Dict[AliasName, MemberIPSuite]
+
 class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
     members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
@@ -84,7 +100,22 @@ class ClusterModel(BaseModel):
     rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
     active_session: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) session that one cluster member can handle')
     sessions_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of session attempt in one second that one cluster member can handle')
+    network_alias: AliasIPSuite = Field(description='set of listen/advertising ip that associate with cluster member') 
+
     # validation
+    @root_validator()
+    def network_alias_agreement(cls, network_alias):
+        for aliasname, aliasdata  in network_alias.items():
+            alias_members = set(aliasdata.keys())
+            cluster_members = set(CLUSTERMEMBERS)
+            if alias_members > cluster_members:
+                raise ValueError(f'There is invalid member in alias {aliasname}')
+            if alias_members < cluster_members:
+                raise ValueError(f'The alias {aliasname} must be set for all cluster members')
+            if alias_members != cluster_members:
+                raise ValueError(f'The alias {aliasname} must be set for cluster members only')
+        return network_alias
+    
     _validmember = validator('members')(check_valid)
 
 
@@ -131,7 +162,7 @@ def get_cluster(response: Response):
                   'rtp_end_port': LAST_RTP_PORT,
                   'active_session': MAX_SESSION,
                   'sessions_per_second': MAX_SPS}
-        response.status_code = 200, 
+        response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -330,7 +361,7 @@ class SIPProfileModel(BaseModel):
     enable_timer: bool = Field(default=True, description='true to support for RFC 4028 SIP Session Timers')
     session_timeout: int = Field(default=0, ge=1800, le=3600, description='call to expire after the specified seconds')
     minimum_session_expires: int = Field(default=120, ge=90, le=3600, description='Value of SIP header Min-SE')
-    sip_listen_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
+    sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_listen_ip: IPv4Address = Field(description='IP to bind to for SIP traffic')
     sip_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for SIP')
     rtp_listen_ip: IPv4Address = Field(description='IP to bind to for RTP traffic')
