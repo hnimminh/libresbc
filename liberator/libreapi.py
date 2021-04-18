@@ -15,7 +15,7 @@ from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION,
                            NODEID, CLUSTERNAME, CLUSTERMEMBERS,
                            SWCODECS, MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, listify, getnameid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, hashfieldify, listify, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -130,7 +130,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         rtp_end_port = reqbody.rtp_end_port
         active_session = reqbody.active_session
         sessions_per_second = reqbody.sessions_per_second
-
+        network_alias = reqbody.sessions_per_second
         _members = set(rdbconn.smembers('cluster:members'))
         removed_members = _members - members
         for removed_member in removed_members:
@@ -139,7 +139,10 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 
         pipe.set('cluster:name', name)
         for member in members: pipe.sadd('cluster:members', member)
-        pipe.hmset('cluster:attributes', {'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second })
+        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second, 'aliasnames': list(network_alias.keys())}))
+        for aliasname, aliasdata in network_alias.items():
+            for memberid, ipsuite in aliasdata.items():
+                pipe.hmset(f'cluster:netalias:{aliasname}:{memberid}', ipsuite)
         pipe.execute()
         CLUSTERNAME, CLUSTERMEMBERS = name, members
         FIRST_RTP_PORT, LAST_RTP_PORT = rtp_start_port, rtp_end_port
@@ -156,12 +159,19 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
+        aliasnames = hashfieldify(rdbconn.hget('cluster:attributes', 'aliasnames'))
+        network_alias = dict()
+        for aliasname in aliasnames:
+            for memberid in CLUSTERMEMBERS:
+                network_alias[aliasname][memberid] = rdbconn.hgetall(f'cluster:netalias:{aliasname}:{memberid}')
+
         result = {'name': CLUSTERNAME, 
                   'members': CLUSTERMEMBERS,
                   'rtp_start_port': FIRST_RTP_PORT,
                   'rtp_end_port': LAST_RTP_PORT,
                   'active_session': MAX_SESSION,
-                  'sessions_per_second': MAX_SPS}
+                  'sessions_per_second': MAX_SPS,
+                  'network_alias': network_alias}
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
