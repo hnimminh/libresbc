@@ -77,22 +77,6 @@ def check_valid(members):
             raise ValueError('member is not in nodespool')
     return members
 
-class IPSuite(BaseModel):
-    listen: IPv4Address = Field(description='the listen ip address')
-    advertising: IPv4Address = Field(description='the advertising ip address')
-
-class MemberID(BaseModel):
-    __root__: str = Field(regex=_NAME_, description='NodeID of member in cluster')
-
-class MemberIPSuite(BaseModel):
-    __root__: Dict[MemberID, IPSuite]
-
-class AliasName(BaseModel):
-    __root__: str = Field(regex=_NAME_, description='Name of Alias')
-
-class AliasIPSuite(BaseModel):
-    __root__: Dict[AliasName, MemberIPSuite]
-
 class ClusterModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='The name of libresbc cluster')
     members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
@@ -100,22 +84,7 @@ class ClusterModel(BaseModel):
     rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
     active_session: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) session that one cluster member can handle')
     sessions_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of session attempt in one second that one cluster member can handle')
-    network_alias: AliasIPSuite = Field(description='set of listen/advertising ip that associate with cluster member') 
-
-    # validation
-    @root_validator()
-    def network_alias_agreement(cls, network_alias):
-        for aliasname, aliasdata  in network_alias.items():
-            alias_members = set(aliasdata.keys())
-            cluster_members = set(CLUSTERMEMBERS)
-            if alias_members > cluster_members:
-                raise ValueError(f'There is invalid member in alias {aliasname}')
-            if alias_members < cluster_members:
-                raise ValueError(f'The alias {aliasname} must be set for all cluster members')
-            if alias_members != cluster_members:
-                raise ValueError(f'The alias {aliasname} must be set for cluster members only')
-        return network_alias
-    
+    # validation    
     _validmember = validator('members')(check_valid)
 
 
@@ -130,7 +99,6 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         rtp_end_port = reqbody.rtp_end_port
         active_session = reqbody.active_session
         sessions_per_second = reqbody.sessions_per_second
-        network_alias = reqbody.sessions_per_second
         _members = set(rdbconn.smembers('cluster:members'))
         removed_members = _members - members
         for removed_member in removed_members:
@@ -139,10 +107,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 
         pipe.set('cluster:name', name)
         for member in members: pipe.sadd('cluster:members', member)
-        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second, 'aliasnames': list(network_alias.keys())}))
-        for aliasname, aliasdata in network_alias.items():
-            for memberid, ipsuite in aliasdata.items():
-                pipe.hmset(f'cluster:netalias:{aliasname}:{memberid}', ipsuite)
+        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second}))
         pipe.execute()
         CLUSTERNAME, CLUSTERMEMBERS = name, members
         FIRST_RTP_PORT, LAST_RTP_PORT = rtp_start_port, rtp_end_port
@@ -159,23 +124,170 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        aliasnames = hashfieldify(rdbconn.hget('cluster:attributes', 'aliasnames'))
-        network_alias = dict()
-        for aliasname in aliasnames:
-            for memberid in CLUSTERMEMBERS:
-                network_alias[aliasname][memberid] = rdbconn.hgetall(f'cluster:netalias:{aliasname}:{memberid}')
-
         result = {'name': CLUSTERNAME, 
                   'members': CLUSTERMEMBERS,
                   'rtp_start_port': FIRST_RTP_PORT,
                   'rtp_end_port': LAST_RTP_PORT,
                   'active_session': MAX_SESSION,
-                  'sessions_per_second': MAX_SPS,
-                  'network_alias': network_alias}
+                  'sessions_per_second': MAX_SPS
+                }
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+
+class IPSuite(BaseModel):
+    member: str = Field(regex=_NAME_, description='NodeID of member in cluster')
+    listen: IPv4Address = Field(description='the listen ip address')
+    advertise: IPv4Address = Field(description='the advertising ip address')
+
+class NetworkAlias(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of network alias (identifier)')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
+    addresses: List[IPSuite] = Field(description='List of IP address suite for cluster members')
+
+    @root_validator()
+    def network_alias_agreement(cls, addresses):
+        alias_members = set([address.get('member') for address in addresses])
+        cluster_members = set(CLUSTERMEMBERS)
+        if alias_members > cluster_members:
+            raise ValueError(f'There is invalid member in alias')
+        if alias_members < cluster_members:
+            raise ValueError(f'The alias must be set for all cluster members')
+        if alias_members != cluster_members:
+            raise ValueError(f'The alias must be set for cluster members only')
+        return addresses
+
+
+@librerouter.post("/libresbc/base/netalias", status_code=200)
+def create_netalias(reqbody: NetworkAlias, response: Response):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        name = reqbody.name
+        name_key = f'base:netalias:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent network alias name'}; return
+        data = jsonable_encoder(reqbody)
+        addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
+        data.update({'addresses': addressesstr})
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.put("/libresbc/base/netalias/{identifier}", status_code=200)
+def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        #
+        name = reqbody.name
+        _name_key = f'base:netalias:{identifier}'
+        name_key = f'base:netalias:{name}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent network alias name'}; return
+        data = jsonable_encoder(reqbody)
+        addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
+        data.update({'addresses': addressesstr})
+        rdbconn.hmset(name_key, redishash(data))
+        if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                pipe.hset(engagement, name)
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+            pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+        # fire-event acl change
+        for index, node in enumerate(CLUSTERMEMBERS):
+            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.delete("/libresbc/base/netalias/{identifier}", status_code=200)
+def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        #
+        _name_key = f'base:netalias:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engage_key): 
+            response.status_code, result = 403, {'error': 'engaged network alias'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
+        pipe.delete(_engage_key)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+        # fire-event acl change
+        for index, node in enumerate(CLUSTERMEMBERS):
+            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/base/netalias/{identifier}", status_code=200)
+def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'base:netalias:{identifier}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        addressesstr = result.get('addresses')
+        addresses = list(map(lambda address: {'member': address[0], 'listen': address[1], 'advertise': address[2]}, map(listify, addressesstr)))
+        result.update({'addresses': addresses})
+        engagements = rdbconn.smembers(_engage_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libresbc/base/netalias", status_code=200)
+def list_netalias(response: Response):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        KEYPATTERN = f'base:netalias:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hget(mainkey, 'desc')
+        descs = pipe.execute()
+        data = [{'name': getnameid(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -357,6 +469,11 @@ def check_existent_acl(acl_name):
             raise ValueError('nonexistent acl')
     return acl_name
 
+def check_existent_ipsuite(alias):
+    if not rdbconn.exists(f'cluster:netalias:{alias}:{NODEID}'):
+        raise ValueError('nonexistent alias address') 
+    return alias
+
 class SIPProfileModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
@@ -372,17 +489,15 @@ class SIPProfileModel(BaseModel):
     session_timeout: int = Field(default=0, ge=1800, le=3600, description='call to expire after the specified seconds')
     minimum_session_expires: int = Field(default=120, ge=90, le=3600, description='Value of SIP header Min-SE')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
-    sip_listen_ip: IPv4Address = Field(description='IP to bind to for SIP traffic')
-    sip_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for SIP')
-    rtp_listen_ip: IPv4Address = Field(description='IP to bind to for RTP traffic')
-    rtp_advertising_ip: IPv4Address = Field(description='IP address that used to advertise to public network for RTP')
+    sip_address: str = Field(description='IP address suite use for SIP Signalling')
+    rtp_address: str = Field(description='IP address suite use for RTP Media')
     sip_tls: bool = Field(default=False, description='true to enable SIP TLS')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
     tls_version: str = Field(default='tlsv1.2', description='TLS version')
     tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
     # validation
     _existentacl = validator('nat_space')(check_existent_acl)
-
+    _existentalias = validator('sip_address', 'rtp_address')(check_existent_ipsuite)
 
 @librerouter.post("/libresbc/sipprofile", status_code=200)
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
