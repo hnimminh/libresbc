@@ -1,6 +1,6 @@
         <param name="core-db-name" value="/dev/shm/libresbc/core.db"/>
-        <param name="max-sessions" value="{{max_sessions}}"/>
-        <param name="sessions-per-second" value="{{sessions_per_second}}"/>
-        <param name="rtp-start-port" value="{{rtp_start_port}}"/>
-        <param name="rtp-end-port" value="{{rtp_end_port}}"/>
+        <param name="max-sessions" value="{{switchattributes.max_concurrent_calls}}"/>
+        <param name="sessions-per-second" value="{{switchattributes.max_calls_per_second}}"/>
+        <param name="rtp-start-port" value="{{switchattributes.rtp_start_port}}"/>
+        <param name="rtp-end-port" value="{{switchattributes.rtp_end_port}}"/>
 
