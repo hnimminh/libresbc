@@ -33,20 +33,23 @@ librerouter = APIRouter()
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 try:
     rdbconn.sadd('nodespool', NODEID)
     _clustername = rdbconn.get('cluster:name')
     if _clustername: CLUSTERNAME = _clustername
     _clustermembers = set(rdbconn.smembers('cluster:members')) 
     if _clustermembers: CLUSTERMEMBERS = list(_clustermembers)
-    _rtp_start_port = rdbconn.hget('cluster:attributes', 'rtp_start_port')
-    if _rtp_start_port: FIRST_RTP_PORT = int(_rtp_start_port)
-    _rtp_end_port = rdbconn.hget('cluster:attributes', 'rtp_end_port')
-    if _rtp_end_port: LAST_RTP_PORT = int(_rtp_end_port)
-    _active_session = rdbconn.hget('cluster:attributes', 'active_session')
-    if _active_session: MAX_SESSION = int(_active_session)
-    _sessions_per_second = rdbconn.hget('cluster:attributes', 'sessions_per_second')
-    if _sessions_per_second: MAX_SPS = int(_sessions_per_second)
+
+    attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
+    _rtp_start_port = attributes.get('rtp_start_port')
+    if _rtp_start_port: FIRST_RTP_PORT = _rtp_start_port
+    _rtp_end_port = attributes.get('rtp_end_port')
+    if _rtp_end_port: LAST_RTP_PORT = _rtp_end_port
+    _active_session = attributes.get('active_session')
+    if _active_session: MAX_SESSION = _active_session
+    _sessions_per_second = attributes.get('sessions_per_second')
+    if _sessions_per_second: MAX_SPS = _sessions_per_second
 except Exception as e:
     logify(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
@@ -73,7 +76,7 @@ def predefine():
 
 def check_valid(members):
     for member in members:
-        if not rdbconn.ismembers('nodespool', member):
+        if not rdbconn.sismember('nodespool', member):
             raise ValueError('member is not in nodespool')
     return members
 
@@ -109,9 +112,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         for member in members: pipe.sadd('cluster:members', member)
         pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second}))
         pipe.execute()
-        CLUSTERNAME, CLUSTERMEMBERS = name, members
-        FIRST_RTP_PORT, LAST_RTP_PORT = rtp_start_port, rtp_end_port
-        MAX_SPS, MAX_SESSION = sessions_per_second, active_session
+        CLUSTERNAME, CLUSTERMEMBERS, FIRST_RTP_PORT, LAST_RTP_PORT, MAX_SPS, MAX_SESSION = name, list(members), rtp_start_port, rtp_end_port, sessions_per_second, active_session
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -128,8 +129,8 @@ def get_cluster(response: Response):
                   'members': CLUSTERMEMBERS,
                   'rtp_start_port': FIRST_RTP_PORT,
                   'rtp_end_port': LAST_RTP_PORT,
+                  'sessions_per_second': MAX_SPS,
                   'active_session': MAX_SESSION,
-                  'sessions_per_second': MAX_SPS
                 }
         response.status_code = 200
     except Exception as e:
@@ -139,6 +140,15 @@ def get_cluster(response: Response):
         return result
 
 
+def netalias_agreement(addresses):
+    _addresses = jsonable_encoder(addresses)
+    if len(_addresses) != len(CLUSTERMEMBERS):
+        raise ValueError('The alias must be set for only/all cluster members')
+    for address in _addresses:
+        member = address['member']
+        if member not in CLUSTERMEMBERS:
+            raise ValueError(f'{member} is invalid member')
+    return addresses
 
 class IPSuite(BaseModel):
     member: str = Field(regex=_NAME_, description='NodeID of member in cluster')
@@ -149,18 +159,8 @@ class NetworkAlias(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of network alias (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     addresses: List[IPSuite] = Field(description='List of IP address suite for cluster members')
-
-    @root_validator()
-    def network_alias_agreement(cls, addresses):
-        alias_members = set([address.get('member') for address in addresses])
-        cluster_members = set(CLUSTERMEMBERS)
-        if alias_members > cluster_members:
-            raise ValueError(f'There is invalid member in alias')
-        if alias_members < cluster_members:
-            raise ValueError(f'The alias must be set for all cluster members')
-        if alias_members != cluster_members:
-            raise ValueError(f'The alias must be set for cluster members only')
-        return addresses
+    # validation
+    _validnetalias = validator('addresses')(netalias_agreement)
 
 
 @librerouter.post("/libresbc/base/netalias", status_code=200)
@@ -470,7 +470,7 @@ def check_existent_acl(acl_name):
     return acl_name
 
 def check_existent_ipsuite(alias):
-    if not rdbconn.exists(f'cluster:netalias:{alias}:{NODEID}'):
+    if not rdbconn.exists(f'base:netalias:{alias}'):
         raise ValueError('nonexistent alias address') 
     return alias
 
@@ -511,8 +511,12 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
         nat_space = data.get('nat_space')
+        sip_address = data.get('sip_address')
+        rtp_address = data.get('rtp_address')
         pipe.hmset(name_key, redishash(data))
         if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
+        pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
@@ -539,9 +543,17 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
         _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        _sip_address = rdbconn.get('sip_address')
+        _rtp_address = rdbconn.get('rtp_address')
         nat_space = data.get('nat_space')
+        sip_address = data.get('sip_address')
+        rtp_address = data.get('rtp_address')
         if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
+        pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
+        pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
         if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
+        pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.hmset(name_key, redishash(data))
         pipe.execute()
         if name != identifier:
@@ -579,7 +591,11 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
         _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        _sip_address = rdbconn.get('sip_address')
+        _rtp_address = rdbconn.get('rtp_address')
         if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
+        pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
+        pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
         pipe.execute()

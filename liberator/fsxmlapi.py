@@ -6,7 +6,8 @@ import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from configuration import (ESL_HOST, ESL_PORT, ESL_SECRET,
+from configuration import (NODEID,
+                           ESL_HOST, ESL_PORT, ESL_SECRET,
                            MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
@@ -137,6 +138,22 @@ def distributor(request: Request, response: Response):
 def sip(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
+        # get netalias
+        # {profilename1: profiledata1, profilename2: profiledata2}
+        KEYPATTERN = 'base:netalias:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+        for mainkey in mainkeys:
+            pipe.hget(mainkey, 'addresses')
+        details = pipe.execute()
+        netaliases = dict()
+        for mainkey, detail in zip(mainkeys, details):
+            aliasname = getnameid(mainkey)
+            addresses = list(map(listify, hashfieldify(detail)))
+            netaliases[aliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
+
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
         KEYPATTERN = 'sipprofile:*'
@@ -195,7 +212,7 @@ def sip(request: Request, response: Response):
 
         # template
         result = templates.TemplateResponse("sip-setting.j2.xml",
-                                            {"request": request, "sipprofiles": sipprofiles},
+                                            {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:

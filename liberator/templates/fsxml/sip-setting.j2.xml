@@ -80,10 +80,10 @@
             <param name="minimum-session-expires" value="{{sipprofile.minimum_session_expires|default('120')}}"/>
             <param name="sip-options-respond-503-on-busy" value="{{sipprofile.sip_options_respond_503_on_busy}}"/>
             {# <!-- set all listening ip by profile --> #}
-            <param name="rtp-ip" value="{{sipprofile.rtp_listen_ip}}"/>
-            <param name="sip-ip" value="{{sipprofile.sip_listen_ip}}"/>
-            <param name="ext-rtp-ip" value="autonat:{{sipprofile.rtp_advertising_ip}}"/>
-            <param name="ext-sip-ip" value="autonat:{{sipprofile.sip_advertising_ip}}"/>
+            <param name="rtp-ip" value="{{ netaliases[sipprofile.rtp_address][NODEID]['listen'] }}"/>
+            <param name="sip-ip" value="{{ netaliases[sipprofile.sip_address][NODEID]['listen'] }}"/>
+            <param name="ext-rtp-ip" value="autonat:{{ netaliases[sipprofile.rtp_address][NODEID]['advertise'] }}"/>
+            <param name="ext-sip-ip" value="autonat:{{ netaliases[sipprofile.sip_address][NODEID]['advertise'] }}"/>
             <param name="sip-port" value="{{sipprofile.sip_listen_port}}"/>
             {# <!--TLS: BEGIN --> #}
             <param name="tls" value="{{sipprofile.sip_tls}}"/>
