@@ -6,8 +6,8 @@ import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from configuration import (NODEID,
-                           ESL_HOST, ESL_PORT, ESL_SECRET,
+from configuration import (NODEID, CLUSTERS,
+                           ESL_HOST, ESL_PORT, ESL_SECRET, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
 from utilities import logify, get_request_uuid, hashfieldify, jsonhash, getnameid, listify
@@ -27,9 +27,8 @@ templates = Jinja2Templates(directory="templates/fsxml")
 @fsxmlrouter.get("/fsxmlapi/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
     try:
-        switchattributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
         result = templates.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "switchattributes": switchattributes},
+                                            {"request": request, "switchattributes": CLUSTERS},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
