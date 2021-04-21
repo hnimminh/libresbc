@@ -31,8 +31,10 @@ async def tracking(request: Request, call_next) -> Response:
         async for chunk in response.body_iterator: response_body += chunk
         response_body = response_body.decode()
         process_time = round(time.time() - start_time, 3)
-        if url.startswith('/libresbc/'): logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}')
-        else: logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}')
+        if url.startswith('/libresbc/'): 
+            logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}')
+        else: 
+            logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}')
         _request_uuid_ctx_var.reset(request_uuid)
         return Response(content=response_body,
                         status_code=status_code,
