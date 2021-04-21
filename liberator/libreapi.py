@@ -480,7 +480,7 @@ class SIPProfileModel(BaseModel):
     manual_redirect: bool = Field(default=False, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
     disable_hold: bool = Field(default=False, description='no handling the SIP re-INVITE with hold/unhold')
     nonce_ttl: int = Field(default=60, ge=15, le=120, description='TTL for nonce in sip auth')
-    nat_space: str = Field(default='rfc1918.auto', description='the network will be applied NAT')
+    local_network_acl: str = Field(default='rfc1918.auto', description='the network will be applied NAT')
     sip_options_respond_503_on_busy: bool = Field(default=True, description='response 503 when system is in heavy load')
     enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
     enable_timer: bool = Field(default=True, description='true to support for RFC 4028 SIP Session Timers')
@@ -494,7 +494,7 @@ class SIPProfileModel(BaseModel):
     tls_version: str = Field(default='tlsv1.2', description='TLS version')
     tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
     # validation
-    _existentacl = validator('nat_space')(check_existent_acl)
+    _existentacl = validator('local_network_acl')(check_existent_acl)
     _existentalias = validator('sip_address', 'rtp_address')(check_existent_ipsuite)
 
 @librerouter.post("/libresbc/sipprofile", status_code=200)
@@ -508,11 +508,11 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         name_key = f'sipprofile:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        nat_space = data.get('nat_space')
+        local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
         pipe.hmset(name_key, redishash(data))
-        if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        if local_network_acl not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{local_network_acl}', name_key)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.execute()
@@ -540,16 +540,16 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
         _sip_address = rdbconn.get('sip_address')
         _rtp_address = rdbconn.get('rtp_address')
-        nat_space = data.get('nat_space')
+        local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
-        if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
+        if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
-        if nat_space not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{nat_space}', name_key)
+        if local_network_acl not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{local_network_acl}', name_key)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.hmset(name_key, redishash(data))
@@ -588,10 +588,10 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
             response.status_code, result = 403, {'error': 'engaged sipprofile'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
-        _nat_space = rdbconn.hget(_name_key, 'nat_space')
+        _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
         _sip_address = rdbconn.get('sip_address')
         _rtp_address = rdbconn.get('rtp_address')
-        if _nat_space not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_nat_space}', _name_key)
+        if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
         pipe.delete(_engage_key)
