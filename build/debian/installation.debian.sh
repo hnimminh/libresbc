@@ -27,10 +27,11 @@ apt-get update
 # Install dependencies required for the build
 # apt-get install -y g++ g++-8 gcc gcc-8 autoconf automake libtool wget libncurses-dev zlib1g-dev libcurl3-gnutls libcurl4-openssl-dev libgnutls-openssl27 libpcre16-3 libpcre3-dev libpcre32-3 libpcrecpp0v5 libspeex-dev libspeex1 libspeexdsp-dev libspeexdsp1 libldns-dev libldns2 libedit-dev libspeex-dev libspeex1 libspeexdsp-dev libspeexdsp1 libsqlite3-dev libssl-dev yasm libsndfile1 libsndfile1-dev libvpx5 libopus-dev libopus0 libopusfile-dev libopusfile0
 apt-get build-dep freeswitch
-
-wget https://files.freeswitch.org/freeswitch-releases/freeswitch-1.10.5.-release.tar.gz -O freeswitch-1.10.5.-release.tar.gz 
-tar -xzvf freeswitch-1.10.5.-release.tar.gz
-cd freeswitch-1.10.5.-release
+# wget https://files.freeswitch.org/freeswitch-releases/freeswitch-1.10.5.-release.tar.gz -O freeswitch-1.10.5.-release.tar.gz 
+wget https://github.com/signalwire/freeswitch/archive/refs/tags/v1.10.6.tar.gz -O freeswitch-1.10.6.tar.gz 
+tar -xzvf freeswitch-1.10.6.tar.gz
+cd freeswitch-1.10.6
+./bootstrap.sh -j
 mv modules.conf modules.conf.origin
 cat >modules.conf<< EOF 
 applications/mod_commands
@@ -48,6 +49,7 @@ applications/mod_spandsp
 formats/mod_sndfile
 xml_int/mod_xml_rpc
 xml_int/mod_xml_curl
+codecs/mod_opus
 EOF
 
 ./configure -C --prefix=/usr/local --with-rundir=/var/run/ --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl
