@@ -12,8 +12,7 @@ from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
-                           NODEID, CLUSTERNAME, CLUSTERMEMBERS,
-                           SWCODECS, MAX_SPS, MAX_SESSION, FIRST_RTP_PORT, LAST_RTP_PORT,
+                           NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, hashfieldify, listify, getnameid
 
@@ -24,7 +23,6 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
 # CONSTANCE
 COEFFICIENT = 0
-# PATTERN
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
 _DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
 
@@ -36,20 +34,21 @@ librerouter = APIRouter()
 
 try:
     rdbconn.sadd('nodespool', NODEID)
+
     _clustername = rdbconn.get('cluster:name')
-    if _clustername: CLUSTERNAME = _clustername
+    if _clustername: CLUSTERS['name'] = _clustername
     _clustermembers = set(rdbconn.smembers('cluster:members')) 
-    if _clustermembers: CLUSTERMEMBERS = list(_clustermembers)
+    if _clustermembers: CLUSTERS['members'] = list(_clustermembers)
 
     attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
     _rtp_start_port = attributes.get('rtp_start_port')
-    if _rtp_start_port: FIRST_RTP_PORT = _rtp_start_port
+    if _rtp_start_port: CLUSTERS['rtp_start_port'] = _rtp_start_port
     _rtp_end_port = attributes.get('rtp_end_port')
-    if _rtp_end_port: LAST_RTP_PORT = _rtp_end_port
-    _active_session = attributes.get('active_session')
-    if _active_session: MAX_SESSION = _active_session
-    _sessions_per_second = attributes.get('sessions_per_second')
-    if _sessions_per_second: MAX_SPS = _sessions_per_second
+    if _rtp_end_port: CLUSTERS['rtp_end_port'] = _rtp_end_port
+    _max_concurrent_calls = attributes.get('max_concurrent_calls')
+    if _max_concurrent_calls: CLUSTERS['max_concurrent_calls'] = _max_concurrent_calls
+    _max_calls_per_second = attributes.get('max_calls_per_second')
+    if _max_calls_per_second: CLUSTERS['max_calls_per_second'] = _max_calls_per_second
 except Exception as e:
     logify(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
@@ -59,15 +58,13 @@ except Exception as e:
 @librerouter.get("/libresbc/predefine", status_code=200)
 def predefine():
     return {
-        "nodeid": NODEID,
-        "cluster": {
-            "name": CLUSTERNAME,
-            "members": CLUSTERMEMBERS
-        },
-        'nodespool': rdbconn.smembers('nodespool'),
-        "application": _APPLICATION,
+        'application': _APPLICATION,
         'swversion': _SWVERSION,
-        "description": _DESCRIPTION
+        'description': _DESCRIPTION,
+        'nodeid': NODEID,
+        'nodespool': rdbconn.smembers('nodespool'),
+        'cluster': CLUSTERS,
+        'codecs': SWCODECS,
     }
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -85,8 +82,8 @@ class ClusterModel(BaseModel):
     members: List[str] = Field(min_items=1, max_item=16, description='The member of libresbc cluster')
     rtp_start_port: int = Field(default=10000, min=0, max=65535, description='start of rtp port range')
     rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
-    active_session: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) session that one cluster member can handle')
-    sessions_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of session attempt in one second that one cluster member can handle')
+    max_concurrent_calls: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) call that one cluster member can handle')
+    max_calls_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of calls attempt in one second that one cluster member can handle')
     # validation    
     _validmember = validator('members')(check_valid)
 
@@ -100,8 +97,8 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         members = set(reqbody.members)
         rtp_start_port = reqbody.rtp_start_port
         rtp_end_port = reqbody.rtp_end_port
-        active_session = reqbody.active_session
-        sessions_per_second = reqbody.sessions_per_second
+        max_concurrent_calls = reqbody.max_concurrent_calls
+        max_calls_per_second = reqbody.max_calls_per_second
         _members = set(rdbconn.smembers('cluster:members'))
         removed_members = _members - members
         for removed_member in removed_members:
@@ -110,9 +107,17 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 
         pipe.set('cluster:name', name)
         for member in members: pipe.sadd('cluster:members', member)
-        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'active_session': active_session, 'sessions_per_second': sessions_per_second}))
+        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'max_concurrent_calls': max_concurrent_calls, 'max_calls_per_second': max_calls_per_second}))
         pipe.execute()
-        CLUSTERNAME, CLUSTERMEMBERS, FIRST_RTP_PORT, LAST_RTP_PORT, MAX_SPS, MAX_SESSION = name, list(members), rtp_start_port, rtp_end_port, sessions_per_second, active_session
+        CLUSTERS.update({
+            'name': name,
+            'members': list(members),
+            'rtp_start_port': rtp_start_port,
+            'rtp_end_port': rtp_end_port,
+            'max_concurrent_calls': max_concurrent_calls,
+            'max_calls_per_second': max_calls_per_second
+        })
+
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -125,14 +130,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        result = {'name': CLUSTERNAME, 
-                  'members': CLUSTERMEMBERS,
-                  'rtp_start_port': FIRST_RTP_PORT,
-                  'rtp_end_port': LAST_RTP_PORT,
-                  'sessions_per_second': MAX_SPS,
-                  'active_session': MAX_SESSION,
-                }
-        response.status_code = 200
+        response.status_code, result = 200, CLUSTERS
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -142,11 +140,11 @@ def get_cluster(response: Response):
 
 def netalias_agreement(addresses):
     _addresses = jsonable_encoder(addresses)
-    if len(_addresses) != len(CLUSTERMEMBERS):
+    if len(_addresses) != len(CLUSTERS.get('members')):
         raise ValueError('The alias must be set for only/all cluster members')
     for address in _addresses:
         member = address['member']
-        if member not in CLUSTERMEMBERS:
+        if member not in CLUSTERS.get('members'):
             raise ValueError(f'{member} is invalid member')
     return addresses
 
@@ -214,7 +212,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -240,7 +238,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -341,7 +339,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -380,7 +378,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -406,7 +404,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -520,7 +518,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -568,7 +566,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:sipprofile:{node}'
             value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
@@ -601,7 +599,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -911,8 +909,18 @@ def list_codec_class(response: Response):
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    cps: int = Field(default=2, ge=1, le=len(CLUSTERMEMBERS)*MAX_SPS//2, description='call per second')
-    ccs: int = Field(default=10, ge=1, le=len(CLUSTERMEMBERS)*MAX_SESSION//2, description='concurrent calls')
+    cps: int = Field(default=2, ge=1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
+    ccs: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
+    # validator
+    @root_validator(pre=True)
+    def routing_table_agreement(cls, values):
+        cps = values.get('cps')
+        if cps > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_calls_per_second'))//2:
+            raise ValueError(f'the cps value is not valid for cluster capacity')
+        ccs = values.get('ccs')
+        if ccs > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_concurrent_calls'))//2:
+            raise ValueError(f'the ccs value is not valid for cluster capacity')
+        return values
 
 
 @librerouter.post("/libresbc/class/capacity", status_code=200)
@@ -1206,7 +1214,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1242,7 +1250,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             pipe.delete(_name_key)
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1267,7 +1275,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1352,7 +1360,7 @@ def check_existent_sipprofile(sipprofile):
 
 def check_cluster_node(nodes):
     for node in nodes:
-        if node != '_ALL_' and node not in CLUSTERMEMBERS:
+        if node != '_ALL_' and node not in CLUSTERS.get('members'):
             raise ValueError('nonexistent node')
     return nodes
 
@@ -1393,7 +1401,7 @@ class OutboundInterconnection(BaseModel):
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
-    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
+    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
     _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
@@ -1437,7 +1445,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1516,7 +1524,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:outbound:intcon:{node}'
             value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
@@ -1561,7 +1569,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1646,7 +1654,7 @@ class InboundInterconnection(BaseModel):
     ringtone_class: str = Field(default=None, description='nameid of ringtone class')
     auth_username: str = Field(default=None, min_length=8, max_length=32, description='username of digest auth for inbound, if set to not-null call will will challenge')
     auth_password: str = Field(default=None, min_length=16, max_length=32, description='password of digest auth for inbound')
-    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
+    nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
     _existenringtone = validator('ringtone_class')(check_existent_ringtone)
@@ -1699,7 +1707,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1778,7 +1786,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect update
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:inbound:intcon:{node}'
             value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
@@ -1821,7 +1829,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect delete
-        for index, node in enumerate(CLUSTERMEMBERS):
+        for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None

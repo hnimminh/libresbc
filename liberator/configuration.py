@@ -17,16 +17,18 @@ REDIS_TIMEOUT = 5
 # VOICE ATTRIBUTE
 #-----------------------------------------------------------------------------------------------------
 SWCODECS = ['ALAW', 'ULAW', 'G729']
-MAX_SPS = 0
-MAX_SESSION = 0
-FIRST_RTP_PORT = 0
-LAST_RTP_PORT = 0
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------
 NODEID = '{{nodeid}}'
-CLUSTERNAME = 'DEFAULT-CLUSTERNAME'
-CLUSTERMEMBERS = {NODEID}
+CLUSTERS = {
+    'name': 'defaultname',
+    'members': [NODEID],
+    "rtp_start_port": 0,
+    "rtp_end_port": 0,
+    "max_calls_per_second": 0,
+    "max_concurrent_calls": 0
+}
 #-----------------------------------------------------------------------------------------------------
 # CALL ENGINE EVENT SOCKET
 #-----------------------------------------------------------------------------------------------------
