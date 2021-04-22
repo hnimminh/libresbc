@@ -14,20 +14,32 @@ from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, hashfieldify, listify, getnameid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
-# CONSTANCE
-COEFFICIENT = 0
-_NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
-_DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
 
 # API ROUTER DECLARATION
 librerouter = APIRouter()
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CONSTANTS
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+_COEFFICIENT = 0
+# PATTERN
+_NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
+# ROUTING 
+_QUERY = 'query'
+_BLOCK = 'block'
+_JUMPS = 'jumps'
+_ROUTE = 'route'
+# reserved for value empty string
+__EMPTY_STRING__ = '__empty_string__'
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -71,7 +83,7 @@ def predefine():
 # CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def check_valid(members):
+def check_member(members):
     for member in members:
         if not rdbconn.sismember('nodespool', member):
             raise ValueError('member is not in nodespool')
@@ -85,7 +97,7 @@ class ClusterModel(BaseModel):
     max_concurrent_calls: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) call that one cluster member can handle')
     max_calls_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of calls attempt in one second that one cluster member can handle')
     # validation    
-    _validmember = validator('members')(check_valid)
+    _validmember = validator('members')(check_member)
 
 
 @librerouter.put("/libresbc/cluster", status_code=200)
@@ -138,6 +150,11 @@ def get_cluster(response: Response):
         return result
 
 
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# NETWORK ALIAS
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 def netalias_agreement(addresses):
     _addresses = jsonable_encoder(addresses)
     if len(_addresses) != len(CLUSTERS.get('members')):
@@ -166,7 +183,6 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
-        pipe = rdbconn.pipeline()
         name = reqbody.name
         name_key = f'base:netalias:{name}'
         if rdbconn.exists(name_key):
@@ -188,7 +204,6 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
     result = None
     try:
         pipe = rdbconn.pipeline()
-        #
         name = reqbody.name
         _name_key = f'base:netalias:{identifier}'
         name_key = f'base:netalias:{name}'
@@ -205,7 +220,10 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                if rdbconn.hget(engagement, 'rtp_address') == identifier:
+                    pipe.hset(engagement, 'rtp_address', name)
+                if rdbconn.hget(engagement, 'sip_address') == identifier:
+                    pipe.hset(engagement, 'sip_address', name)        
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -213,7 +231,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -239,7 +257,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -340,7 +358,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -353,7 +371,6 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
     result = None
     try:
         pipe = rdbconn.pipeline()
-        #
         name = reqbody.name
         _name_key = f'base:acl:{identifier}'
         name_key = f'base:acl:{name}'
@@ -371,7 +388,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(engagement, 'local_network_acl', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -379,7 +396,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -405,7 +422,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -519,7 +536,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -559,7 +576,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'sipprofile', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -568,7 +585,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         # fire-event sip profile update
         for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:sipprofile:{node}'
-            value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -600,7 +617,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -697,7 +714,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'ringtone_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -825,7 +842,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'codec_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -959,7 +976,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'capacity_class',  name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1085,7 +1102,9 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                _translation_rules = fieldjsonify(rdbconn.hget(f'intcon:{engagement}', 'translation_classes'))
+                translation_rules = [name if rule == identifier else rule for rule in _translation_rules]
+                pipe.hset(f'intcon:{engagement}', 'translation_classes', fieldredisify(translation_rules))
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1215,7 +1234,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1251,7 +1270,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1276,7 +1295,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1446,7 +1465,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1459,6 +1478,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     result = None
     try:
         pipe = rdbconn.pipeline()
+        name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
@@ -1514,10 +1534,16 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 if engagement.startswith('table'):
-                    pipe.hset(f'routing:{engagement}', 'endpoint', name)
+                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
+                    if _endpoints:
+                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
+                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
                 if engagement.startswith('record'):
-                    endpoints = rdbconn.hget(f'routing:{engagement}', 'endpoints')
-                    pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{endpoints[6:].replace(identifier, name)}')
+                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
+                    _action = rdbconn.hget(f'routing:{engagement}', 'action')
+                    if _endpoints and _action==_ROUTE:
+                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
+                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1526,7 +1552,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         # fire-event outbound interconnect update
         for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:outbound:intcon:{node}'
-            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1570,7 +1596,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1708,7 +1734,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1788,7 +1814,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         # fire-event inbound interconnect update
         for index, node in enumerate(CLUSTERS.get('members')):
             key = f'event:callengine:inbound:intcon:{node}'
-            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid}
+            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
             pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
@@ -1830,7 +1856,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect delete
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1884,13 +1910,6 @@ def list_inbound_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROUTING TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_QUERY = 'query'
-_BLOCK = 'block'
-_JUMPS = 'jumps'
-_ROUTE = 'route'
-# reserved for value empty string
-__EMPTY_STRING__ = '__empty_string__'
-
 class RoutingTableActionEnum(str, Enum):
     query = _QUERY
     route = _ROUTE
@@ -1913,10 +1932,13 @@ class RoutingTableModel(BaseModel):
         if action==_ROUTE:
             endpointsize = len(endpoints)
             weightsize = len(weights)
-            if endpointsize:
+            if not endpointsize:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize!=weightsize and endpointsize>1:
-                raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+            if endpointsize <= 1:
+                if 'weights' in values: values.pop('weights')
+            else:
+                if endpointsize!=weightsize:
+                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
             for weight in weights:
                 if weight < 0 or weight > 100:
                     raise ValueError('weight value should be in range 0-99')
@@ -1937,13 +1959,14 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        endpoint = data.get('endpoint')
+        endpoints = data.get('endpoints')
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
-        if endpoint: 
-            pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if endpoints:
+            for endpoint in endpoints: 
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1959,7 +1982,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        endpoint = data.get('endpoint')
+        endpoints = data.get('endpoints')
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if not rdbconn.exists(_name_key): 
@@ -1967,18 +1990,22 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table name'}; return
         # get current data
-        _endpoint = rdbconn.hget(_name_key, 'endpoint')
+        _endpoints = fieldjsonify(rdbconn.hget(_name_key, 'endpoints'))
         # transaction block
         pipe.multi()
-        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
+        if _endpoints:
+            for _endpoint in _endpoints:
+                pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.hmset(name_key, redishash(data))
-        if endpoint: pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if endpoints:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{name}')
+                pipe.hset(f'intcon:{engagement}', 'routing', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -2012,8 +2039,10 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
                 if records:
                     response.status_code, result = 400, {'error': 'routing table in used'}; return
         # get current data
-        _endpoint = rdbconn.hget(_name_key, 'endpoint')
-        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
+        _endpoints = rdbconn.hget(_name_key, 'endpoints')
+        if _endpoints:
+            for _endpoint in _endpoints: 
+                pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -2114,8 +2143,11 @@ class RoutingRecordModel(BaseModel):
             weightsize = len(weights)
             if endpointsize:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize!=weightsize and endpointsize>1:
-                raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+            if endpointsize <= 1:
+                if 'weights' in values: values.pop('weights')
+            else:
+                if endpointsize!=weightsize:
+                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
             for weight in weights:
                 if weight < 0 or weight > 100:
                     raise ValueError('weight value should be in range 0-99')
@@ -2182,12 +2214,6 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         # update new-one
         data.pop('table'); data.pop('match'); data.pop('value')
         pipe.hmset(record_key, redishash(data))
-        if action==_ROUTE:
-            for endpoint in endpoints:
-                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
-        if action==_JUMPS:
-            for endpoint in endpoints:
-                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
         # remove new-one
         if _action==_ROUTE:
             for endpoint in _endpoints:
@@ -2195,6 +2221,12 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         if _action==_JUMPS:
             for endpoint in _endpoints:
                 pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
+        if action==_ROUTE:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if action==_JUMPS:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:

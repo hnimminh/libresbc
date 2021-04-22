@@ -10,7 +10,7 @@ from configuration import (NODEID, CLUSTERS,
                            ESL_HOST, ESL_PORT, ESL_SECRET, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, hashfieldify, jsonhash, getnameid, listify
+from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getnameid, listify
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -68,9 +68,9 @@ def acl(request: Request, response: Response):
         sipprofile_ips = dict()
         for details in pipe.execute():
             if details:
-                if not hashfieldify(details[2]):
+                if not fieldjsonify(details[2]):
                     sipprofile = details[0]
-                    sip_ips = hashfieldify(details[1])
+                    sip_ips = fieldjsonify(details[1])
                     if sipprofile in sipprofile_ips: sipprofile_ips[sipprofile] += sip_ips
                     else: sipprofile_ips[sipprofile] = sip_ips
 
@@ -88,7 +88,7 @@ def acl(request: Request, response: Response):
             if detail:
                 name = detail.get('name')
                 action = detail.get('action')
-                rulestrs = hashfieldify(detail.get('rules'))
+                rulestrs = fieldjsonify(detail.get('rules'))
                 rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
                 defined_acls.append({'name': name, 'action': action, 'rules': rules})
 
@@ -150,7 +150,7 @@ def sip(request: Request, response: Response):
         netaliases = dict()
         for mainkey, detail in zip(mainkeys, details):
             aliasname = getnameid(mainkey)
-            addresses = list(map(listify, hashfieldify(detail)))
+            addresses = list(map(listify, fieldjsonify(detail)))
             netaliases[aliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
 
         # get the maping siprofile and data
