@@ -14,7 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, hashfieldify, listify, getnameid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, getnameid
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -359,7 +359,6 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
     result = None
     try:
         pipe = rdbconn.pipeline()
-        #
         name = reqbody.name
         _name_key = f'base:acl:{identifier}'
         name_key = f'base:acl:{name}'
@@ -377,7 +376,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(engagement, 'local_network_acl', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -565,7 +564,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'sipprofile', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -703,7 +702,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'ringtone_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -831,7 +830,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'codec_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -965,7 +964,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                pipe.hset(f'intcon:{engagement}', 'capacity_class',  name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1091,7 +1090,9 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(engagement, name)
+                _translation_rules = fieldjsonify(rdbconn.hget(f'intcon:{engagement}', 'translation_classes'))
+                translation_rules = [name if rule == identifier else rule for rule in _translation_rules]
+                pipe.hset(f'intcon:{engagement}', 'translation_classes', fieldredisify(translation_rules))
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1465,6 +1466,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     result = None
     try:
         pipe = rdbconn.pipeline()
+        name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
@@ -1919,10 +1921,13 @@ class RoutingTableModel(BaseModel):
         if action==_ROUTE:
             endpointsize = len(endpoints)
             weightsize = len(weights)
-            if endpointsize:
+            if not endpointsize:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize!=weightsize and endpointsize>1:
-                raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+            if endpointsize <= 1:
+                if 'weights' in values: values.pop('weights')
+            else:
+                if endpointsize!=weightsize:
+                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
             for weight in weights:
                 if weight < 0 or weight > 100:
                     raise ValueError('weight value should be in range 0-99')
@@ -1943,13 +1948,14 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        endpoint = data.get('endpoint')
+        endpoints = data.get('endpoints')
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
         pipe.hmset(name_key, redishash(data))
-        if endpoint: 
-            pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if endpoints:
+            for endpoint in endpoints: 
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1965,7 +1971,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        endpoint = data.get('endpoint')
+        endpoints = data.get('endpoints')
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if not rdbconn.exists(_name_key): 
@@ -1973,18 +1979,22 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table name'}; return
         # get current data
-        _endpoint = rdbconn.hget(_name_key, 'endpoint')
+        _endpoints = fieldjsonify(rdbconn.hget(_name_key, 'endpoints'))
         # transaction block
         pipe.multi()
-        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
+        if _endpoints:
+            for _endpoint in _endpoints:
+                pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.hmset(name_key, redishash(data))
-        if endpoint: pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if endpoints:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{name}')
+                pipe.hset(f'intcon:{engagement}', 'routing', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -2018,8 +2028,10 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
                 if records:
                     response.status_code, result = 400, {'error': 'routing table in used'}; return
         # get current data
-        _endpoint = rdbconn.hget(_name_key, 'endpoint')
-        if _endpoint: pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
+        _endpoints = rdbconn.hget(_name_key, 'endpoints')
+        if _endpoints:
+            for _endpoint in _endpoints: 
+                pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -2120,8 +2132,11 @@ class RoutingRecordModel(BaseModel):
             weightsize = len(weights)
             if endpointsize:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize!=weightsize and endpointsize>1:
-                raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+            if endpointsize <= 1:
+                if 'weights' in values: values.pop('weights')
+            else:
+                if endpointsize!=weightsize:
+                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
             for weight in weights:
                 if weight < 0 or weight > 100:
                     raise ValueError('weight value should be in range 0-99')
@@ -2188,12 +2203,6 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         # update new-one
         data.pop('table'); data.pop('match'); data.pop('value')
         pipe.hmset(record_key, redishash(data))
-        if action==_ROUTE:
-            for endpoint in endpoints:
-                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
-        if action==_JUMPS:
-            for endpoint in endpoints:
-                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
         # remove new-one
         if _action==_ROUTE:
             for endpoint in _endpoints:
@@ -2201,6 +2210,12 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         if _action==_JUMPS:
             for endpoint in _endpoints:
                 pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
+        if action==_ROUTE:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        if action==_JUMPS:
+            for endpoint in endpoints:
+                pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
