@@ -21,13 +21,25 @@ REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
-# CONSTANCE
-COEFFICIENT = 0
-_NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
-_DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
 
 # API ROUTER DECLARATION
 librerouter = APIRouter()
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# CONSTANTS
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+COEFFICIENT = 0
+# PATTERN
+_NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
+# ROUTING 
+_QUERY = 'query'
+_BLOCK = 'block'
+_JUMPS = 'jumps'
+_ROUTE = 'route'
+# reserved for value empty string
+__EMPTY_STRING__ = '__empty_string__'
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1522,10 +1534,16 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 if engagement.startswith('table'):
-                    pipe.hset(f'routing:{engagement}', 'endpoint', name)
+                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
+                    if _endpoints:
+                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
+                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
                 if engagement.startswith('record'):
-                    endpoints = rdbconn.hget(f'routing:{engagement}', 'endpoints')
-                    pipe.hset(f'routing:{engagement}', 'endpoints', f':list:{endpoints[6:].replace(identifier, name)}')
+                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
+                    _action = rdbconn.hget(f'routing:{engagement}', 'action')
+                    if _endpoints and _action==_ROUTE:
+                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
+                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -1892,13 +1910,6 @@ def list_inbound_interconnect(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROUTING TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_QUERY = 'query'
-_BLOCK = 'block'
-_JUMPS = 'jumps'
-_ROUTE = 'route'
-# reserved for value empty string
-__EMPTY_STRING__ = '__empty_string__'
-
 class RoutingTableActionEnum(str, Enum):
     query = _QUERY
     route = _ROUTE
