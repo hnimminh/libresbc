@@ -71,7 +71,7 @@
             <param name="rtp-digit-delay" value="20"/>
             {# <!--If you don't want to pass through timestamps from 1 RTP call to another (on a per call basis with rtp_rewrite_timestamps chanvar)--> #}
             <param name="rtp-rewrite-timestamps" value="true"/>
-            <param name="local-network-acl" value="{{sipprofile.natspnat_spaceace|default('rfc1918.auto')}}"/>
+            <param name="local-network-acl" value="{{sipprofile.local_network_acl|default('rfc1918.auto')}}"/>
             <param name="dialplan" value="XML"/>
             <param name="context" value="librectx"/>
             <param name="dbname" value="/dev/shm/libresbc/sip_{{sipprofile.name}}.db"/>
