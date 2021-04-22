@@ -71,7 +71,7 @@ def predefine():
 # CLUSTER & NODE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def check_valid(members):
+def check_member(members):
     for member in members:
         if not rdbconn.sismember('nodespool', member):
             raise ValueError('member is not in nodespool')
@@ -85,7 +85,7 @@ class ClusterModel(BaseModel):
     max_concurrent_calls: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) call that one cluster member can handle')
     max_calls_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of calls attempt in one second that one cluster member can handle')
     # validation    
-    _validmember = validator('members')(check_valid)
+    _validmember = validator('members')(check_member)
 
 
 @librerouter.put("/libresbc/cluster", status_code=200)
