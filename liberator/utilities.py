@@ -35,7 +35,7 @@ def rembytes(data):
     if isinstance(data, list):        return list(map(rembytes, data))
     if isinstance(data, set):         return set(map(rembytes, data))
 
-def hashfieldify(data):
+def fieldjsonify(data):
     if isinstance(data, str):
         if data.startswith(':bool:'):
             if data == ':bool:true': return True
@@ -48,6 +48,17 @@ def hashfieldify(data):
         elif data.startswith(':none:'): return None
         else: return data
     else: return data
+
+def fieldredisify(data):
+    if isinstance(data, bool):
+        if data: return ':bool:true'
+        else: return ':bool:false'
+    elif isinstance(data, int): return f':int:{data}'
+    elif isinstance(data, float): return f':float:{data}'
+    elif isinstance(data, (list,set)): return f':list:{_delimiter_.join(data)}'
+    elif data is None: return ':none:'
+    else: return data
+
 
 def redishash(data: dict) -> dict:
     if isinstance(data, dict):
