@@ -38,7 +38,7 @@ _BLOCK = 'block'
 _JUMPS = 'jumps'
 _ROUTE = 'route'
 # reserved for value empty string
-__EMPTY_STRING__ = '__empty_string__'
+__DEFAULT_ENTRY__ = '__DEFAULT_ENTRY__'
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
@@ -1921,11 +1921,12 @@ class RoutingTableModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: List[str] = Field(min_items=0, max_items=1, description='sip variable for routing base, eg: destination_number, auth_user, caller_id...')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action, <{_QUERY}>: find nexthop by query routing record; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
-    endpoints: List[str] = Field(max_items=3, description='designated endpoint for action')
-    weights: List[int] = Field(max_items=3, description='weights associated with endpoints')
+    endpoints: Optional[List[str]] = Field(max_items=3, description='designated endpoint for action')
+    weights: Optional[List[int]] = Field(max_items=3, description='weights associated with endpoints')
     # validation
     @root_validator(pre=True)
     def routing_table_agreement(cls, values):
+        values = jsonable_encoder(values)
         action = values.get('action')
         endpoints = values.get('endpoints')
         weights = values.get('weights')
@@ -1958,15 +1959,18 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
-        endpoints = data.get('endpoints')
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
-        pipe.hmset(name_key, redishash(data))
+
+        data = jsonable_encoder(reqbody)
+        endpoints = data.get('endpoints')
         if endpoints:
             for endpoint in endpoints: 
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        else: data.pop('endpoints')
+        if not data.get('weights'): data.pop('weights')
+        pipe.hmset(name_key, redishash(data))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1981,8 +1985,6 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
-        endpoints = data.get('endpoints')
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if not rdbconn.exists(_name_key): 
@@ -1996,10 +1998,15 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         if _endpoints:
             for _endpoint in _endpoints:
                 pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
+
+        data = jsonable_encoder(reqbody)
         pipe.hmset(name_key, redishash(data))
+        endpoints = data.get('endpoints')
         if endpoints:
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
+        else: pipe.hdel(name_key, 'endpoints')
+        if not data.get('weights'): pipe.hdel(name_key, 'weights')
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -2114,11 +2121,12 @@ class RoutingRecordModel(BaseModel):
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
     value: str = Field(max_length=128, description='value of variable that declared in routing table')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action, <{_JUMPS}>: jumps to other routing table; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
-    endpoints: List[str] = Field(max_items=3, description='designated endpoint for action')
-    weights: List[int] = Field(max_items=3, description='weights associated with endpoints')
+    endpoints: Optional[List[str]] = Field(default=None, max_items=3, description='designated endpoint for action')
+    weights: Optional[List[str]] = Field(default=None, max_items=3, description='weights associated with endpoints')
     # validation
     @root_validator(pre=True)
     def routing_record_agreement(cls, values):
+        values = jsonable_encoder(values)
         table = values.get('table')
         action = values.get('action')
         endpoints = values.get('endpoints')
@@ -2173,16 +2181,19 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'existent routing record'}; return
-        
-        data.pop('table'); data.pop('match'); data.pop('value')
-        pipe.hmset(record_key, redishash(data))
+
         if action==_ROUTE:
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
-        if action==_JUMPS:
+        elif action==_JUMPS:
+            data.pop('weights')
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
-
+        else:
+            data.pop('endpoints')
+            data.pop('weights')
+        data.pop('table'); data.pop('match'); data.pop('value')
+        pipe.hmset(record_key, redishash(data))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2218,15 +2229,20 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         if _action==_ROUTE:
             for endpoint in _endpoints:
                 pipe.srem(f'engagement:intcon:out:{endpoint}', nameid)
-        if _action==_JUMPS:
+        elif _action==_JUMPS:
             for endpoint in _endpoints:
                 pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
+        else: pass    
         if action==_ROUTE:
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         if action==_JUMPS:
+            pipe.hdel(record_key, 'weights')
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
+        else:
+            pipe.hdel(record_key, 'endpoints')
+            pipe.hdel(record_key, 'weights')
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2241,7 +2257,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
     result = None
     try:
         pipe = rdbconn.pipeline()
-        if value == __EMPTY_STRING__: value = ''
+        if value == __DEFAULT_ENTRY__: value = ''
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
@@ -2265,6 +2281,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
     finally:
         return result
 
+
 @librerouter.get("/libresbc/routing/record/{table}", status_code=200)
 def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
     result = None
@@ -2285,9 +2302,8 @@ def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             records = listify(mainkey)
-            detail.update({'match': records[-2], 'value': records[-1]})
+            detail.update({'match': records[-2], 'value': records[-1] if records[-1] else __DEFAULT_ENTRY__})
             data.append(jsonhash(detail))
-
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
