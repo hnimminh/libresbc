@@ -931,7 +931,7 @@ class CapacityModel(BaseModel):
     ccs: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
     # validator
     @root_validator()
-    def routing_table_agreement(cls, values):
+    def capacity_agreement(cls, values):
         cps = values.get('cps')
         if cps > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_calls_per_second'))//2:
             raise ValueError(f'the cps value is not valid for cluster capacity')
