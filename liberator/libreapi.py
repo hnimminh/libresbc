@@ -39,6 +39,7 @@ _JUMPS = 'jumps'
 _ROUTE = 'route'
 # reserved for value empty string
 __DEFAULT_ENTRY__ = '__DEFAULT_ENTRY__'
+__EMPTY_STRING__ = ''
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
@@ -929,7 +930,7 @@ class CapacityModel(BaseModel):
     cps: int = Field(default=2, ge=1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
     ccs: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
     # validator
-    @root_validator(pre=True)
+    @root_validator()
     def routing_table_agreement(cls, values):
         cps = values.get('cps')
         if cps > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_calls_per_second'))//2:
@@ -1920,36 +1921,38 @@ class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: List[str] = Field(min_items=0, max_items=1, description='sip variable for routing base, eg: destination_number, auth_user, caller_id...')
-    action: RoutingTableActionEnum = Field(default='query', description=f'routing action, <{_QUERY}>: find nexthop by query routing record; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
+    action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
     endpoints: Optional[List[str]] = Field(max_items=3, description='designated endpoint for action')
     weights: Optional[List[int]] = Field(max_items=3, description='weights associated with endpoints')
     # validation
-    @root_validator(pre=True)
+    @root_validator()
     def routing_table_agreement(cls, values):
-        values = jsonable_encoder(values)
         action = values.get('action')
         endpoints = values.get('endpoints')
         weights = values.get('weights')
         if action==_ROUTE:
-            endpointsize = len(endpoints)
-            weightsize = len(weights)
-            if not endpointsize:
+            if not endpoints:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize <= 1:
-                if 'weights' in values: values.pop('weights')
             else:
-                if endpointsize!=weightsize:
-                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
-            for weight in weights:
-                if weight < 0 or weight > 100:
-                    raise ValueError('weight value should be in range 0-99')
-            # check endpoint of _ROUTE
-            for endpoint in endpoints:
-                if not rdbconn.exists(f'intcon:out:{endpoint}'):
-                    raise ValueError('nonexistent outbound interconnect')
+                endpointsize = len(endpoints)
+                if endpointsize <= 1:
+                    if 'weights' in values: values.pop('weights')
+                else:
+                    if not weights:
+                        raise ValueError(f'{_ROUTE} action and endpoints size is {endpointsize} will require weights')
+                    elif endpointsize!=len(weights):
+                        raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+                    else: 
+                        for weight in weights:
+                            if weight < 0 or weight > 100:
+                                raise ValueError('weight value should be in range 0-100')
+                for endpoint in endpoints:
+                    if not rdbconn.exists(f'intcon:out:{endpoint}'):
+                        raise ValueError('nonexistent outbound interconnect')
         else:
             if 'endpoints' in values: values.pop('endpoints')
             if 'weights' in values: values.pop('weights')
+
         return values
 
 
@@ -1964,13 +1967,11 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
 
         data = jsonable_encoder(reqbody)
+        pipe.hmset(name_key, redishash(data))
         endpoints = data.get('endpoints')
         if endpoints:
             for endpoint in endpoints: 
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
-        else: data.pop('endpoints')
-        if not data.get('weights'): data.pop('weights')
-        pipe.hmset(name_key, redishash(data))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -1999,7 +2000,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
             for _endpoint in _endpoints:
                 pipe.srem(f'engagement:intcon:out:{_endpoint}', _nameid)
 
-        data = jsonable_encoder(reqbody)
+        data = jsonable_encoder(reqbody);logify(f'data={data}')
         pipe.hmset(name_key, redishash(data))
         endpoints = data.get('endpoints')
         if endpoints:
@@ -2119,14 +2120,13 @@ class RoutingRecordActionEnum(str, Enum):
 class RoutingRecordModel(BaseModel):
     table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
-    value: str = Field(max_length=128, description='value of variable that declared in routing table')
-    action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action, <{_JUMPS}>: jumps to other routing table; <{_BLOCK}>: block the call; <{_ROUTE}>: route call to outbound interconnection')
-    endpoints: Optional[List[str]] = Field(default=None, max_items=3, description='designated endpoint for action')
-    weights: Optional[List[str]] = Field(default=None, max_items=3, description='weights associated with endpoints')
+    value: str = Field(min_length=1, max_length=128, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
+    action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
+    endpoints: Optional[List[str]] = Field(max_items=3, description='designated endpoint for action')
+    weights: Optional[List[int]] = Field(max_items=3, description='weights associated with endpoints')
     # validation
-    @root_validator(pre=True)
+    @root_validator()
     def routing_record_agreement(cls, values):
-        values = jsonable_encoder(values)
         table = values.get('table')
         action = values.get('action')
         endpoints = values.get('endpoints')
@@ -2139,30 +2139,37 @@ class RoutingRecordModel(BaseModel):
             values.pop('endpoints')
             values.pop('weights')
         if action==_JUMPS: 
-            if len(endpoints)!=1:
-                raise ValueError(f'{_JUMPS} action require one* routing table in endpoints')
+            if not endpoints:
+                raise ValueError(f'{_JUMPS} action require at least one interconnections in endpoints')
+            elif len(endpoints)!=1:
+                raise ValueError(f'{_JUMPS} action require one and only one routing table in endpoints')
+            else: pass
             values.pop('weights')
             # check endpoint of _JUMP
             endpoint = endpoints[0]
+            if endpoint == table:
+                raise ValueError(f'routing loop prevention: endpoint[{endpoint}] & table[{table}]')
             if not rdbconn.exists(f'routing:table:{endpoint}'): 
                 raise ValueError('nonexistent routing table in first endpoint')
         if action==_ROUTE:
-            endpointsize = len(endpoints)
-            weightsize = len(weights)
-            if endpointsize:
+            if not endpoints:
                 raise ValueError(f'{_ROUTE} action require at least one interconnections in endpoints')
-            if endpointsize <= 1:
-                if 'weights' in values: values.pop('weights')
             else:
-                if endpointsize!=weightsize:
-                    raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
-            for weight in weights:
-                if weight < 0 or weight > 100:
-                    raise ValueError('weight value should be in range 0-99')
-            # check endpoint of _ROUTE
-            for endpoint in endpoints:
-                if not rdbconn.exists(f'intcon:out:{endpoint}'):
-                    raise ValueError('nonexistent outbound interconnect')
+                endpointsize = len(endpoints)
+                if endpointsize <= 1:
+                    if 'weights' in values: values.pop('weights')
+                else:
+                    if not weights:
+                        raise ValueError(f'{_ROUTE} action and endpoints size is {endpointsize} will require weights')
+                    elif endpointsize!=len(weights):
+                        raise ValueError(f'{_ROUTE} action require weights and endpoint must have the same size')
+                    else: 
+                        for weight in weights:
+                            if weight < 0 or weight > 100:
+                                raise ValueError('weight value should be in range 0-100')
+                for endpoint in endpoints:
+                    if not rdbconn.exists(f'intcon:out:{endpoint}'):
+                        raise ValueError('nonexistent outbound interconnect')
         return values
 
 
@@ -2175,6 +2182,7 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         table = data.get('table')
         match = data.get('match')
         value = data.get('value')
+        if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
         action = data.get('action')
         endpoints = data.get('endpoints')
 
@@ -2182,18 +2190,14 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         if rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'existent routing record'}; return
 
+        data.pop('table'); data.pop('match'); data.pop('value')
+        pipe.hmset(record_key, redishash(data))
         if action==_ROUTE:
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
         elif action==_JUMPS:
-            data.pop('weights')
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
-        else:
-            data.pop('endpoints')
-            data.pop('weights')
-        data.pop('table'); data.pop('match'); data.pop('value')
-        pipe.hmset(record_key, redishash(data))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2212,6 +2216,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         table = data.get('table')
         match = data.get('match')
         value = data.get('value')
+        if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
         action = data.get('action')
         endpoints = data.get('endpoints')
 
@@ -2234,9 +2239,10 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
                 pipe.srem(f'engagement:routing:table:{endpoint}', nameid)
         else: pass    
         if action==_ROUTE:
+            if not data.get('weights'): pipe.hdel(record_key, 'weights')
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:intcon:out:{endpoint}', nameid)
-        if action==_JUMPS:
+        elif action==_JUMPS:
             pipe.hdel(record_key, 'weights')
             for endpoint in endpoints:
                 pipe.sadd(f'engagement:routing:table:{endpoint}', nameid)
@@ -2257,7 +2263,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
     result = None
     try:
         pipe = rdbconn.pipeline()
-        if value == __DEFAULT_ENTRY__: value = ''
+        if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
@@ -2302,7 +2308,8 @@ def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             records = listify(mainkey)
-            detail.update({'match': records[-2], 'value': records[-1] if records[-1] else __DEFAULT_ENTRY__})
+            value = records[-1]
+            detail.update({'match': records[-2], 'value': value if value else __DEFAULT_ENTRY__})
             data.append(jsonhash(detail))
         response.status_code, result = 200, data
     except Exception as e:
