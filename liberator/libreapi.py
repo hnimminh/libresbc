@@ -74,8 +74,8 @@ def predefine():
         'swversion': _SWVERSION,
         'description': _DESCRIPTION,
         'nodeid': NODEID,
-        'nodespool': rdbconn.smembers('nodespool'),
-        'cluster': CLUSTERS,
+        #'nodespool': rdbconn.smembers('nodespool'),
+        #'cluster': CLUSTERS,
         'codecs': SWCODECS,
     }
 
