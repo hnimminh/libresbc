@@ -35,19 +35,6 @@ def rembytes(data):
     if isinstance(data, list):        return list(map(rembytes, data))
     if isinstance(data, set):         return set(map(rembytes, data))
 
-def fieldjsonify(data):
-    if isinstance(data, str):
-        if data.startswith(':bool:'):
-            if data == ':bool:true': return True
-            if data == ':bool:false': return False
-        elif data.startswith(':int:'): return int(data[5:]) 
-        elif data.startswith(':float:'): return float(data[7:])
-        elif data.startswith(':list:'): 
-            if data==':list:': return []
-            else: return data[6:].split(_delimiter_)
-        elif data.startswith(':none:'): return None
-        else: return data
-    else: return data
 
 def fieldredisify(data):
     if isinstance(data, bool):
@@ -55,7 +42,9 @@ def fieldredisify(data):
         else: return ':bool:false'
     elif isinstance(data, int): return f':int:{data}'
     elif isinstance(data, float): return f':float:{data}'
-    elif isinstance(data, (list,set)): return f':list:{_delimiter_.join(data)}'
+    elif isinstance(data, (list,set)): 
+        try: return f':list:{_delimiter_.join(data)}'
+        except: return f':list:{_delimiter_.join([str(i) for i in data])}'
     elif data is None: return ':none:'
     else: return data
 
@@ -68,10 +57,30 @@ def redishash(data: dict) -> dict:
                 else: data.update({key: ':bool:false'})
             elif isinstance(value, int): data.update({key: f':int:{value}'})
             elif isinstance(value, float): data.update({key: f':float:{value}'})
-            elif isinstance(value, (list,set)): data.update({key: f':list:{_delimiter_.join(value)}'})
+            elif isinstance(value, (list,set)): 
+                try: data.update({key: f':list:{_delimiter_.join(value)}'})
+                except: data.update({key: f':list:{_delimiter_.join([str(v) for v in value])}'})
             elif value is None: data.update({key: ':none:'})
             else: pass
     return data
+
+
+def fieldjsonify(data):
+    if isinstance(data, str):
+        if data.startswith(':bool:'):
+            if data == ':bool:true': return True
+            if data == ':bool:false': return False
+        elif data.startswith(':int:'): return int(data[5:]) 
+        elif data.startswith(':float:'): return float(data[7:])
+        elif data.startswith(':list:'): 
+            if data==':list:': return []
+            else:
+                _data = data[6:].split(_delimiter_)
+                try: return [int(v) for v in _data]
+                except: return _data
+        elif data.startswith(':none:'): return None
+        else: return data
+    else: return data
 
 
 def jsonhash(data: dict) -> dict:
@@ -85,7 +94,10 @@ def jsonhash(data: dict) -> dict:
                 elif value.startswith(':float:'): data.update({key: float(value[7:])}) 
                 elif value.startswith(':list:'): 
                     if value==':list:': data.update({key: []})
-                    else: data.update({key: value[6:].split(_delimiter_)})
+                    else:
+                        _value = value[6:].split(_delimiter_)
+                        try: data.update({key: [int(v) for v in _value]})
+                        except: data.update({key: _value})
                 elif value.startswith(':none:'): data.update({key: None})
                 else: pass
     return data
