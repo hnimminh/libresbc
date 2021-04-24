@@ -1267,21 +1267,27 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
         rdbconn.hmset(name_key, redishash(data))
+        # if change name
+        _engaged_key = f'engagement:{_name_key}'
+        engaged_key = f'engagement:{name_key}'
         if name != identifier:
-            _engaged_key = f'engagement:{_name_key}'
-            engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                weight = rdbconn.hget(f'intcon:out:{engagement}', identifier)
-                pipe.hset(f'intcon:out:{engagement}', name, weight)
-                pipe.hdel(f'intcon:out:{engagement}', identifier)
+                weight = rdbconn.hget(f'intcon:out:{engagement}:_gateways', identifier)
+                pipe.hdel(f'intcon:out:{engagement}:_gateways', identifier)
+                pipe.hset(f'intcon:out:{engagement}:_gateways', name, weight)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
             pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        # fire event for update gateway
+        intconname = rdbconn.srandmember(engaged_key); sipprofile = None
+        if intconname:
+            sipprofile = rdbconn.hget(f'intcon:out:{intconname}', 'sipprofile')
+        if sipprofile:
+            for index, node in enumerate(CLUSTERS.get('members')):
+                pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1304,9 +1310,6 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event sip profile delete
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'delete', '_gateway': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1343,13 +1346,13 @@ def list_gateway(response: Response):
             mainkeys += tmpkeys
 
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'desc', 'ip', 'port', 'transport')
+            pipe.hmget(mainkey, 'desc', 'proxy', 'port', 'transport')
         details = pipe.execute()
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]})
+                data.append(jsonhash({'name': getnameid(mainkey), 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]}))
 
         response.status_code, result = 200, data
     except Exception as e:

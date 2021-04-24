@@ -94,13 +94,10 @@ class BaseEventHandler(Thread):
                         threaded(fssocket, eventvalue)
                     elif eventkey==callengine_gateway_event:
                         action = eventvalue.get('action')
+                        sipprofile = eventvalue.get('sipprofile')
                         gateway = eventvalue.get('gateway')
                         _gateway = eventvalue.get('_gateway')
-                        if action=='create':
-                            eventvalue.update({'commands': [f'sofia profile {sipprofile} rescan']})
-                        elif action=='delete':
-                            eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}']})
-                        elif action=='update':
+                        if action=='update':
                             eventvalue.update({'commands': [f'sofia profile {sipprofile} killgw {gateway}', f'sofia profile {sipprofile} rescan']})
                         threaded(fssocket, eventvalue)
                     elif eventkey==callengine_outcon_event:
