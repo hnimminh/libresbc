@@ -6,6 +6,7 @@
 * [LUA WIKI](https://en.wikipedia.org/wiki/Lua_(programming_language)) 
 * [LUA CHEATSHEET](https://devhints.io/luas)
 * [FREESWITCH](https://freeswitch.org/confluence/display/FREESWITCH/Configuring+FreeSWITCH)
+* [VAD/CNG](https://freeswitch.org/confluence/display/FREESWITCH/VAD+and+CNG)
 * [REDIS](https://redis.io/commands/)
 * [CODEC](https://freeswitch.org/confluence/display/FREESWITCH/Codec+Negotiation)
 * [SOFIA CONFIG](https://freeswitch.org/confluence/display/FREESWITCH/Sofia+Configuration+Files)
