@@ -1197,13 +1197,13 @@ class CidTypeEnum(str, Enum):
     pidd = 'pid'
 
 class GatewayModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
+    name: str = Field(regex=_NAME_,min_length=2, max_length=32, description='name of translation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    username: str = Field(default='libre-user', description='auth username')
+    username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
     realm: Optional[str] = Field(description='auth realm, use gateway name as default')
     from_user: Optional[str] = Field(description='username in from header, use username as default')
     from_domain: Optional[str] = Field(description='domain in from header, use realm as default')
-    password: str = Field(default='libre@secret', description='auth password')
+    password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
     extension: Optional[str] = Field(description='extension for inbound calls, use username as default')
     proxy: str = Field(description='farend proxy ip address or domain, use realm as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
