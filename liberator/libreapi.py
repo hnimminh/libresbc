@@ -5,7 +5,7 @@ import json
 import redis
 import validators
 from pydantic import BaseModel, Field, validator, root_validator
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Union
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response, Path
@@ -1203,9 +1203,9 @@ class GatewayModel(BaseModel):
     realm: Optional[str] = Field(description='auth realm, use gateway name as default')
     from_user: Optional[str] = Field(description='username in from header, use username as default')
     from_domain: Optional[str] = Field(description='domain in from header, use realm as default')
-    password: str = Field(default='libre-secret', description='auth password')
+    password: str = Field(default='libre@secret', description='auth password')
     extension: Optional[str] = Field(description='extension for inbound calls, use username as default')
-    proxy: IPv4Address = Field(description='farend proxy ip address or domain, use realm as default')
+    proxy: str = Field(description='farend proxy ip address or domain, use realm as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
     _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
@@ -1213,19 +1213,25 @@ class GatewayModel(BaseModel):
     expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     register_transport: Optional[TransportEnum] = Field(description='transport to use for register')
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
-    caller_id_in_from: Optional[bool] = Field(default=True, description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
-    cid_type: CidTypeEnum = Field(description='callerid header mechanism: rpid, pid, none')
+    caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
+    cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
     contact_params: Optional[str] = Field(description='extra sip params to send in the contact')
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
-    ping: int = Field(default=60, ge=5, le=3600, description='the period (second) to send SIP OPTION')
+    ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
     ping_min: Optional[int] = Field(ge=1, le=31,description='number of failure pings to declaring a gateway down')
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
+        _values = jsonable_encoder(values)
+        for key, value in _values.items():
+            if not value:
+                values.pop(key)
+        for key, value in values.items():
+            if key in ['realm', 'proxy', 'from_domain', 'register_proxy']:
+                if not validators.ip_address.ipv4(value) and not validators.domain(value):
+                    raise ValueError(f'{key} must be IPv4 address or Domain')
         return values
-
-
 
 @librerouter.post("/libresbc/base/gateway", status_code=200)
 def create_gateway(reqbody: GatewayModel, response: Response):
@@ -1234,15 +1240,12 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
-        name_key = f'gateway:{name}'
+        data = jsonable_encoder(reqbody); logify(f'data={data}')
+        name_key = f'base:gateway:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
-        # fire-event sip profile create
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:gateway:{node}', json.dumps({'action': 'create', 'gateway': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1257,8 +1260,8 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        _name_key = f'gateway:{identifier}'
-        name_key = f'gateway:{name}'
+        _name_key = f'base:gateway:{identifier}'
+        name_key = f'base:gateway:{name}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -1291,7 +1294,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        _name_key = f'gateway:{identifier}'
+        _name_key = f'base:gateway:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engaged_key): 
             response.status_code, result = 403, {'error': 'engaged gateway'}; return
@@ -1314,7 +1317,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
 def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
-        _name_key = f'gateway:{identifier}'
+        _name_key = f'base:gateway:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
@@ -1333,7 +1336,7 @@ def list_gateway(response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        KEYPATTERN = f'gateway:*'
+        KEYPATTERN = f'base:gateway:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -1406,8 +1409,10 @@ class Distribution(str, Enum):
 
 
 def check_existent_gateway(gateway):
-    if not rdbconn.exists(f'gateway:{gateway}'):
+    if not rdbconn.exists(f'base:gateway:{gateway}'):
         raise ValueError('nonexistent gateway')
+    if rdbconn.scard(f'engagement:base:gateway:{gateway}'):
+        raise ValueError('the gateway can be assigned to only one outbound interconnection')
     return gateway
 
 class DistributedGatewayModel(BaseModel):
@@ -1468,7 +1473,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         pipe.hmset(f'intcon:{nameid}:_gateways', redishash(gateways))
-        for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
+        for gateway in gateways: pipe.sadd(f'engagement:base:gateway:{gateway}', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
@@ -1522,7 +1527,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
+        for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
         pipe.delete(f'intcon:{_nameid}:_gateways')
         # processing: adding new-one
         data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
@@ -1534,7 +1539,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         pipe.hmset(f'intcon:{nameid}:_gateways', redishash(gateways))
-        for gateway in gateways: pipe.sadd(f'engagement:gateway:{gateway}', name)
+        for gateway in gateways: pipe.sadd(f'engagement:base:gateway:{gateway}', name)
         # change identifier
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
@@ -1597,7 +1602,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for gateway in _gateways: pipe.srem(f'engagement:gateway:{gateway}', identifier)
+        for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
         pipe.delete(f'intcon:{_nameid}:_gateways')
         pipe.delete(_name_key)
         pipe.execute()
