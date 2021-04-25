@@ -14,7 +14,7 @@ from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, getnameid
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, getnameid, removekey
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -228,7 +228,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
@@ -393,7 +393,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
         for index, node in enumerate(CLUSTERS.get('members')):
@@ -479,41 +479,67 @@ def list_acl(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto']
 
-def check_existent_acl(acl_name):
-    if acl_name not in _BUILTIN_ACLS_:
-        if not rdbconn.exists(f'base:acl:{acl_name}'):
-            raise ValueError('nonexistent acl')
-    return acl_name
+class ContextEnum(str, Enum):
+    core = "core"
+    interconnection = "interconnection"
+    # access = "access"
 
-def check_existent_ipsuite(alias):
-    if not rdbconn.exists(f'base:netalias:{alias}'):
-        raise ValueError('nonexistent alias address') 
-    return alias
+class DtmfType(str, Enum):
+    rfc2833 = "rfc2833"
+    info = "info"
+    none = "none"
 
 class SIPProfileModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='friendly name of sip profile')
-    desc: Optional[str] = Field(default='', max_length=64, description='description')
+    desc: str = Field(default='', max_length=64, description='description')
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
+    sdp_user: str = Field(default='LibreSBC', max_length=64, description='username with the o= and s= fields in SDP body')
+    local_network_acl: str = Field(default='rfc1918.auto', description='set the local network that refer from predefined acl')
+    enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
+    ignore_183nosdp: bool = Field(default=True, description='Just ignore SIP 183 without SDP body')
+    sip_options_respond_503_on_busy: bool = Field(default=True, description='response 503 when system is in heavy load')
     disable_transfer: bool = Field(default=False, description='true mean disable call transfer')
     manual_redirect: bool = Field(default=False, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
-    disable_hold: bool = Field(default=False, description='no handling the SIP re-INVITE with hold/unhold')
-    nonce_ttl: int = Field(default=60, ge=15, le=120, description='TTL for nonce in sip auth')
-    local_network_acl: str = Field(default='rfc1918.auto', description='the network will be applied NAT')
-    sip_options_respond_503_on_busy: bool = Field(default=True, description='response 503 when system is in heavy load')
-    enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
-    enable_timer: bool = Field(default=True, description='true to support for RFC 4028 SIP Session Timers')
+    enable_3pcc: bool = Field(default=False, description='determines if third party call control is allowed or not')
+    enable_compact_headers: bool = Field(default=False, description='disable as default, true to enable compact SIP headers')
+    enable_timer: bool = Field(default=False, description='true to support for RFC 4028 SIP Session Timers')
     session_timeout: int = Field(default=0, ge=1800, le=3600, description='call to expire after the specified seconds')
     minimum_session_expires: int = Field(default=120, ge=90, le=3600, description='Value of SIP header Min-SE')
+    dtmf_type: DtmfType = Field(default='rfc2833', description='Dual-tone multi-frequency (DTMF) signal type')
+    media_timeout: int = Field(default=0, description='The number of seconds of RTP inactivity before SBC considers the call disconnected, and hangs up (recommend to use session timers instead), default value is 0 - disables the timeout.')
+    rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
+    context: ContextEnum = Field(description='predefined context for call control policy')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_address: str = Field(description='IP address suite use for SIP Signalling')
     rtp_address: str = Field(description='IP address suite use for RTP Media')
     sip_tls: bool = Field(default=False, description='true to enable SIP TLS')
+    tls_only: bool = Field(default=False, description='set True to disable listening on the unencrypted port for this connection')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
-    tls_version: str = Field(default='tlsv1.2', description='TLS version')
-    tls_cert_dir: str = Field(default='', description='TLS Certificate dirrectory')
+    #tls_version: str = Field(default='tlsv1.2', description='TLS version')
+    #tls_cert_dir: str = Field(description='TLS Certificate dirrectory')
     # validation
-    _existentacl = validator('local_network_acl')(check_existent_acl)
-    _existentalias = validator('sip_address', 'rtp_address')(check_existent_ipsuite)
+    @root_validator()
+    def gateway_agreement(cls, values):
+        _values = jsonable_encoder(values)
+        for key, value in _values.items():
+            # SIP TIMER
+            if key=='enable_timer' and not value :
+                removekey(['enable_timer', 'session_timeout', 'minimum_session_expires'], values)
+            # SIP TLS
+            if key=='sip_tls' and not value :
+                removekey(['sip_tls', 'sips_port', 'tls_only', 'tls_version', 'tls_cert_dir'], values)
+
+            if key=='local_network_acl':
+                if value not in _BUILTIN_ACLS_:
+                    if not rdbconn.exists(f'base:acl:{value}'):
+                        raise ValueError('nonexistent acl')
+
+            if key in ['sip_address', 'rtp_address']:
+                if not rdbconn.exists(f'base:netalias:{value}'):
+                    raise ValueError('nonexistent network alias')
+
+        return values
+
 
 @librerouter.post("/libresbc/sipprofile", status_code=200)
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
@@ -551,16 +577,19 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
         _name_key = f'sipprofile:{identifier}'
         name_key = f'sipprofile:{name}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
-        _sip_address = rdbconn.get('sip_address')
-        _rtp_address = rdbconn.get('rtp_address')
+        
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _local_network_acl = _data.get('local_network_acl')
+        _sip_address = _data.get('sip_address')
+        _rtp_address = _data.get('rtp_address')
+
+        data = jsonable_encoder(reqbody)
         local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
@@ -571,7 +600,11 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.hmset(name_key, redishash(data))
-        pipe.execute()
+        # remove the unintended-field
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
+        # if name is changed
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
             engaged_key = f'engagement:{name_key}'
@@ -581,7 +614,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
         for index, node in enumerate(CLUSTERS.get('members')):
@@ -719,7 +752,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -847,7 +880,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -981,7 +1014,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -1109,7 +1142,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -1200,12 +1233,15 @@ class GatewayModel(BaseModel):
     name: str = Field(regex=_NAME_,min_length=2, max_length=32, description='name of translation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
+    # auth-username"
     realm: Optional[str] = Field(description='auth realm, use gateway name as default')
+    # scheme
     from_user: Optional[str] = Field(description='username in from header, use username as default')
     from_domain: Optional[str] = Field(description='domain in from header, use realm as default')
     password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
     extension: Optional[str] = Field(description='extension for inbound calls, use username as default')
     proxy: str = Field(description='farend proxy ip address or domain, use realm as default')
+    # context
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
     _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
@@ -1215,11 +1251,17 @@ class GatewayModel(BaseModel):
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
     caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
+    # contact-host
+    # distinct-to
+    # destination-prefix
     contact_params: Optional[str] = Field(description='extra sip params to send in the contact')
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
     ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
     ping_min: Optional[int] = Field(ge=1, le=31,description='number of failure pings to declaring a gateway down')
+    # ping-user-agent
+    # ping-monitoring
+    # contact-in-ping
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
@@ -1259,14 +1301,19 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
         _name_key = f'base:gateway:{identifier}'
         name_key = f'base:gateway:{name}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
+        data = jsonable_encoder(reqbody)
         rdbconn.hmset(name_key, redishash(data))
+        # remove the unintended-field
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
         # if change name
         _engaged_key = f'engagement:{_name_key}'
         engaged_key = f'engagement:{name_key}'
@@ -1279,7 +1326,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
-            pipe.execute()
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire event for update gateway
         intconname = rdbconn.srandmember(engaged_key); sipprofile = None
