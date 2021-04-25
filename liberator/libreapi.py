@@ -512,7 +512,7 @@ class SIPProfileModel(BaseModel):
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_address: str = Field(description='IP address suite use for SIP Signalling')
     rtp_address: str = Field(description='IP address suite use for RTP Media')
-    sip_tls: bool = Field(default=False, description='true to enable SIP TLS')
+    tls: bool = Field(default=False, description='true to enable TLS')
     tls_only: bool = Field(default=False, description='set True to disable listening on the unencrypted port for this connection')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
     #tls_version: str = Field(default='tlsv1.2', description='TLS version')
@@ -1236,33 +1236,25 @@ class GatewayModel(BaseModel):
     username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
     # auth-username"
     realm: Optional[str] = Field(description='auth realm, use gateway name as default')
-    # scheme
     from_user: Optional[str] = Field(description='username in from header, use username as default')
     from_domain: Optional[str] = Field(description='domain in from header, use realm as default')
     password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
     extension: Optional[str] = Field(description='extension for inbound calls, use username as default')
     proxy: str = Field(description='farend proxy ip address or domain, use realm as default')
-    # context
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
     _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
     register_proxy: Optional[str] = Field(description='proxy address to register, use proxy as default')
-    expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     register_transport: Optional[TransportEnum] = Field(description='transport to use for register')
+    expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
     caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
-    # contact-host
-    # distinct-to
-    # destination-prefix
     contact_params: Optional[str] = Field(description='extra sip params to send in the contact')
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
     ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
     ping_min: Optional[int] = Field(ge=1, le=31,description='number of failure pings to declaring a gateway down')
-    # ping-user-agent
-    # ping-monitoring
-    # contact-in-ping
     # validation
     @root_validator()
     def gateway_agreement(cls, values):

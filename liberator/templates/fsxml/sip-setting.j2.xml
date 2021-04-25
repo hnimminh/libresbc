@@ -1,25 +1,35 @@
 {%- for profilename, sipprofile in sipprofiles.items() %}        <profile name="{{profilename}}">
           <gateways>
-{%- for gateway in sipprofile.gateways %}  
+{%- for gateway in sipprofile.gateways %}
             <gateway name="{{gateway.name}}">
-              <param name="realm" value="{{gateway.realm}}"/>
+              {# <!-- <param name="auth-username" value="{{gateway.auth_username}}"/> --> #}
               <param name="username" value="{{gateway.username}}"/>
-              <param name="password" value="{{gateway.password}}"/>
+              <param name="realm" value="{{gateway.realm}}"/>
               <param name="from-user" value="{{gateway.from_user}}"/>
               <param name="from-domain" value="{{gateway.from_domain}}"/>
-              <param name="proxy" value="{{gateway.ip}}:{{gateway.port}};transport={{gateway.transport}}"/>
-              <param name="register" value="{{gateway.register}}"/>
+              <param name="password" value="{{gateway.password}}"/>
+              {# <!-- <param name="schema" value="{{gateway.schema}}"/> --> #}
+              <param name="extension" value="{{gateway.extension}}"/>
+              <param name="proxy" value="{{gateway.proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>
+              {# <!-- <param name="context" value="{{gateway.context}}"/> --> #}
+              <param name="register" value="{{gateway.register|lower}}"/>
               <param name="register-proxy" value="{{gateway.register_proxy}}"/>
-              <param name="caller-id-in-from" value="{{gateway.caller_id_in_from}}"/>
-              <param name="extension-in-contact" value="true"/>
-              <param name="register-transport" value="{{gateway.transport}}"/>
+              <param name="register-transport" value="{{gateway.register_transport}}"/>
               <param name="retry-seconds" value="{{gateway.retry_seconds}}" />
               <param name="expire-seconds" value="{{gateway.expire_seconds}}" />
+              <param name="caller-id-in-from" value="{{gateway.caller_id_in_from|lower}}"/>
+              <param name="cid-type" value="{{gateway.cid_type}}"/>
+              <param name="extension-in-contact" value="{{gateway.extension_in_contact|lower}}"/>
+              <param name="contact-params" value="{{gateway.contact_params}}"/>
+              {# <!-- <param name="contact-host" value="{{gateway.contact_host}}"/> --> #}
+              {# <!-- <param name="distinct-to" value="{{gateway.distinct_to}}"/> --> #}
+              {# <!-- <param name="destination-prefix" value="{{gateway.destination_prefix}}"/> --> #}
               <param name="ping" value="{{gateway.ping}}"/>
               <param name="ping-max" value="{{gateway.ping_max}}"/>
               <param name="ping-min" value="{{gateway.ping_min}}"/>
-              <param name="cid-type" value="{{gateway.sip_cid_type}}"/>
-              <param name="extension-in-contact" value="false"/>
+              {# <!-- <param name="contact-in-ping" value="{{gateway.contact_in_ping}}"/> --> #}
+              {# <!-- <param name="ping-monitoring" value="{{gateway.ping_monitoring}}"/> --> #}
+              {# <!-- <param name="ping-user-agent" value="{{gateway.ping_user_agent}}"/> --> #}
             </gateway>
 {%- endfor %}
           </gateways>
@@ -30,7 +40,7 @@
             <param name="shutdown-on-fail" value="true"/>
             {# <!-- UA IDENTITY--> #}
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
-            <param name="username" value="libresbc"/> {# <!-- sdp username in o= and s= fields --> #}
+            <param name="username" value="{{sipprofile.sdp_user}}"/> {# <!-- sdp username in o= and s= fields --> #}
             {# <!-- AUTH AND SECURE--> #}
             <param name="apply-inbound-acl" value="{{profilename|upper}}ACL"/>
             <param name="auth-calls" value="true"/>
@@ -38,16 +48,16 @@
             <param name="log-auth-failures" value="true"/>
             <param name="challenge-realm" value="auto_to"/>
             {# <!-- NAT--> #}
-            <param name="local-network-acl" value="{{sipprofile.local_network_acl|default('rfc1918.auto')}}"/>
+            <param name="local-network-acl" value="{{sipprofile.local_network_acl}}"/>
             {# <!-- SIP VERBOSE CALLFLOW CONTROL--> #}
-            <param name="enable-100rel" value="{{sipprofile.enable_100rel|default('false')}}"/>
-            <param name="ignore-183nosdp" value="true"/>
-            <param name="sip-options-respond-503-on-busy" value="{{sipprofile.sip_options_respond_503_on_busy}}"/>
+            <param name="enable-100rel" value="{{sipprofile.enable_100rel|lower}}"/>
+            <param name="ignore-183nosdp" value="{{sipprofile.ignore_183nosdp|lower}}"/>
+            <param name="sip-options-respond-503-on-busy" value="{{sipprofile.sip_options_respond_503_on_busy|lower}}"/>
             <param name="disable-register" value="true"/>
-            <param name="disable-transfer" value="{{sipprofile.disable_transfer}}"/> {# <!-- call transfer and call forward setting --> #}
-            <param name="manual-redirect" value="{{sipprofile.manual_redirect}}"/>
-            <param name="enable-3pcc" value="{{sipprofile.enable_3pcc}}"/>
-            <param name="enable-compact-headers" value="{{sipprofile.enable_compact_headers}}"/> {# <!-- Do not send UPDATE after session established --> #}
+            <param name="disable-transfer" value="{{sipprofile.disable_transfer|lower}}"/> {# <!-- call transfer and call forward setting --> #}
+            <param name="manual-redirect" value="{{sipprofile.manual_redirect|lower}}"/>
+            <param name="enable-3pcc" value="{{sipprofile.enable_3pcc|lower}}"/>
+            <param name="enable-compact-headers" value="{{sipprofile.enable_compact_headers|lower}}"/> {# <!-- Do not send UPDATE after session established --> #}
             <param name="send-display-update" value="false"/> 
             <param name="inbound-proxy-media" value="false"/> {# <!-- disable proxy media, thinking to support bypass in future --> #}
             {# <!--  
@@ -69,11 +79,13 @@
             <param name="rtp-digit-delay" value="20"/>
             <param name="rtp-timer-name" value="soft"/>
             <param name="media_timeout" value="{{sipprofile.media_timeout}}"/> {# <!-- media_hold_timeout -->}
-            <param name="rtp-rewrite-timestamps" value="{{sipprofile.rtp_rewrite_timestamps}}"/> {# <!-- rtp_rewrite_timestamps chanvar in a dialplan, If you don't want to pass through timestamps from 1 RTP call to another (on a per call basis with rtp_rewrite_timestamps chanvar)--> #}
+            <param name="rtp-rewrite-timestamps" value="{{sipprofile.rtp_rewrite_timestamps|lower}}"/> {# <!-- rtp_rewrite_timestamps chanvar in a dialplan, If you don't want to pass through timestamps from 1 RTP call to another (on a per call basis with rtp_rewrite_timestamps chanvar)--> #}
             {# <!-- SIP SESSION TIMER--> #}
-            <param name="enable-timer" value="{{sipprofile.enable_timer}}"/>
+            {%- if sipprofile.enable_timer %}
+            <param name="enable-timer" value="{{sipprofile.enable_timer|lower}}"/>
             <param name="session-timeout" value="{{sipprofile.session_timeout}}"/>
             <param name="minimum-session-expires" value="{{sipprofile.minimum_session_expires}}"/>
+            {%- endif %}
             {# <!-- DIALPLAN--> #}
             <param name="dialplan" value="XML"/>
             <param name="context" value="{{sipprofile.context}}"/>
@@ -83,8 +95,9 @@
             <param name="sip-ip" value="{{ netaliases[sipprofile.sip_address][NODEID]['listen'] }}"/>
             <param name="ext-rtp-ip" value="autonat:{{ netaliases[sipprofile.rtp_address][NODEID]['advertise'] }}"/>
             <param name="ext-sip-ip" value="autonat:{{ netaliases[sipprofile.sip_address][NODEID]['advertise'] }}"/>
-            <param name="sip-port" value="{{sipprofile.sip_listen_port}}"/>
-            <param name="tls" value="{{sipprofile.sip_tls}}"/>
+            <param name="sip-port" value="{{sipprofile.sip_port}}"/>
+            {%- if sipprofile.tls %}
+            <param name="tls" value="{{sipprofile.tls|lower}}"/>
             <param name="tls-only" value="{{sipprofile.tls_only}}"/>
             <param name="tls-bind-params" value="transport=tls"/>
             <param name="tls-sip-port" value="{{sipprofile.sips_port}}"/>
@@ -92,7 +105,8 @@
             <param name="tls-verify-date" value="true"/>
             <param name="tls-version" value="tlsv1.2"/>
             <param name="tls-ciphers" value="ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"/>
-            <param name="tls-verify-policy" value="none"/>          
+            <param name="tls-verify-policy" value="none"/>
+            {%- endif %}    
           </settings>
         </profile>
 {%- endfor %}
