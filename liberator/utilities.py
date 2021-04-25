@@ -113,6 +113,11 @@ def getnameid(string) -> str:
     if array[-1].startswith('_'): return array[-2]
     else: return array[-1]
 
+def removekey(keys, data):
+    for key in keys:
+        data.pop(key, None)
+    return data
+
 def threaded(func, *params):
     th = Thread(target=func, args=params)
     th.start()
