@@ -832,6 +832,7 @@ def list_ringtone_class(response: Response):
 class CodecEnum(str, Enum):
     PCMA = "PCMA"
     PCMU = "PCMU"
+    OPUS = "OPUS"
     G729 = "G729"
 
 class CodecModel(BaseModel):
