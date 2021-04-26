@@ -653,8 +653,8 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
         _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
-        _sip_address = rdbconn.get('sip_address')
-        _rtp_address = rdbconn.get('rtp_address')
+        _sip_address = rdbconn.hget(_name_key, 'sip_address')
+        _rtp_address = rdbconn.hget(_name_key, 'rtp_address')
         if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
