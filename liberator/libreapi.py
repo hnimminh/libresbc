@@ -4,8 +4,9 @@ import json
 
 import redis
 import validators
-from pydantic import BaseModel, Field, validator, root_validator
-from typing import Optional, List, Dict, Union
+from pydantic import BaseModel, Field, validator, root_validator, schema
+from pydantic.fields import ModelField
+from typing import Optional, List, Dict, Union, Any
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response, Path
@@ -24,6 +25,18 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
 # API ROUTER DECLARATION
 librerouter = APIRouter()
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# PYDANTIC SCHEME HIDE FIELD
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def field_schema(field: ModelField, **kwargs: Any) -> Any:
+    if field.field_info.extra.get("hidden_field", False):
+        raise schema.SkipField(f"{field.name} field is being hidden with fastapi/issues/1378")
+    else:
+        return original_field_schema(field, **kwargs)
+
+original_field_schema = schema.field_schema
+schema.field_schema = field_schema
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONSTANTS
@@ -515,8 +528,8 @@ class SIPProfileModel(BaseModel):
     tls: bool = Field(default=False, description='true to enable TLS')
     tls_only: bool = Field(default=False, description='set True to disable listening on the unencrypted port for this connection')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
-    #tls_version: str = Field(default='tlsv1.2', description='TLS version')
-    #tls_cert_dir: str = Field(description='TLS Certificate dirrectory')
+    tls_version: str = Field(max_length=64, default='tlsv1.2', description='TLS version', hidden_field=True)
+    tls_cert_dir: Optional[str] = Field(max_length=256, description='TLS Certificate dirrectory', hidden_field=True)
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
@@ -1235,26 +1248,29 @@ class GatewayModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
     # auth-username"
-    realm: Optional[str] = Field(description='auth realm, use gateway name as default')
-    from_user: Optional[str] = Field(description='username in from header, use username as default')
-    from_domain: Optional[str] = Field(description='domain in from header, use realm as default')
+    realm: Optional[str] = Field(max_length=256, description='auth realm, use gateway name as default')
+    from_user: Optional[str] = Field(max_length=256, description='username in from header, use username as default')
+    from_domain: Optional[str] = Field(max_length=256, description='domain in from header, use realm as default')
     password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
-    extension: Optional[str] = Field(description='extension for inbound calls, use username as default')
-    proxy: str = Field(description='farend proxy ip address or domain, use realm as default')
+    extension: Optional[str] = Field(max_length=256, description='extension for inbound calls, use username as default')
+    proxy: str = Field(max_length=256, description='farend proxy ip address or domain, use realm as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
     _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
-    register_proxy: Optional[str] = Field(description='proxy address to register, use proxy as default')
+    register_proxy: Optional[str] = Field(max_length=256, description='proxy address to register, use proxy as default')
     register_transport: Optional[TransportEnum] = Field(description='transport to use for register')
     expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
     caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
-    contact_params: Optional[str] = Field(description='extra sip params to send in the contact')
+    contact_params: Optional[str] = Field(max_length=256, description='extra sip params to send in the contact')
+    contact_host: Optional[str] = Field(max_length=256, description='host part in contact header', hidden_field=True)
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
     ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
     ping_min: Optional[int] = Field(ge=1, le=31,description='number of failure pings to declaring a gateway down')
+    contact_in_ping: Optional[str] = Field(max_length=256, description='contact header of ping message', hidden_field=True)
+    ping_user_agent: Optional[str] = Field(max_length=64, description='user agent of ping message', hidden_field=True)
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
