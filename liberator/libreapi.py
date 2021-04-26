@@ -59,7 +59,7 @@ __EMPTY_STRING__ = ''
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 try:
-    rdbconn.sadd('nodespool', NODEID)
+    rdbconn.sadd('cluster:candidates', NODEID)
 
     _clustername = rdbconn.get('cluster:name')
     if _clustername: CLUSTERS['name'] = _clustername
@@ -88,7 +88,7 @@ def predefine():
         'swversion': _SWVERSION,
         'description': _DESCRIPTION,
         'nodeid': NODEID,
-        #'nodespool': rdbconn.smembers('nodespool'),
+        #'candidates': rdbconn.smembers('cluster:candidates'),
         #'cluster': CLUSTERS,
         'codecs': SWCODECS,
     }
@@ -99,8 +99,8 @@ def predefine():
 
 def check_member(members):
     for member in members:
-        if not rdbconn.sismember('nodespool', member):
-            raise ValueError('member is not in nodespool')
+        if not rdbconn.sismember('cluster:candidates', member):
+            raise ValueError('member is not in candidates')
     return members
 
 class ClusterModel(BaseModel):
