@@ -1193,7 +1193,7 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
-        result = rdbconn.hgetall(_name_key)
+        result = jsonhash(rdbconn.hgetall(_name_key))
         engagements = rdbconn.smembers(_engaged_key)
         result.update({'engagements': engagements})
         response.status_code = 200
@@ -1943,7 +1943,7 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
         _name_key = f'intcon:in:{identifier}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
-        result = rdbconn.hgetall(_name_key)
+        result = jsonhash(rdbconn.hgetall(_name_key))
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
