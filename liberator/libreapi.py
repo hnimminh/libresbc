@@ -88,7 +88,7 @@ def predefine():
         'swversion': _SWVERSION,
         'description': _DESCRIPTION,
         'nodeid': NODEID,
-        #'candidates': rdbconn.smembers('cluster:candidates'),
+        'candidates': rdbconn.smembers('cluster:candidates'),
         #'cluster': CLUSTERS,
         'codecs': SWCODECS,
     }
