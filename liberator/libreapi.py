@@ -528,8 +528,8 @@ class SIPProfileModel(BaseModel):
     tls: bool = Field(default=False, description='true to enable TLS')
     tls_only: bool = Field(default=False, description='set True to disable listening on the unencrypted port for this connection')
     sips_port: int = Field(default=5061, ge=0, le=65535, description='Port to bind to for TLS SIP traffic')
-    tls_version: str = Field(max_length=64, default='tlsv1.2', description='TLS version', hidden_field=True)
-    tls_cert_dir: Optional[str] = Field(max_length=256, description='TLS Certificate dirrectory', hidden_field=True)
+    tls_version: str = Field(min_length=4, max_length=64, default='tlsv1.2', description='TLS version', hidden_field=True)
+    tls_cert_dir: Optional[str] = Field(min_length=4, max_length=256, description='TLS Certificate dirrectory', hidden_field=True)
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
@@ -550,6 +550,9 @@ class SIPProfileModel(BaseModel):
             if key in ['sip_address', 'rtp_address']:
                 if not rdbconn.exists(f'base:netalias:{value}'):
                     raise ValueError('nonexistent network alias')
+            # remove the key's value is None
+            if value is None:
+                 values.pop(key, None)
 
         return values
 
@@ -1248,35 +1251,35 @@ class GatewayModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
     # auth-username"
-    realm: Optional[str] = Field(max_length=256, description='auth realm, use gateway name as default')
-    from_user: Optional[str] = Field(max_length=256, description='username in from header, use username as default')
-    from_domain: Optional[str] = Field(max_length=256, description='domain in from header, use realm as default')
+    realm: Optional[str] = Field(min_length=1, max_length=256, description='auth realm, use gateway name as default')
+    from_user: Optional[str] = Field(min_length=1, max_length=256, description='username in from header, use username as default')
+    from_domain: Optional[str] = Field(min_length=1, max_length=256, description='domain in from header, use realm as default')
     password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
     extension: Optional[str] = Field(max_length=256, description='extension for inbound calls, use username as default')
-    proxy: str = Field(max_length=256, description='farend proxy ip address or domain, use realm as default')
+    proxy: str = Field(min_length=1, max_length=256, description='farend proxy ip address or domain, use realm as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
     _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
-    register_proxy: Optional[str] = Field(max_length=256, description='proxy address to register, use proxy as default')
+    register_proxy: Optional[str] = Field(min_length=1, max_length=256, description='proxy address to register, use proxy as default')
     register_transport: Optional[TransportEnum] = Field(description='transport to use for register')
     expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
     caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
-    contact_params: Optional[str] = Field(max_length=256, description='extra sip params to send in the contact')
-    contact_host: Optional[str] = Field(max_length=256, description='host part in contact header', hidden_field=True)
+    contact_params: Optional[str] = Field(min_length=1, max_length=256, description='extra sip params to send in the contact')
+    contact_host: Optional[str] = Field(min_length=1, max_length=256, description='host part in contact header', hidden_field=True)
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
     ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
     ping_min: Optional[int] = Field(ge=1, le=31,description='number of failure pings to declaring a gateway down')
-    contact_in_ping: Optional[str] = Field(max_length=256, description='contact header of ping message', hidden_field=True)
-    ping_user_agent: Optional[str] = Field(max_length=64, description='user agent of ping message', hidden_field=True)
+    contact_in_ping: Optional[str] = Field(min_length=4, max_length=256, description='contact header of ping message', hidden_field=True)
+    ping_user_agent: Optional[str] = Field(min_length=4, max_length=64, description='user agent of ping message', hidden_field=True)
     # validation
     @root_validator()
     def gateway_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
-            if not value:
+            if value is None:
                 values.pop(key)
         for key, value in values.items():
             if key in ['realm', 'proxy', 'from_domain', 'register_proxy']:
@@ -1576,7 +1579,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
         _sip_ips = _data.get('sip_ips')
-        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{nameid}:_gateways'))
+        _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # transaction block
         pipe.multi()
         # processing: removing old-one
@@ -1587,7 +1590,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
-        pipe.delete(f'intcon:{_nameid}:_gateways')
+        pipe.delete(f'{_name_key}:_gateways')
         # processing: adding new-one
         data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
@@ -1597,7 +1600,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        pipe.hmset(f'intcon:{nameid}:_gateways', redishash(gateways))
+        pipe.hmset(f'{name_key}:_gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:base:gateway:{gateway}', name)
         # change identifier
         if name != identifier:
@@ -1653,7 +1656,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
         _sip_ips = _data.get('sip_ips')
-        _gateways = jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways'))
+        _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
@@ -1662,7 +1665,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
-        pipe.delete(f'intcon:{_nameid}:_gateways')
+        pipe.delete(f'{_name_key}:_gateways')
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}

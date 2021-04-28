@@ -207,8 +207,8 @@ def sip(request: Request, response: Response):
             profile_gateways_maps[profile] = list(map(jsonhash, pipe.execute()))
 
         for sipprofile in sipprofiles:
-            if 'gateways' in sipprofiles[sipprofile]:
-                sipprofiles[sipprofile]['gateways'] = profile_gateways_maps[sipprofile]
+            gateways = profile_gateways_maps.get(sipprofile, list())
+            sipprofiles[sipprofile]['gateways'] = gateways
 
         # template
         result = templates.TemplateResponse("sip-setting.j2.xml",
