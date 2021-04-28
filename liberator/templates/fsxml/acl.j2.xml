@@ -1,5 +1,5 @@
 {%- for profilename, inbound_ipaddrs in sipprofile_ips.items() %} 
-        <list name="{{profilename|upper}}ACL" default="deny">
+        <list name="_SIPACL{{profilename}}" default="deny">
 {%- for inbound_ipaddr in inbound_ipaddrs %}  
           <node type="allow" cidr="{{inbound_ipaddr}}/32"/>
 {%- endfor %}
