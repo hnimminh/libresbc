@@ -1,37 +1,38 @@
-{%- for profilename, sipprofile in sipprofiles.items() %}        <profile name="{{profilename}}">
+        {%- for profilename, sipprofile in sipprofiles.items() %}
+        <profile name="{{profilename}}">
           <gateways>
-{%- for gateway in sipprofile.gateways %}
+          {%- for gateway in sipprofile.gateways %}
             <gateway name="{{gateway.name}}">
               {# <!-- <param name="auth-username" value="{{gateway.auth_username}}"/> --> #}
               {# <!-- <param name="schema" value="{{gateway.schema}}"/> --> #}
               {# <!--<param name="context" value="{{gateway.context}}"/>--> #}
-              <param name="username" value="{{gateway.username}}"/>{% if gateway.realm %}
-              <param name="realm" value="{{gateway.realm}}"/>{% endif %}{% if gateway.from_user %}
-              <param name="from-user" value="{{gateway.from_user}}"/>{% endif %}{% if gateway.from_domain %}
+              <param name="username" value="{{gateway.username}}"/>{% if gateway.realm is defined %}
+              <param name="realm" value="{{gateway.realm}}"/>{% endif %}{% if gateway.from_user is defined %}
+              <param name="from-user" value="{{gateway.from_user}}"/>{% endif %}{% if gateway.from_domain is defined %}
               <param name="from-domain" value="{{gateway.from_domain}}"/>{% endif %}
-              <param name="password" value="{{gateway.password}}"/>{% if gateway.extension %}
+              <param name="password" value="{{gateway.password}}"/>{% if gateway.extension is defined %}
               <param name="extension" value="{{gateway.extension}}"/>{% endif %}
-              <param name="proxy" value="{{gateway.proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>{% if gateway.register %}
-              <param name="register" value="{{gateway.register|lower}}"/>{% endif %}{% if gateway.register_proxy %}
-              <param name="register-proxy" value="{{gateway.register_proxy}}"/>{% endif %}{% if gateway.register_transport %}
-              <param name="register-transport" value="{{gateway.register_transport}}"/>{% endif %}{% if gateway.retry_seconds %}
-              <param name="retry-seconds" value="{{gateway.retry_seconds}}" />{% endif %}{% if gateway.expire_seconds %}
-              <param name="expire-seconds" value="{{gateway.expire_seconds}}" />{% endif %}{% if gateway.caller_id_in_from %}
-              <param name="caller-id-in-from" value="{{gateway.caller_id_in_from|lower}}"/>{% endif %}{% if gateway.cid_type %}
-              <param name="cid-type" value="{{gateway.cid_type}}"/>{% endif %}{% if gateway.extension_in_contact %}
-              <param name="extension-in-contact" value="{{gateway.extension_in_contact|lower}}"/>{% endif %}{% if gateway.contact_params %}
-              <param name="contact-params" value="{{gateway.contact_params}}"/>{% endif %}{% if gateway.contact_host %}
-              <param name="contact-host" value="{{gateway.contact_host}}"/>{% endif %}{% if gateway.ping %}
-              <param name="ping" value="{{gateway.ping}}"/>{% endif %}{% if gateway.ping_max %}
-              <param name="ping-max" value="{{gateway.ping_max}}"/>{% endif %}{% if gateway.ping_min %}
-              <param name="ping-min" value="{{gateway.ping_min}}"/>{% endif %}{% if gateway.contact_in_ping %}
-              <param name="contact-in-ping" value="{{gateway.contact_in_ping}}"/>{% endif %}{% if gateway.ping_user_agent %}
+              <param name="proxy" value="{{gateway.proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>
+              <param name="register" value="{{gateway.do_register|lower}}"/>{% if gateway.register_proxy is defined %}
+              <param name="register-proxy" value="{{gateway.register_proxy}}"/>{% endif %}{% if gateway.register_transport is defined %}
+              <param name="register-transport" value="{{gateway.register_transport}}"/>{% endif %}{% if gateway.retry_seconds is defined %}
+              <param name="retry-seconds" value="{{gateway.retry_seconds}}" />{% endif %}{% if gateway.expire_seconds is defined %}
+              <param name="expire-seconds" value="{{gateway.expire_seconds}}" />{% endif %}
+              <param name="caller-id-in-from" value="{{gateway.caller_id_in_from|lower}}"/>{% if gateway.cid_type is defined %}
+              <param name="cid-type" value="{{gateway.cid_type}}"/>{% endif %}{% if gateway.extension_in_contact is defined %}
+              <param name="extension-in-contact" value="{{gateway.extension_in_contact|lower}}"/>{% endif %}{% if gateway.contact_params is defined %}
+              <param name="contact-params" value="{{gateway.contact_params}}"/>{% endif %}{% if gateway.contact_host is defined %}
+              <param name="contact-host" value="{{gateway.contact_host}}"/>{% endif %}{% if gateway.ping is defined %}
+              <param name="ping" value="{{gateway.ping}}"/>{% endif %}{% if gateway.ping_max is defined %}
+              <param name="ping-max" value="{{gateway.ping_max}}"/>{% endif %}{% if gateway.ping_min is defined %}
+              <param name="ping-min" value="{{gateway.ping_min}}"/>{% endif %}{% if gateway.contact_in_ping is defined %}
+              <param name="contact-in-ping" value="{{gateway.contact_in_ping}}"/>{% endif %}{% if gateway.ping_user_agent is defined %}
               <param name="ping-user-agent" value="{{gateway.ping_user_agent}}"/>{% endif %}
               {# <!-- <param name="ping-monitoring" value="{{gateway.ping_monitoring}}"/> --> #}
               {# <!-- <param name="distinct-to" value="{{gateway.distinct_to}}"/> --> #}
               {# <!-- <param name="destination-prefix" value="{{gateway.destination_prefix}}"/> --> #}
             </gateway>
-{%- endfor %}
+          {%- endfor %}
           </gateways>
           <settings>
             <param name="debug" value="0"/>
@@ -109,5 +110,5 @@
             {%- endif %}    
           </settings>
         </profile>
-{%- endfor %}
+        {%- endfor %}
 
