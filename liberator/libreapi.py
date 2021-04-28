@@ -1237,9 +1237,9 @@ def list_translation_class(response: Response):
 # GATEWAY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TransportEnum(str, Enum):
-    UDP = "UDP"
-    TCP = "TCP"
-    TLS = "TLS"
+    udp = "udp"
+    tcp = "tcp"
+    tls = "tls"
 
 class CidTypeEnum(str, Enum):
     none = 'none'
@@ -1258,13 +1258,13 @@ class GatewayModel(BaseModel):
     extension: Optional[str] = Field(max_length=256, description='extension for inbound calls, use username as default')
     proxy: str = Field(min_length=1, max_length=256, description='farend proxy ip address or domain, use realm as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
-    transport: TransportEnum = Field(default='UDP', description='farend transport protocol')
-    _register: Optional[bool] = Field(description='register to farend endpoint, false mean no register', alias='register')
+    transport: TransportEnum = Field(default='udp', description='farend transport protocol')
+    do_register: bool = Field(default=False, description='register to farend endpoint, false mean no register')
     register_proxy: Optional[str] = Field(min_length=1, max_length=256, description='proxy address to register, use proxy as default')
     register_transport: Optional[TransportEnum] = Field(description='transport to use for register')
     expire_seconds: Optional[int] = Field(ge=60, le=3600, description='register expire interval in second, use 600s as default')
     retry_seconds: Optional[int] = Field(ge=30, le=600, description='interval in second before a retry when a failure or timeout occurs')
-    caller_id_in_from: Optional[bool] = Field(description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
+    caller_id_in_from: bool = Field(default=True, description='use the callerid of an inbound call in the from field on outbound calls via this gateway')
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
     contact_params: Optional[str] = Field(min_length=1, max_length=256, description='extra sip params to send in the contact')
     contact_host: Optional[str] = Field(min_length=1, max_length=256, description='host part in contact header', hidden_field=True)
@@ -1279,8 +1279,15 @@ class GatewayModel(BaseModel):
     def gateway_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
+            if key == 'do_register' and not value:
+                removekey(['register_proxy', 'register_transport', 'expire_seconds', 'retry_seconds'], values)
+
+            if key == 'ping' and not value:
+                removekey(['ping_max', 'ping_min', 'contact_in_ping', 'ping_user_agent'], values)
+
             if value is None:
-                values.pop(key)
+                values.pop(key, None)
+
         for key, value in values.items():
             if key in ['realm', 'proxy', 'from_domain', 'register_proxy']:
                 if not validators.ip_address.ipv4(value) and not validators.domain(value):
@@ -1320,6 +1327,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
         data = jsonable_encoder(reqbody)
+        logify(f'data={data}')
         rdbconn.hmset(name_key, redishash(data))
         # remove the unintended-field
         _data = jsonhash(rdbconn.hgetall(_name_key))
