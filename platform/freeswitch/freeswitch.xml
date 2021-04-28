@@ -57,11 +57,13 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/> -->
-        <param name="startup-script" value="startupctl.lua"/>
-        <hook event="CHANNEL_CREATE" script="eventctl.lua"/>
-        <hook event="CHANNEL_UUID" script="eventctl.lua"/>
-        <hook event="CHANNEL_DESTROY" script="eventctl.lua"/>
-        <hook event="CHANNEL_HANGUP_COMPLETE" script="eventctl.lua"/>
+        <!--
+        <param name="startup-script" value="$${lualibre}/startupctl.lua"/>
+        <hook event="CHANNEL_CREATE" script="$${lualibre}/eventctl.lua"/>
+        <hook event="CHANNEL_UUID" script="$${lualibre}/eventctl.lua"/>
+        <hook event="CHANNEL_DESTROY" script="$${lualibre}/eventctl.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${lualibre}/eventctl.lua"/>
+        -->
       </settings>
     </configuration>
     <!--- MODULES -->  
@@ -124,15 +126,15 @@
     <context name="redirected">
       <extension name="any_to_any">
         <condition field="destination_number" expression="^.+$">
-          <action application="lua" data="callcontrol/redirectctl.lua"/>
+          <action application="lua" data="${lualibre}/redirectctl.lua"/>
         </condition>
       </extension>
     </context>
-    <context name="librectx">
+    <context name="interconnection">
       <extension name="any_to_any">
         <condition regex="all">
-          <regex field="${acl(${network_addr} INTERCONNECTION)}" expression="true"/>
-          <action application="lua" data="callcontrol/callctl.lua"/>
+          <!--<regex field="${acl(${network_addr} INTERCONNECTION)}" expression="true"/> -->
+          <action application="lua" data="$${lualibre}/callctl.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
         </condition>
       </extension>
