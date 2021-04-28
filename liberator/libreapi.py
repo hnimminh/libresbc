@@ -1461,28 +1461,22 @@ def check_cluster_node(nodes):
 # OUTBOUND INTERCONECTION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+WEIGHTBASE = 'weight_based'
+ROUNDROBIN = 'round_robin'
+HASHCALLID = 'hash_callid'
+HASHIPADDR = 'hash_src_ip'
+HASHDESTNO = 'hash_destination_number'
+
 class Distribution(str, Enum):
-    round_robin = 'round_robin'
-    hash_caller = 'hash_caller'
-    hash_callee = 'hash_callee'
-    hash_both = 'hash_both'
-    hash_callid = 'hash_callid'
-    weight_based = 'weight_based'
-
-
-def check_existent_gateway(gateway):
-    if not rdbconn.exists(f'base:gateway:{gateway}'):
-        raise ValueError('nonexistent gateway')
-    if rdbconn.scard(f'engagement:base:gateway:{gateway}'):
-        raise ValueError('the gateway can be assigned to only one outbound interconnection')
-    return gateway
+    weight_based = WEIGHTBASE
+    round_robin = ROUNDROBIN
+    hash_callid = HASHCALLID
+    hash_src_ip = HASHIPADDR
+    hash_destination_number = HASHDESTNO 
 
 class DistributedGatewayModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='gateway name')
     weight:  int = Field(default=1, ge=0, le=127, description='weight value use for distribution')
-    # validation
-    _existentgateway = validator('name')(check_existent_gateway)
-
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
@@ -1504,6 +1498,32 @@ class OutboundInterconnection(BaseModel):
     _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
+
+    @root_validator()
+    def out_intcon_agreement(cls, values):
+        values = jsonable_encoder(values)
+        sipprofile = values.get('sipprofile')
+        distribution = values.get('distribution')
+        gateways = values.get('gateways')
+        for gateway in gateways:
+            gwname = gateway.get('name')
+            # check if gateways is existing
+            if not rdbconn.exists(f'base:gateway:{gwname}'):
+                raise ValueError('nonexistent gateway')
+
+            # gateway agreement with inteconnection and sipprofile
+            _intcon = rdbconn.srandmember(f'engagement:base:gateway:{gateway}')
+            if _intcon:
+                _scard = rdbconn.scard(f'engagement:base:gateway:{gateway}')
+                _sipprofile = rdbconn.hget(f'intcon:{_intcon}', 'sipprofile')
+                if sipprofile != _sipprofile and _scard > 1:
+                    raise ValueError('gateway can be assigned to multiple intconnection only if they use the same sip profile')
+
+            if distribution != WEIGHTBASE:
+                gateway['weight'] = 1
+
+        return values
+
 
 @librerouter.post("/libresbc/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
