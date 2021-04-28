@@ -1764,8 +1764,9 @@ def check_existent_routing(table):
     return table
 
 def check_existent_ringtone(ringtone):
-    if not rdbconn.exists(f'class:ringtone:{ringtone}'):
-        raise ValueError('nonexistent class')
+    if ringtone:
+        if not rdbconn.exists(f'class:ringtone:{ringtone}'):
+            raise ValueError('nonexistent class')
     return ringtone
 
 class InboundInterconnection(BaseModel):
@@ -1794,7 +1795,6 @@ class InboundInterconnection(BaseModel):
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _existentrouting = validator('routing')(check_existent_routing)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
-
 
 @librerouter.post("/libresbc/interconnection/inbound", status_code=200)
 def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
@@ -1908,7 +1908,11 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)   
+        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)
+        # remove the unintended-field
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
         # change identifier
         if name != identifier:
             pipe.delete(_name_key)
