@@ -43,7 +43,7 @@
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             <param name="username" value="{{sipprofile.sdp_user}}"/> {# <!-- sdp username in o= and s= fields --> #}
             {# <!-- AUTH AND SECURE--> #}
-            <param name="apply-inbound-acl" value="_SIPACL{{profilename}}"/>
+            <param name="apply-inbound-acl" value="_SIPACL_{{profilename}}"/>
             <param name="auth-calls" value="true"/>
             <param name="nonce-ttl" value="60"/>
             <param name="log-auth-failures" value="true"/>
