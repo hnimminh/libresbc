@@ -160,55 +160,40 @@ def sip(request: Request, response: Response):
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
-
         for mainkey in mainkeys:
             pipe.hgetall(mainkey)
         details = pipe.execute()
-
         sipprofiles = dict()
         for mainkey, detail in zip(mainkeys, details):
             sipprofiles[getnameid(mainkey)] = jsonhash(detail)
 
         # get the mapping siprofile name and interconnection name
         # {profilename1: [intconname,...], profilename2: [intconname,...]}
-        KEYPATTERN = 'intcon:out:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-
-        for mainkey in mainkeys:
-            if not mainkey.endswith('_gateways'):
-                pipe.hget(mainkey, 'sipprofile')
-        profilenames = pipe.execute()
-
-        profile_intcons_maps = dict()
-        for mainkey, profilename in zip(mainkeys, profilenames):
-            intconname = getnameid(mainkey)
-            if profilename not in profile_intcons_maps:
-                profile_intcons_maps[profilename] = [intconname]
-            else:
-                if profilename not in profile_intcons_maps[profilename]:
-                    profile_intcons_maps[profilename].append(profilename)
+        map_profilename_intconnames = {}
+        for profilenames in sipprofiles.keys():
+            intcon_names = rdbconn.smembers(f'engagement:sipprofile:{profilenames}')
+            out_intcon_names = list(filter(lambda name: name.startswith('out:') ,intcon_names))
+            map_profilename_intconnames[profilenames] = out_intcon_names
 
         # get the mapping siprofile name and gateway name
         # {profilename1: [gateway,...], profilename2: [gateway,...]}
-        profile_gwnames_maps = dict()
-        for profile, intcons in profile_intcons_maps.items():
+        map_profilename_gwnames = dict()
+        for profilename, intcons in map_profilename_intconnames.items():
             for intcon in intcons:
-                pipe.hkeys(f'intcon:out:{intcon}:_gateways')
-            profile_gwnames_maps[profile] = list(set([gw for gws in pipe.execute() for gw in gws]))
+                pipe.hkeys(f'intcon:{intcon}:_gateways')
+            allgws = pipe.execute()
+            map_profilename_gwnames[profilename] = list(set([gw for gws in allgws for gw in gws]))
 
         # add gateway data to sip profile data
-        profile_gateways_maps = dict()
-        for profile, gwnames in profile_gwnames_maps.items():
+        map_profilename_gateways = dict()
+        for profilename, gwnames in map_profilename_gwnames.items():
             for gwname in gwnames:
-                pipe.hgetall(f'gateway:{gwname}')
-            profile_gateways_maps[profile] = list(map(jsonhash, pipe.execute()))
-
+                pipe.hgetall(f'base:gateway:{gwname}')
+            map_profilename_gateways[profilename] = list(filter(lambda gwdata: gwdata, map(jsonhash, pipe.execute())))
         for sipprofile in sipprofiles:
-            gateways = profile_gateways_maps.get(sipprofile, list())
-            sipprofiles[sipprofile]['gateways'] = gateways
+            gateways = map_profilename_gateways.get(sipprofile)
+            if gateways:
+                sipprofiles[sipprofile]['gateways'] = gateways
 
         # template
         result = templates.TemplateResponse("sip-setting.j2.xml",
