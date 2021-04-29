@@ -11,6 +11,7 @@
 * [CODEC](https://freeswitch.org/confluence/display/FREESWITCH/Codec+Negotiation)
 * [SOFIA CONFIG](https://freeswitch.org/confluence/display/FREESWITCH/Sofia+Configuration+Files)
 * [SOFIA GATEWAY](https://freeswitch.org/confluence/display/FREESWITCH/Gateways+Configuration)
+* [SOFIA VAR](https://freeswitch.org/confluence/display/FREESWITCH/mod_sofia+variables)
 * [CALLER ID](https://freeswitch.org/confluence/display/FREESWITCH/Caller+ID+Privacy)
 * [SIP CID TYPE](https://freeswitch.org/confluence/display/FREESWITCH/sip_cid_type)
 * [VARIABLES](https://freeswitch.org/confluence/display/FREESWITCH/Variables+Master+List#VariablesMasterList-originate_timeout)
@@ -36,3 +37,4 @@
 * [COMMANDS](https://freeswitch.org/confluence/display/FREESWITCH/mod_commands)
 * [NFTABLES](https://wiki.nftables.org/wiki-nftables/index.php/Netfilter_hooks)
 * [NFTABLE BEST PRACTICE](https://blog.samuel.domains/blog/security/nftables-hardening-rules-and-good-practices)
+* [DIRECTORY](https://freeswitch.org/confluence/display/FREESWITCH/XML+User+Directory)
