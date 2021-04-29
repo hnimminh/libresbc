@@ -46,8 +46,7 @@
             <param name="apply-inbound-acl" value="_SIPACL_{{profilename}}"/>
             <param name="auth-calls" value="true"/>
             <param name="nonce-ttl" value="60"/>
-            <param name="log-auth-failures" value="true"/>
-            <param name="challenge-realm" value="auto_to"/>
+            <param name="challenge-realm" value="{{sipprofile.challenge_realm|default('auto_to')}}"/>
             {# <!-- NAT--> #}
             <param name="local-network-acl" value="{{sipprofile.local_network_acl}}"/>
             {# <!-- SIP VERBOSE CALLFLOW CONTROL--> #}

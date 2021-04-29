@@ -162,4 +162,10 @@
     </context>
   </section>
   <!-- END: DIALPLAN SECTION -->
+
+  <!-- BEGIN: DIRECTORY SECTION -->
+  <section name="directory" description="User Directory">
+    <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/directory"/>
+  </section>
+  <!-- END: DIRECTORY SECTION -->
 </document>

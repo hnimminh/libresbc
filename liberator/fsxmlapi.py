@@ -206,3 +206,16 @@ def sip(request: Request, response: Response):
     finally:
         return result
 
+
+@fsxmlrouter.get("/fsxmlapi/directory", include_in_schema=False)
+def directory(request: Request, response: Response):
+    try:
+        result = templates.TemplateResponse("directory.j2.xml",
+                                            {"request": request},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result

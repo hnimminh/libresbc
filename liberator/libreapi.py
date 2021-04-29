@@ -522,6 +522,7 @@ class SIPProfileModel(BaseModel):
     media_timeout: int = Field(default=0, description='The number of seconds of RTP inactivity before SBC considers the call disconnected, and hangs up (recommend to use session timers instead), default value is 0 - disables the timeout.')
     rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
     context: ContextEnum = Field(description='predefined context for call control policy')
+    challenge_realm: Optional[str] = Field(min_length=1, max_length=256, description='Digest Auth realm')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_address: str = Field(description='IP address suite use for SIP Signalling')
     rtp_address: str = Field(description='IP address suite use for RTP Media')

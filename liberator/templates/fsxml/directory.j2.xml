@@ -1,0 +1,8 @@
+    <domain name="libre.sbc">
+      <user id="LibreUser">
+        <params>
+          <!-- <param name="password" value="H8jndj8zTWrZ8NAs"/> -->
+          <param name="a1-hash" value="1badcf02d0383e14de60a57410b5dbcd"/>
+        </params>
+      </user>
+    </domain>
