@@ -1,11 +1,10 @@
-dofile("/opt/libresbc/run/callcontrol/configuration.lua")
+dofile("configuration.lua")
 
 -- REQUIRE
-redis = require("redis")
 socket = require("socket")
 syslog = require("posix.syslog")
 json = require("json")
-luuid = require("lua_uuid")
+redis = require("redis")
 random = math.random
 
 -- REDIS CONNECTION

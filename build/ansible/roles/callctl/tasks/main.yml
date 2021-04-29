@@ -1,0 +1,24 @@
+---
+# tasks file for callctl
+- name: Update configuration for callctl
+  template:
+    src: "{{sourcedir}}/callctl/configuration.lua"
+    dest: "{{destinationdir}}/callctl/configuration.lua"
+    owner: root
+    group: root
+    mode: 0754
+
+- name: Gather callctl lua file
+  find:
+    paths: "{{destinationdir}}/callctl"
+    patterns: "*.lua"
+    file_type: file
+  register: fslua
+
+- name: Update a symbolic link for callctl lua file and fs-scripts
+  file:
+    src: "{{rundir}}/callctl/{{ item.path | basename }}"
+    dest: "/usr/local/share/freeswitch/scripts/{{ item.path | basename }}"
+    force: true
+    state: link
+  with_items: "{{ fslua.files }}"

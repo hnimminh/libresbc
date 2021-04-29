@@ -10,11 +10,11 @@
   roles:
     - sourcing
     - rsyslog
-    #- logrotate
+    - logrotate
     - nginx
     - liberator
-    #- corectl
+    - callctl
     - freeswitch
     #- netfilter
-    #- captagent
+    - captagent
     - linking

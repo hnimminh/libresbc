@@ -1,5 +1,5 @@
-dofile("/opt/libresbc/run/callcontrol/configuration.lua")
-dofile("/opt/libresbc/run/callcontrol/utilities.lua")
+dofile("configuration.lua")
+dofile("utilities.lua")
 ---------------------------------------------------------------------------
 
 local function cdrreporter(event_name, event)
@@ -94,7 +94,7 @@ local function cdrreporter(event_name, event)
     else 
         filename = os.date("%Y-%m-%d")..'.cdr.raw.json'
         cdrjson = json.encode(cdr_details)
-        logify('module', 'callflow', 'space', 'eventctl', 'action', 'cdrreporter', 'error', 'rdb.timeout', 'data', cdrjson, 'donext', 'append_to_file', 'filename', filename)
+        logify('module', 'callflow', 'space', 'events', 'action', 'cdrreporter', 'error', 'rdb.timeout', 'data', cdrjson, 'donext', 'append_to_file', 'filename', filename)
         writefile(filename, cdrjson)
     end
 end
@@ -128,7 +128,7 @@ local function peer_capacity_handler(event_name, event)
         if peername then
             rdbconn:sadd(get_key_peer_node_capacity(peername), uuid)
         else
-            logify('module', 'callflow', 'space', 'eventctl', 'action', 'peer_capacity_handler', 'error', 'unrecognize.traffic', 
+            logify('module', 'callflow', 'space', 'events', 'action', 'peer_capacity_handler', 'error', 'unrecognize.traffic', 
                    'event', 'channel.create', 'uuid', uuid, 'interface', sofia_profile_name, 'direction', direction, 'remote_ip', remote_ip)
         end
     end
@@ -137,14 +137,14 @@ local function peer_capacity_handler(event_name, event)
     if event_name == 'CHANNEL_UUID' then
         peername = event:getHeader("variable_V-LIBRE-PEER")
         local old_uuid = event:getHeader("Old-Unique-ID")
-        logify('module', 'callflow', 'space', 'eventctl', 'action', 'peer_capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
+        logify('module', 'callflow', 'space', 'events', 'action', 'peer_capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
         if peername and old_uuid then
             rdbconn:pipeline(function(p)
                 p:srem(get_key_peer_node_capacity(peername), old_uuid)
                 p:sadd(get_key_peer_node_capacity(peername), uuid)
             end)
         else
-            logify('module', 'callflow', 'space', 'eventctl', 'action', 'peer_capacity_handler', 'error', 'unrecognize.traffic', 
+            logify('module', 'callflow', 'space', 'events', 'action', 'peer_capacity_handler', 'error', 'unrecognize.traffic', 
                    'event', 'channel.uuid', 'uuid', uuid, 'interface', sofia_profile_name, 'direction', direction, 'remote_ip', remote_ip)
         end
     end
@@ -171,7 +171,7 @@ end
 
 local function main()
     local event_name = event:getHeader("Event-Name")
-    -- local uuid = event:getHeader("Unique-ID"); dlogify('module', 'callflow', 'space', 'eventctl', 'action', 'debug', 'event', event_name, 'uuid', uuid)
+    -- local uuid = event:getHeader("Unique-ID"); dlogify('module', 'callflow', 'space', 'events', 'action', 'debug', 'event', event_name, 'uuid', uuid)
     -- PEER CAPACITY HANDLE
     if event_name=='CHANNEL_CREATE' or event_name=='CHANNEL_UUID' or event_name=='CHANNEL_DESTROY' then
         peer_capacity_handler(event_name, event)
@@ -188,7 +188,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logger("module=callflow, space=eventctl, action=exception, error="..tostring(error))
+    logger("module=callctl, space=events, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

@@ -1,5 +1,5 @@
-dofile("/opt/libresbc/run/callcontrol/configuration.lua")
-dofile("/opt/libresbc/run/callcontrol/utilities.lua")
+dofile("configuration.lua")
+dofile("utilities.lua")
 
 ---------------------------------------------------------------------------
 local unpack = _G.unpack or table.unpack
@@ -8,7 +8,7 @@ local function fire_infra_event()
     local key = 'event:infra:fsengine:'..NODENAME
     local value = json.encode({subevent='restart', prewait=0, requestid=luuid()})
     rdbconn:lpush(key, value)
-    logify('module', 'callcontrol', 'space', 'startupctl', 'action', 'fire_infra_event', 'key', key, 'value', value)
+    logify('module', 'callctl', 'space', 'startup', 'action', 'fire_infra_event', 'key', key, 'value', value)
 end
 
 local function clean_node_capacity()
@@ -27,7 +27,7 @@ local function clean_node_capacity()
         end
     end)
     ---
-    logify('module', 'callcontrol', 'space', 'startupctl', 'action', 'clean_node_capacity', 'node', NODENAME)
+    logify('module', 'callctl', 'space', 'startup', 'action', 'clean_node_capacity', 'node', NODENAME)
 end
 
 -----------------**********************************--------------------
@@ -46,7 +46,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logger("module=callflow, space=startupctl, action=exception, error="..tostring(error))
+    logger("module=callctl, space=startup, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()
