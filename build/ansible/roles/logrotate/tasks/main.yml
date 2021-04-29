@@ -4,7 +4,7 @@
   find:
     paths: "{{destinationdir}}/platform/logrotate/logrotate.d/"
     file_type: file
-  register: logrotate_d_conf
+  register: logrotatedconf
 
 - name: Update logrotate config
   template:
@@ -13,7 +13,7 @@
     owner: root
     group: root
     mode: "0644"
-  with_items: "{{logrotate_d_conf.files}}"
+  with_items: "{{logrotatedconf.files}}"
 
 - name: Update a symbolic link for components
   file:
@@ -21,7 +21,7 @@
     dest: /etc/logrotate.d/{{item.path|basename}}
     state: link
     force: true
-  with_items: "{{logrotate_d_conf.files}}"
+  with_items: "{{logrotatedconf.files}}"
 
 - name: handle logrotate daemon 
   debug: 

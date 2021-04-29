@@ -57,6 +57,7 @@ make
 make install
 mv /usr/local/etc/freeswitch /usr/local/etc/freeswitch.origin
 mkdir -p /dev/shm/libresbc
+chmod 750 /var/log/freeswitch
 #-------------------------- FreeSWITCH configuration --------------------------
 #
 #  Locations:
