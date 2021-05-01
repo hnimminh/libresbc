@@ -2,11 +2,9 @@
         <profile name="{{profilename}}">
           <gateways>
           {%- for gateway in sipprofile.gateways %}
-            <gateway name="{{gateway.name}}">
-              {# <!-- <param name="auth-username" value="{{gateway.auth_username}}"/> --> #}
-              {# <!-- <param name="schema" value="{{gateway.schema}}"/> --> #}
-              {# <!--<param name="context" value="{{gateway.context}}"/>--> #}
-              <param name="username" value="{{gateway.username}}"/>{% if gateway.realm is defined %}
+            <gateway name="{{gateway.name}}">{% if gateway.auth_username is defined %}
+              <param name="auth-username" value="{{gateway.auth_username}}"/>
+              <param name="username" value="{{gateway.username}}"/>{% endif %}{% if gateway.realm is defined %}
               <param name="realm" value="{{gateway.realm}}"/>{% endif %}{% if gateway.from_user is defined %}
               <param name="from-user" value="{{gateway.from_user}}"/>{% endif %}{% if gateway.from_domain is defined %}
               <param name="from-domain" value="{{gateway.from_domain}}"/>{% endif %}
@@ -28,9 +26,11 @@
               <param name="ping-min" value="{{gateway.ping_min}}"/>{% endif %}{% if gateway.contact_in_ping is defined %}
               <param name="contact-in-ping" value="{{gateway.contact_in_ping}}"/>{% endif %}{% if gateway.ping_user_agent is defined %}
               <param name="ping-user-agent" value="{{gateway.ping_user_agent}}"/>{% endif %}
-              {# <!-- <param name="ping-monitoring" value="{{gateway.ping_monitoring}}"/> --> #}
-              {# <!-- <param name="distinct-to" value="{{gateway.distinct_to}}"/> --> #}
-              {# <!-- <param name="destination-prefix" value="{{gateway.destination_prefix}}"/> --> #}
+              {#- <!-- <param name="ping-monitoring" value="{{gateway.ping_monitoring}}"/> --> #}
+              {#- <!-- <param name="distinct-to" value="{{gateway.distinct_to}}"/> --> #}
+              {#- <!-- <param name="destination-prefix" value="{{gateway.destination_prefix}}"/> --> #}
+              {#- <!-- <param name="schema" value="{{gateway.schema}}"/> --> #}
+              {#- <!--<param name="context" value="{{gateway.context}}"/>--> #}
             </gateway>
           {%- endfor %}
           </gateways>

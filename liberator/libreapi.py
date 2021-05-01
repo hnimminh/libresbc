@@ -1250,8 +1250,8 @@ class CidTypeEnum(str, Enum):
 class GatewayModel(BaseModel):
     name: str = Field(regex=_NAME_,min_length=2, max_length=32, description='name of translation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    username: str = Field(default='libre-user', min_length=1, max_length=128, description='auth username')
-    # auth-username"
+    username: str = Field(default='libre-user', min_length=1, max_length=128, description='username')
+    auth_username: Optional[str] = Field(min_length=1, max_length=128, description='auth username', hidden_field=True)
     realm: Optional[str] = Field(min_length=1, max_length=256, description='auth realm, use gateway name as default')
     from_user: Optional[str] = Field(min_length=1, max_length=256, description='username in from header, use username as default')
     from_domain: Optional[str] = Field(min_length=1, max_length=256, description='domain in from header, use realm as default')
