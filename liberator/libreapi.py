@@ -82,7 +82,7 @@ except Exception as e:
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@librerouter.get("/libresbc/predefine", status_code=200)
+@librerouter.get("/libreapi/predefine", status_code=200)
 def predefine():
     return {
         'application': _APPLICATION,
@@ -115,7 +115,7 @@ class ClusterModel(BaseModel):
     _validmember = validator('members')(check_member)
 
 
-@librerouter.put("/libresbc/cluster", status_code=200)
+@librerouter.put("/libreapi/cluster", status_code=200)
 def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
     try:
@@ -153,7 +153,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         return result
 
 
-@librerouter.get("/libresbc/cluster", status_code=200)
+@librerouter.get("/libreapi/cluster", status_code=200)
 def get_cluster(response: Response):
     result = None
     try:
@@ -193,7 +193,7 @@ class NetworkAlias(BaseModel):
     _validnetalias = validator('addresses')(netalias_agreement)
 
 
-@librerouter.post("/libresbc/base/netalias", status_code=200)
+@librerouter.post("/libreapi/base/netalias", status_code=200)
 def create_netalias(reqbody: NetworkAlias, response: Response):
     requestid=get_request_uuid()
     result = None
@@ -213,7 +213,7 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/base/netalias/{identifier}", status_code=200)
+@librerouter.put("/libreapi/base/netalias/{identifier}", status_code=200)
 def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -253,7 +253,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
     finally:
         return result
 
-@librerouter.delete("/libresbc/base/netalias/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/base/netalias/{identifier}", status_code=200)
 def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -279,7 +279,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
     finally:
         return result
 
-@librerouter.get("/libresbc/base/netalias/{identifier}", status_code=200)
+@librerouter.get("/libreapi/base/netalias/{identifier}", status_code=200)
 def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -300,7 +300,7 @@ def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
     finally:
         return result
 
-@librerouter.get("/libresbc/base/netalias", status_code=200)
+@librerouter.get("/libreapi/base/netalias", status_code=200)
 def list_netalias(response: Response):
     result = None
     try:
@@ -360,7 +360,7 @@ class ACLModel(BaseModel):
     rules: List[ACLRuleModel] = Field(min_items=1, max_items=64, description='default action')
 
 
-@librerouter.post("/libresbc/base/acl", status_code=200)
+@librerouter.post("/libreapi/base/acl", status_code=200)
 def create_acl(reqbody: ACLModel, response: Response):
     requestid=get_request_uuid()
     result = None
@@ -385,7 +385,7 @@ def create_acl(reqbody: ACLModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/base/acl/{identifier}", status_code=200)
+@librerouter.put("/libreapi/base/acl/{identifier}", status_code=200)
 def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -423,7 +423,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
     finally:
         return result
 
-@librerouter.delete("/libresbc/base/acl/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/base/acl/{identifier}", status_code=200)
 def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -449,7 +449,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/base/acl/{identifier}", status_code=200)
+@librerouter.get("/libreapi/base/acl/{identifier}", status_code=200)
 def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -470,7 +470,7 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/base/acl", status_code=200)
+@librerouter.get("/libreapi/base/acl", status_code=200)
 def list_acl(response: Response):
     result = None
     try:
@@ -577,7 +577,7 @@ class SIPProfileModel(BaseModel):
         return values
 
 
-@librerouter.post("/libresbc/sipprofile", status_code=200)
+@librerouter.post("/libreapi/sipprofile", status_code=200)
 def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     requestid=get_request_uuid()
     result = None
@@ -608,7 +608,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/sipprofile/{identifier}", status_code=200)
+@librerouter.put("/libreapi/sipprofile/{identifier}", status_code=200)
 def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -669,7 +669,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
     finally:
         return result
 
-@librerouter.delete("/libresbc/sipprofile/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/sipprofile/{identifier}", status_code=200)
 def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -702,7 +702,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
     finally:
         return result
 
-@librerouter.get("/libresbc/sipprofile/{identifier}", status_code=200)
+@librerouter.get("/libreapi/sipprofile/{identifier}", status_code=200)
 def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -720,7 +720,7 @@ def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
     finally:
         return result
 
-@librerouter.get("/libresbc/sipprofile", status_code=200)
+@librerouter.get("/libreapi/sipprofile", status_code=200)
 def list_sipprofile(response: Response):
     result = None
     try:
@@ -756,7 +756,7 @@ class RingtoneModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     data: str = Field(min_length=8, max_length=256, description='ringtone data which can be full-path of audio file or tone script follow ITU-T Recommendation E.180')
 
-@librerouter.post("/libresbc/class/ringtone", status_code=200)
+@librerouter.post("/libreapi/class/ringtone", status_code=200)
 def create_ringtone_class(reqbody: RingtoneModel, response: Response):
     result = None
     try:
@@ -773,7 +773,7 @@ def create_ringtone_class(reqbody: RingtoneModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/class/ringtone/{identifier}", status_code=200)
+@librerouter.put("/libreapi/class/ringtone/{identifier}", status_code=200)
 def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -804,7 +804,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/ringtone/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/class/ringtone/{identifier}", status_code=200)
 def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -825,7 +825,7 @@ def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_N
     finally:
         return result
 
-@librerouter.get("/libresbc/class/ringtone/{identifier}", status_code=200)
+@librerouter.get("/libreapi/class/ringtone/{identifier}", status_code=200)
 def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -843,7 +843,7 @@ def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_N
     finally:
         return result
 
-@librerouter.get("/libresbc/class/ringtone", status_code=200)
+@librerouter.get("/libreapi/class/ringtone", status_code=200)
 def list_ringtone_class(response: Response):
     result = None
     try:
@@ -885,7 +885,7 @@ class CodecModel(BaseModel):
     codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
 
 
-@librerouter.post("/libresbc/class/codec", status_code=200)
+@librerouter.post("/libreapi/class/codec", status_code=200)
 def create_codec_class(reqbody: CodecModel, response: Response):
     result = None
     try:
@@ -902,7 +902,7 @@ def create_codec_class(reqbody: CodecModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/class/codec/{identifier}", status_code=200)
+@librerouter.put("/libreapi/class/codec/{identifier}", status_code=200)
 def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -933,7 +933,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/codec/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/class/codec/{identifier}", status_code=200)
 def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -954,7 +954,7 @@ def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME
     finally:
         return result
 
-@librerouter.get("/libresbc/class/codec/{identifier}", status_code=200)
+@librerouter.get("/libreapi/class/codec/{identifier}", status_code=200)
 def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -972,7 +972,7 @@ def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME
     finally:
         return result
 
-@librerouter.get("/libresbc/class/codec", status_code=200)
+@librerouter.get("/libreapi/class/codec", status_code=200)
 def list_codec_class(response: Response):
     result = None
     try:
@@ -1019,7 +1019,7 @@ class CapacityModel(BaseModel):
         return values
 
 
-@librerouter.post("/libresbc/class/capacity", status_code=200)
+@librerouter.post("/libreapi/class/capacity", status_code=200)
 def create_capacity_class(reqbody: CapacityModel, response: Response):
     result = None
     try:
@@ -1036,7 +1036,7 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/class/capacity/{identifier}", status_code=200)
+@librerouter.put("/libreapi/class/capacity/{identifier}", status_code=200)
 def update_capacity_class(reqbody: CapacityModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1067,7 +1067,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/capacity/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/class/capacity/{identifier}", status_code=200)
 def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1088,7 +1088,7 @@ def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_N
     finally:
         return result
 
-@librerouter.get("/libresbc/class/capacity/{identifier}", status_code=200)
+@librerouter.get("/libreapi/class/capacity/{identifier}", status_code=200)
 def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1106,7 +1106,7 @@ def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_N
     finally:
         return result
 
-@librerouter.get("/libresbc/class/capacity", status_code=200)
+@librerouter.get("/libreapi/class/capacity", status_code=200)
 def list_capacity_class(response: Response):
     result = None
     try:
@@ -1145,7 +1145,7 @@ class TranslationModel(BaseModel):
     caller_replacement: str = Field(max_length=128, description='replacement that refer to caller pattern use pcre')
     callee_replacement: str = Field(max_length=128, description='replacement that refer to callee pattern use pcre')
 
-@librerouter.post("/libresbc/class/translation", status_code=200)
+@librerouter.post("/libreapi/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
     result = None
     try:
@@ -1162,7 +1162,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/class/translation/{identifier}", status_code=200)
+@librerouter.put("/libreapi/class/translation/{identifier}", status_code=200)
 def update_translation_class(reqbody: TranslationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1195,7 +1195,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
     finally:
         return result
 
-@librerouter.delete("/libresbc/class/translation/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/class/translation/{identifier}", status_code=200)
 def delete_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1216,7 +1216,7 @@ def delete_translation_class(response: Response, identifier: str=Path(..., regex
     finally:
         return result
 
-@librerouter.get("/libresbc/class/translation/{identifier}", status_code=200)
+@librerouter.get("/libreapi/class/translation/{identifier}", status_code=200)
 def detail_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1234,7 +1234,7 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
     finally:
         return result
 
-@librerouter.get("/libresbc/class/translation", status_code=200)
+@librerouter.get("/libreapi/class/translation", status_code=200)
 def list_translation_class(response: Response):
     result = None
     try:
@@ -1322,7 +1322,7 @@ class GatewayModel(BaseModel):
                     raise ValueError(f'{key} must be IPv4 address or Domain')
         return values
 
-@librerouter.post("/libresbc/base/gateway", status_code=200)
+@librerouter.post("/libreapi/base/gateway", status_code=200)
 def create_gateway(reqbody: GatewayModel, response: Response):
     requestid=get_request_uuid()
     result = None
@@ -1341,7 +1341,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/base/gateway/{identifier}", status_code=200)
+@librerouter.put("/libreapi/base/gateway/{identifier}", status_code=200)
 def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -1389,7 +1389,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
     finally:
         return result
 
-@librerouter.delete("/libresbc/base/gateway/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/base/gateway/{identifier}", status_code=200)
 def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -1411,7 +1411,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/base/gateway/{identifier}", status_code=200)
+@librerouter.get("/libreapi/base/gateway/{identifier}", status_code=200)
 def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1429,7 +1429,7 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     finally:
         return result
 
-@librerouter.get("/libresbc/base/gateway", status_code=200)
+@librerouter.get("/libreapi/base/gateway", status_code=200)
 def list_gateway(response: Response):
     result = None
     try:
@@ -1561,7 +1561,7 @@ class OutboundInterconnection(BaseModel):
         return values
 
 
-@librerouter.post("/libresbc/interconnection/outbound", status_code=200)
+@librerouter.post("/libreapi/interconnection/outbound", status_code=200)
 def create_outbound_interconnection(reqbody: OutboundInterconnection, response: Response):
     requestid = get_request_uuid()
     result = None
@@ -1603,7 +1603,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     finally:
         return result
 
-@librerouter.put("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+@librerouter.put("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid = get_request_uuid()
     result = None
@@ -1695,7 +1695,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     finally:
         return result
 
-@librerouter.delete("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def delete_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid = get_request_uuid()
     result = None
@@ -1738,7 +1738,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
     finally:
         return result
 
-@librerouter.get("/libresbc/interconnection/outbound/{identifier}", status_code=200)
+@librerouter.get("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def detail_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -1759,7 +1759,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@librerouter.get("/libresbc/interconnection/outbound", status_code=200)
+@librerouter.get("/libreapi/interconnection/outbound", status_code=200)
 def list_outbound_interconnect(response: Response):
     result = None
     try:
@@ -1846,7 +1846,7 @@ class InboundInterconnection(BaseModel):
         return _values
 
 
-@librerouter.post("/libresbc/interconnection/inbound", status_code=200)
+@librerouter.post("/libreapi/interconnection/inbound", status_code=200)
 def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
     requestid=get_request_uuid()
     result = None
@@ -1900,7 +1900,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         return result
 
 
-@librerouter.put("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+@librerouter.put("/libreapi/interconnection/inbound/{identifier}", status_code=200)
 def update_inbound_interconnection(reqbody: InboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -1994,7 +1994,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         return result
 
 
-@librerouter.delete("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/interconnection/inbound/{identifier}", status_code=200)
 def delete_inbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -2035,7 +2035,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         return result
 
 
-@librerouter.get("/libresbc/interconnection/inbound/{identifier}", status_code=200)
+@librerouter.get("/libreapi/interconnection/inbound/{identifier}", status_code=200)
 def detail_inbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -2051,7 +2051,7 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
         return result
 
 
-@librerouter.get("/libresbc/interconnection/inbound", status_code=200)
+@librerouter.get("/libreapi/interconnection/inbound", status_code=200)
 def list_inbound_interconnect(response: Response):
     result = None
     try:
@@ -2126,7 +2126,7 @@ class RoutingTableModel(BaseModel):
         return values
 
 
-@librerouter.post("/libresbc/routing/table", status_code=200)
+@librerouter.post("/libreapi/routing/table", status_code=200)
 def create_routing_table(reqbody: RoutingTableModel, response: Response):
     result = None
     try:
@@ -2150,7 +2150,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
     finally:
         return result
 
-@librerouter.put("/libresbc/routing/table/{identifier}", status_code=200)
+@librerouter.put("/libreapi/routing/table/{identifier}", status_code=200)
 def update_routing_table(reqbody: RoutingTableModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -2195,7 +2195,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
     finally:
         return result
 
-@librerouter.delete("/libresbc/routing/table/{identifier}", status_code=200)
+@librerouter.delete("/libreapi/routing/table/{identifier}", status_code=200)
 def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -2231,7 +2231,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
     finally:
         return result
 
-@librerouter.get("/libresbc/routing/table/{identifier}", status_code=200)
+@librerouter.get("/libreapi/routing/table/{identifier}", status_code=200)
 def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
@@ -2249,7 +2249,7 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
     finally:
         return result
 
-@librerouter.get("/libresbc/routing/table", status_code=200)
+@librerouter.get("/libreapi/routing/table", status_code=200)
 def list_routing_table(response: Response):
     result = None
     try:
@@ -2343,7 +2343,7 @@ class RoutingRecordModel(BaseModel):
         return values
 
 
-@librerouter.post("/libresbc/routing/record", status_code=200)
+@librerouter.post("/libreapi/routing/record", status_code=200)
 def create_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
@@ -2377,7 +2377,7 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         return result
 
 
-@librerouter.put("/libresbc/routing/record", status_code=200)
+@librerouter.put("/libreapi/routing/record", status_code=200)
 def update_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
@@ -2428,7 +2428,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         return result
 
 
-@librerouter.delete("/libresbc/routing/record/{table}/{match}/{value}", status_code=200)
+@librerouter.delete("/libreapi/routing/record/{table}/{match}/{value}", status_code=200)
 def delete_routing_record(response: Response, value:str, table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
     result = None
     try:
@@ -2458,7 +2458,7 @@ def delete_routing_record(response: Response, value:str, table:str=Path(..., reg
         return result
 
 
-@librerouter.get("/libresbc/routing/record/{table}", status_code=200)
+@librerouter.get("/libreapi/routing/record/{table}", status_code=200)
 def list_routing_record(response: Response, table:str=Path(..., regex=_NAME_)):
     result = None
     try:
