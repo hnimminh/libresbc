@@ -1,13 +1,14 @@
 import traceback
 import json
 import copy
+import hashlib
 
 import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from configuration import (NODEID, CLUSTERS,
-                           ESL_HOST, ESL_PORT, ESL_SECRET, 
+                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
 from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getnameid, listify
@@ -56,23 +57,19 @@ def esl(request: Request, response: Response):
 def acl(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
-        # IP LIST OF INBOUND INTERCONNECTION
-        # {sipprofile: [list of ips]}
-        KEYPATTERN = 'intcon:in:*'
+        # IP LIST OF SIP PROFILE AND REALM
+        # {profilename: realm}
+        KEYPATTERN = 'sipprofile:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'sipprofile', 'sip_ips', 'auth_username')
-        sipprofile_ips = dict()
-        for details in pipe.execute():
-            if details:
-                if not fieldjsonify(details[2]):
-                    sipprofile = details[0]
-                    sip_ips = fieldjsonify(details[1])
-                    if sipprofile in sipprofile_ips: sipprofile_ips[sipprofile] += sip_ips
-                    else: sipprofile_ips[sipprofile] = sip_ips
+            pipe.hget(mainkey, 'realm' )
+        realms = pipe.execute()
+        sipprofiles = dict()
+        for mainkey, realm in zip(mainkeys, realms):
+            sipprofiles[getnameid(mainkey)] = realm
 
         # DEFINED ACL LIST
         # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
@@ -93,7 +90,7 @@ def acl(request: Request, response: Response):
                 defined_acls.append({'name': name, 'action': action, 'rules': rules})
 
         result = templates.TemplateResponse("acl.j2.xml",
-                                            {"request": request, "sipprofile_ips": sipprofile_ips, "defined_acls": defined_acls},
+                                            {"request": request, "sipprofiles": sipprofiles, "defined_acls": defined_acls},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
@@ -210,8 +207,57 @@ def sip(request: Request, response: Response):
 @fsxmlrouter.get("/fsxmlapi/directory", include_in_schema=False)
 def directory(request: Request, response: Response):
     try:
+        pipe = rdbconn.pipeline()
+        # IP LIST OF SIP PROFILE AND REALM
+        # {profilename: realm}
+        KEYPATTERN = 'sipprofile:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+        for mainkey in mainkeys:
+            pipe.hget(mainkey, 'realm' )
+        realms = pipe.execute()
+        sipprofiles = dict()
+        for mainkey, realm in zip(mainkeys, realms):
+            sipprofiles[getnameid(mainkey)] = realm
+
+        # IP LIST OF INBOUND INTERCONNECTION
+        # {profilename: {profilename, sipaddrs, secret}}
+        KEYPATTERN = 'intcon:in:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'sipprofile', 'sipaddrs', 'secret', 'authscheme')
+        
+        directories = dict()
+        for mainkey, details in zip(mainkeys, pipe.execute()):
+            intconname = getnameid(mainkey)
+            profilename = details[0]
+            sipaddrs = fieldjsonify(details[1])
+            secret = details[2]
+            authscheme = details[3]
+
+            if authscheme=='IP': 
+                password = DEFAULT_PASSWORD
+                cidrs = sipaddrs
+            elif authscheme=='DIGEST': 
+                password = secret
+                cidrs = list()
+            else:
+                password = secret
+                cidrs = sipaddrs
+
+            for _profilename, _realm in sipprofiles.items():
+                if _profilename == profilename:
+                    a1hash = hashlib.md5(f'{intconname}:{_realm}:{password}'.encode()).hexdigest()
+                    if _realm in directories: directories[_realm].append({'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash})
+                    else: directories[_realm] = [{'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash}]
+
         result = templates.TemplateResponse("directory.j2.xml",
-                                            {"request": request},
+                                            {"request": request, "directories": directories},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:

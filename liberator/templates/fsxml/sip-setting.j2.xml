@@ -39,17 +39,17 @@
             <param name="sip-trace" value="yes"/>
             <param name="sip-capture" value="no"/>
             <param name="shutdown-on-fail" value="true"/>
-            {# <!-- UA IDENTITY--> #}
+            {#- <!-- UA IDENTITY--> #}
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             <param name="username" value="{{sipprofile.sdp_user}}"/> {# <!-- sdp username in o= and s= fields --> #}
-            {# <!-- AUTH AND SECURE--> #}
-            <param name="apply-inbound-acl" value="_SIPACL_{{profilename}}"/>
+            {#- <!-- AUTH AND SECURE--> #}
+            <param name="apply-inbound-acl" value="_REALM_ACL_{{profilename}}"/>
             <param name="auth-calls" value="true"/>
             <param name="nonce-ttl" value="60"/>
-            <param name="challenge-realm" value="{{sipprofile.challenge_realm|default('auto_to')}}"/>
-            {# <!-- NAT--> #}
+            <param name="challenge-realm" value="{{sipprofile.realm}}"/>
+            {#- <!-- NAT--> #}
             <param name="local-network-acl" value="{{sipprofile.local_network_acl}}"/>
-            {# <!-- SIP VERBOSE CALLFLOW CONTROL--> #}
+            {#- <!-- SIP VERBOSE CALLFLOW CONTROL--> #}
             <param name="enable-100rel" value="{{sipprofile.enable_100rel|lower}}"/>
             <param name="ignore-183nosdp" value="{{sipprofile.ignore_183nosdp|lower}}"/>
             <param name="sip-options-respond-503-on-busy" value="{{sipprofile.sip_options_respond_503_on_busy|lower}}"/>
@@ -60,7 +60,7 @@
             <param name="enable-compact-headers" value="{{sipprofile.enable_compact_headers|lower}}"/> {# <!-- Do not send UPDATE after session established --> #}
             <param name="send-display-update" value="false"/> 
             <param name="inbound-proxy-media" value="false"/> {# <!-- disable proxy media, thinking to support bypass in future --> #}
-            {# <!--  
+            {#- <!--  
               'generous' permits the remote codec list have precedence and 'win' the codec negotiation and selection process
               'greedy' forces a win by the local FreeSWITCH preference list
               'scrooge' the FreeSWITCH wins even when the far side lies about capabilities during the negotiation process
@@ -68,7 +68,7 @@
             <param name="inbound-codec-negotiation" value="generous"/>
             <param name="inbound-late-negotiation" value="true"/> {# <!-- outbound profile need to be in late negotiation --> #}
             <param name="disable-hold" value="true"/> {# <!-- turn of music-on-hold feature --> #}
-            {#<!-- <param name="hold-music" value="$${hold_music}"/> -->#}
+            {#- <!-- <param name="hold-music" value="$${hold_music}"/> -->#}
             <param name="proxy-hold" value="true"/> {# <!-- re-INVITE for hold/unhold is proxied to other end --> #}
             <param name="suppress-cng" value="true"/> {# <!-- Not use cng at the moment --> #}
             <param name="pass-callee-id" value="false" /> {# <!-- Disable sending X-FS-Support header --> #}
@@ -80,17 +80,17 @@
             <param name="rtp-timer-name" value="soft"/>
             <param name="media_timeout" value="{{sipprofile.media_timeout}}"/> {# <!-- media_hold_timeout -->}
             <param name="rtp-rewrite-timestamps" value="{{sipprofile.rtp_rewrite_timestamps|lower}}"/> {# <!-- rtp_rewrite_timestamps chanvar in a dialplan, If you don't want to pass through timestamps from 1 RTP call to another (on a per call basis with rtp_rewrite_timestamps chanvar)--> #}
-            {# <!-- SIP SESSION TIMER--> #}
+            {#- <!-- SIP SESSION TIMER--> #}
             {%- if sipprofile.enable_timer %}
             <param name="enable-timer" value="{{sipprofile.enable_timer|lower}}"/>
             <param name="session-timeout" value="{{sipprofile.session_timeout}}"/>
             <param name="minimum-session-expires" value="{{sipprofile.minimum_session_expires}}"/>
             {%- endif %}
-            {# <!-- DIALPLAN--> #}
+            {#- <!-- DIALPLAN--> #}
             <param name="dialplan" value="XML"/>
             <param name="context" value="{{sipprofile.context}}"/>
             <param name="dbname" value="/dev/shm/libresbc/sip_{{sipprofile.name}}.db"/>
-            {# <!-- SERVER BINDING --> #}
+            {#- <!-- SERVER BINDING --> #}
             <param name="rtp-ip" value="{{ netaliases[sipprofile.rtp_address][NODEID]['listen'] }}"/>
             <param name="sip-ip" value="{{ netaliases[sipprofile.sip_address][NODEID]['listen'] }}"/>
             <param name="ext-rtp-ip" value="autonat:{{ netaliases[sipprofile.rtp_address][NODEID]['advertise'] }}"/>

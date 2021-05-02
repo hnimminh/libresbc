@@ -1,8 +1,6 @@
-{%- for profilename, inbound_ipaddrs in sipprofile_ips.items() %} 
-        <list name="_SIPACL_{{profilename}}" default="deny">
-{%- for inbound_ipaddr in inbound_ipaddrs %}  
-          <node type="allow" cidr="{{inbound_ipaddr}}/32"/>
-{%- endfor %}
+{%- for profilename, realm in sipprofiles.items() %} 
+        <list name="_REALM_ACL_{{profilename}}" default="deny"> 
+          <node type="allow" domain="{{realm}}"/>
         </list>
 {%- endfor %}
 

@@ -44,6 +44,7 @@ schema.field_schema = field_schema
 _COEFFICIENT = 0
 # PATTERN
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9+#*@]*$'
 # ROUTING 
 _QUERY = 'query'
@@ -334,6 +335,7 @@ class ACLRuleModel(BaseModel):
     action: ACLActionEnum = Field(default='allow', description='associate action for node')
     key: ACLTypeEnum = Field(default='cidr', description='type of acl node: cidr, domain')
     value: str = Field(description='acl rule value depend on type')
+    force: Optional[bool] = Field(description='set true if you need to add acl domain', hidden_field=True)
 
     @root_validator()
     def acl_rule_agreement(cls, rule):
@@ -343,8 +345,12 @@ class ACLRuleModel(BaseModel):
             if not IPv4Network(value):
                 raise ValueError('for cidr key, value must be IPv4Network or IPv4Address')
         else:
-            if not validators.domain(value):
-                raise ValueError('for domain key, value must be domain')
+            force = rule.get('force')
+            if force:
+                if not validators.domain(value): raise ValueError('for domain key, value must be domain')
+            else: raise ValueError('to add domain acl, please set force=true & do at your own risk')
+        rule.pop('force', None)
+
         return rule
 
 class ACLModel(BaseModel):
@@ -521,6 +527,7 @@ class SIPProfileModel(BaseModel):
     dtmf_type: DtmfType = Field(default='rfc2833', description='Dual-tone multi-frequency (DTMF) signal type')
     media_timeout: int = Field(default=0, description='The number of seconds of RTP inactivity before SBC considers the call disconnected, and hangs up (recommend to use session timers instead), default value is 0 - disables the timeout.')
     rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
+    realm: Optional[str] = Field(regex=_REALM_, max_length=256, description='realm challenge key for digest auth, mainpoint to identify which directory domain that user belong to. This setting can be used with ALC (be careful to use & do at your own risk)', hidden_field=True)
     context: ContextEnum = Field(description='predefined context for call control policy')
     challenge_realm: Optional[str] = Field(min_length=1, max_length=256, description='Digest Auth realm')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
@@ -551,9 +558,21 @@ class SIPProfileModel(BaseModel):
             if key in ['sip_address', 'rtp_address']:
                 if not rdbconn.exists(f'base:netalias:{value}'):
                     raise ValueError('nonexistent network alias')
+
             # remove the key's value is None
             if value is None:
                  values.pop(key, None)
+
+        # REALM 
+        name = values.get('name')
+        realm = values.get('realm')
+        if realm:
+            _profile = rdbconn.srandmember(f'engagement:base:realm:{realm}')
+            if _profile:
+                _name = getnameid(_profile)
+                if _name != name: raise ValueError(f'realm is used by {_name}')
+        else:
+            values['realm'] = f'{name}.libresbc'
 
         return values
 
@@ -572,10 +591,12 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
+        realm = data.get('realm')
         pipe.hmset(name_key, redishash(data))
         if local_network_acl not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{local_network_acl}', name_key)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
+        pipe.sadd(f'engagement:base:realm:{realm}', name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
@@ -605,17 +626,21 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         _local_network_acl = _data.get('local_network_acl')
         _sip_address = _data.get('sip_address')
         _rtp_address = _data.get('rtp_address')
+        _realm = _data.get('realm')
 
         data = jsonable_encoder(reqbody)
         local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
+        realm = _data.get('realm')
         if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
+        pipe.delete(f'engagement:base:realm:{_realm}')
         if local_network_acl not in _BUILTIN_ACLS_: pipe.sadd(f'engagement:base:acl:{local_network_acl}', name_key)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
+        pipe.sadd(f'engagement:base:realm:{realm}', name_key)
         pipe.hmset(name_key, redishash(data))
         # remove the unintended-field
         for _field in _data:
@@ -659,9 +684,11 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
         _sip_address = rdbconn.hget(_name_key, 'sip_address')
         _rtp_address = rdbconn.hget(_name_key, 'rtp_address')
+        _realm = rdbconn.hget('realm')
         if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
+        pipe.delete(f'engagement:base:realm:{_realm}')
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -1493,7 +1520,7 @@ class OutboundInterconnection(BaseModel):
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
-    rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
+    rtpaddrs: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     codec_class: str = Field(description='nameid of codec class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
@@ -1544,7 +1571,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
-        rtp_nets = set(data.get('rtp_nets'))
+        rtpaddrs = set(data.get('rtpaddrs'))
         codec_class = data.get('codec_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1555,7 +1582,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent outbound interconnection'}; return
         # processing
-        data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
+        data.pop('gateways'); data.update({'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
@@ -1586,7 +1613,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
-        rtp_nets = set(data.get('rtp_nets'))
+        rtpaddrs = set(data.get('rtpaddrs'))
         codec_class = data.get('codec_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1607,7 +1634,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sip_ips = _data.get('sip_ips')
+        _sipaddrs = _data.get('sipaddrs')
         _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # transaction block
         pipe.multi()
@@ -1621,7 +1648,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
         pipe.delete(f'{_name_key}:_gateways')
         # processing: adding new-one
-        data.pop('gateways'); data.update({'rtp_nets': rtp_nets, 'nodes': nodes })
+        data.pop('gateways'); data.update({'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
@@ -1631,6 +1658,10 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
         pipe.hmset(f'{name_key}:_gateways', redishash(gateways))
         for gateway in gateways: pipe.sadd(f'engagement:base:gateway:{gateway}', name)
+        # remove the unintended-field
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
         # change identifier
         if name != identifier:
             _engaged_key = f'engagement:{_name_key}'
@@ -1684,7 +1715,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sip_ips = _data.get('sip_ips')
+        _sipaddrs = _data.get('sipaddrs')
         _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
@@ -1770,21 +1801,26 @@ def check_existent_ringtone(ringtone):
             raise ValueError('nonexistent class')
     return ringtone
 
+class AuthSchemeEnum(str, Enum):
+    IP = 'IP'
+    DIGEST = 'DIGEST'
+    BOTH = 'BOTH'
+
 class InboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     routing: str = Field(description='routing table that will be used by this inbound interconnection') 
-    sip_ips: List[IPv4Address] = Field(min_items=1, max_item=10, description='a set of signalling that use for SIP')
-    rtp_nets: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
+    sipaddrs: List[IPv4Network] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
+    rtpaddrs: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     ringready: bool = Field(default=False, description='response 180 ring indication')
     codec_class: str = Field(description='nameid of codec class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
     ringtone_class: str = Field(default=None, description='nameid of ringtone class')
-    auth_username: str = Field(default=None, min_length=8, max_length=32, description='username of digest auth for inbound, if set to not-null call will will challenge')
-    auth_password: str = Field(default=None, min_length=16, max_length=32, description='password of digest auth for inbound')
+    authscheme: AuthSchemeEnum = Field(default='IP', description='auth scheme for inbound, include: ip, digest, both')
+    secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound', hidden_field=True)
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
@@ -1797,6 +1833,19 @@ class InboundInterconnection(BaseModel):
     _existentrouting = validator('routing')(check_existent_routing)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
+    @root_validator()
+    def in_intcon_agreement(cls, values):
+        _values = jsonable_encoder(values)
+        authscheme = _values.get('authscheme')
+        secret = _values.get('secret')
+        if authscheme != 'IP' and not secret:
+            raise ValueError(f'auth scheme {authscheme} require define secret')
+        for key, value in values.items():
+            if value is None:
+                _values.pop(key, None)
+        return _values
+
+
 @librerouter.post("/libresbc/interconnection/inbound", status_code=200)
 def create_inbound_interconnection(reqbody: InboundInterconnection, response: Response):
     requestid=get_request_uuid()
@@ -1807,8 +1856,8 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
         routing = data.get('routing')
-        sip_ips = set(data.get('sip_ips'))
-        rtp_nets = set(data.get('rtp_nets'))
+        sipaddrs = set(data.get('sipaddrs'))
+        rtpaddrs = set(data.get('rtpaddrs'))
         codec_class = data.get('codec_class')
         ringtone_class = data.get('ringtone_class')
         capacity_class = data.get('capacity_class')
@@ -1819,11 +1868,16 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         nameid = f'in:{name}'; name_key = f'intcon:{nameid}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent inbound interconnection'}; return
-        for sip_ip in sip_ips:
-            if rdbconn.exists(f'recognition:{sipprofile}:{sip_ip}'):
-                response.status_code, result = 403, {'error': 'existent sip ip'}; return
+        # guaranted that the address not overlap eachother
+        _recognitions = rdbconn.smembers(f'recognition:{sipprofile}')
+        for sipaddr in sipaddrs:
+            cidr = IPv4Network(sipaddr)
+            for _recognition in _recognitions:
+                _cidr = IPv4Network(_recognition)
+                if _cidr.overlaps(cidr):
+                        response.status_code, result = 403, {'error': f'These addresses {sipaddr} & {_recognition} are overlaped'}; return
         # processing
-        data.update({'sip_ips': sip_ips, 'rtp_nets': rtp_nets, 'nodes': nodes })
+        data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:{routing}', nameid)
@@ -1833,7 +1887,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)
+        for sipaddr in sipaddrs: pipe.sadd(f'recognition:{sipprofile}', sipaddr)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
@@ -1855,8 +1909,8 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         name = reqbody.name
         data = jsonable_encoder(reqbody)
         sipprofile = data.get('sipprofile')
-        sip_ips = set(data.get('sip_ips'))
-        rtp_nets = set(data.get('rtp_nets'))
+        sipaddrs = set(data.get('sipaddrs'))
+        rtpaddrs = set(data.get('rtpaddrs'))
         routing = data.get('routing')
         codec_class = data.get('codec_class')
         ringtone_class = data.get('ringtone_class')
@@ -1871,10 +1925,6 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
             response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent inbound interconnection name'}; return
-        for sip_ip in sip_ips:
-            _name = rdbconn.exists(f'recognition:{sipprofile}:{sip_ip}')
-            if _name and _name != name:
-                response.status_code, result = 403, {'error': 'existent sip ip'}; return
         # get current data
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
@@ -1885,7 +1935,18 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sip_ips = set(_data.get('sip_ips'))
+        _sipaddrs = set(_data.get('sipaddrs'))
+        # verification
+        if sipprofile == _sipprofile: newaddrs = sipaddrs - _sipaddrs
+        else: newaddrs = sipaddrs
+        if newaddrs:
+            _recognitions = rdbconn.smembers(f'recognition:{_sipprofile}')
+            for newaddr in newaddrs:
+                cidr = IPv4Network(newaddr)
+                for _recognition in _recognitions:
+                    _cidr = IPv4Network(_recognition)
+                    if _cidr.overlaps(cidr):
+                            response.status_code, result = 403, {'error': f'These addresses {newaddr} & {_recognition} are overlaped'}; return
         # transaction block
         pipe.multi()
         # processing: removing old-one
@@ -1897,9 +1958,11 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}') 
+        if sipprofile == _sipprofile: 
+            oldaddrs = _sipaddrs - sipaddrs
+            for oldaddr in oldaddrs: pipe.srem(f'recognition:{_sipprofile}', oldaddr)
         # processing: adding new-one
-        data.update({'sip_ips': sip_ips, 'rtp_nets': rtp_nets, 'nodes': nodes })
+        data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:{routing}', nameid)
@@ -1909,7 +1972,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        for sip_ip in sip_ips: pipe.set(f'recognition:{sipprofile}:{sip_ip}', name)
+        for newaddr in newaddrs: pipe.sadd(f'recognition:{sipprofile}', newaddr)
         # remove the unintended-field
         for _field in _data:
             if _field not in data:
@@ -1949,7 +2012,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sip_ips = _data.get('sip_ips')
+        _sipaddrs = _data.get('sipaddrs')
 
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
@@ -1958,7 +2021,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for sip_ip in _sip_ips: pipe.delete(f'recognition:{_sipprofile}:{sip_ip}')  
+        for _sipaddr in _sipaddrs: pipe.srem(f'recognition:{_sipprofile}', _sipaddr)  
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}

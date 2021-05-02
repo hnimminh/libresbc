@@ -1,8 +1,12 @@
-    <domain name="libre.sbc">
-      <user id="LibreUser">
+    {%- for realm, users in directories.items() %}
+    <domain name="{{realm}}">
+      {%- for user in users %}
+      <user id="{{user.id}}" {% if user.cidrs %}cidr="{{ user.cidrs|join(',') }}"{% endif %}>
         <params>
-          <!-- <param name="password" value="H8jndj8zTWrZ8NAs"/> -->
-          <param name="a1-hash" value="1badcf02d0383e14de60a57410b5dbcd"/>
+          <param name="a1-hash" value="{{user.a1hash}}"/>
         </params>
       </user>
+      {%- endfor %}
     </domain>
+    {%- endfor %}
+
