@@ -1,4 +1,4 @@
-        {%- for profilename, sipprofile in sipprofiles.items() %}
+        {% for profilename, sipprofile in sipprofiles.items() -%}
         <profile name="{{profilename}}">
           <gateways>
           {%- for gateway in sipprofile.gateways %}

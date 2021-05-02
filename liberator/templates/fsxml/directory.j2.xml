@@ -1,4 +1,4 @@
-    {%- for realm, users in directories.items() %}
+    {% for realm, users in directories.items() -%}
     <domain name="{{realm}}">
       {%- for user in users %}
       <user id="{{user.id}}" {% if user.cidrs %}cidr="{{ user.cidrs|join(',') }}"{% endif %}>
