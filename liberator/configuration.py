@@ -35,3 +35,5 @@ CLUSTERS = {
 ESL_HOST = '127.0.0.1'
 ESL_PORT = 8021
 ESL_SECRET = '{{callengine.secret}}'
+# DEFAULT SIP SECRET
+DEFAULT_PASSWORD = '{{callengine.sipsecret}}'
