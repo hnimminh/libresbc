@@ -1,4 +1,4 @@
-dofile("configuration.lua")
+dofile("{{rundir}}/callctl/configuration.lua")
 
 -- REQUIRE
 socket = require("socket")

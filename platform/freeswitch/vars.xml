@@ -1,4 +1,5 @@
 <include>
   <X-PRE-PROCESS cmd="set" data="fsxmlapi=http://127.0.0.1:8080/fsxmlapi"/>
   <X-PRE-PROCESS cmd="set" data="dblocation=/dev/shm/libresbc"/>
+  <X-PRE-PROCESS cmd="set" data="callctld={{rundir}}/callctl"/>
 </include>

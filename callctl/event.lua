@@ -1,5 +1,4 @@
-dofile("configuration.lua")
-dofile("utilities.lua")
+dofile("{{rundir}}/callctl/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function cdrreporter(event_name, event)

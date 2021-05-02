@@ -1,41 +1,30 @@
-syslog = require("posix.syslog")
-function logger(msg)
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
-    syslog.syslog(syslog.LOG_INFO, msg)
-end
-
-function logify(...)
-    local arg = {...}
-    local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end 
-    -- write log
-    logger(message)
-end
+dofile("{{rundir}}/callctl/utilities.lua")
 
 ---------------------******************************---------------------
----------------------*****|    CALLFLOWCTL   |*****---------------------
+---------------------****|  INBOUND CALLCTL   |****---------------------
 ---------------------******************************---------------------
 local function main()
-    local legIN = session
-    local _LOCALS = {}
+    local _manitables = {}
+    local InLeg = session
+    local OutLeg
     --- CALL PROCESSING
-    if ( legIN:ready() ) then
-        -- get legIN variables
-        local in_uuid = legIN:get_uuid()
-        local in_context = legIN:getVariable("context")
-        local in_direction = legIN:getVariable("direction")
-        local in_sofia_profile_name = legIN:getVariable("sofia_profile_name")
-        local in_sip_from_user = legIN:getVariable("sip_from_user")
-        local in_destination_number = legIN:getVariable("destination_number")
-        local in_sip_to_user = legIN:getVariable("sip_to_user")
-        local in_sip_network_ip = legIN:getVariable("sip_network_ip")
-        local in_sip_call_id = legIN:getVariable("sip_call_id")
-        local sip_via_protocol = legIN:getVariable("sip_via_protocol")
-        local sip_acl_authed_by = legIN:getVariable("sip_acl_authed_by")
-        local sip_authorized = legIN:getVariable("sip_authorized")
-        local sip_acl_token = legIN:getVariable("sip_acl_token")
-        local domain_name = legIN:getVariable("domain_name")
-        local user_name = legIN:getVariable("user_name")
+    if ( InLeg:ready() ) then
+        -- get InLeg variables
+        local in_uuid = InLeg:get_uuid()
+        local in_context = InLeg:getVariable("context")
+        local in_direction = InLeg:getVariable("direction")
+        local in_sofia_profile_name = InLeg:getVariable("sofia_profile_name")
+        local in_sip_from_user = InLeg:getVariable("sip_from_user")
+        local in_destination_number = InLeg:getVariable("destination_number")
+        local in_sip_to_user = InLeg:getVariable("sip_to_user")
+        local in_sip_network_ip = InLeg:getVariable("sip_network_ip")
+        local in_sip_call_id = InLeg:getVariable("sip_call_id")
+        local sip_via_protocol = InLeg:getVariable("sip_via_protocol")
+        local sip_acl_authed_by = InLeg:getVariable("sip_acl_authed_by")
+        local sip_authorized = InLeg:getVariable("sip_authorized")
+        local sip_acl_token = InLeg:getVariable("sip_acl_token")
+        local domain_name = InLeg:getVariable("domain_name")
+        local user_name = InLeg:getVariable("user_name")
         -- logging
         logify('module', 'callctl', 'space', 'inbound', 'action', 'inbounnd_call_request' , 'uuid', in_uuid,
                'context', in_context, 'direction', in_direction, 'interface', in_sofia_profile_name, 'from_user', in_sip_from_user,
@@ -46,32 +35,28 @@ local function main()
         ----- IN LEG
         -----------------------------------------------------------
         
-        legIN:execute('ring_ready')
-        legIN:setVariable("ringback", "%(2000,4000,440,480)")
-        legIN:setVariable("codec_string", "PCMA,OPUS,PCMU,G729")
-        legIN:execute('playback', '/home/hnimminh/ulaw08m.wav')
-        legIN:execute("sleep", "8000")
-        legIN:execute('answer')
-        legIN:execute('playback', '/home/hnimminh/vietnamdeclaration.wav')
-        legIN:execute('hangup')
+        InLeg:execute('ring_ready')
+        InLeg:setVariable("ringback", "%(2000,4000,440,480)")
+        InLeg:setVariable("codec_string", "PCMA,OPUS,PCMU,G729")
+        InLeg:execute('playback', '/home/hnimminh/ulaw08m.wav')
+        InLeg:execute("sleep", "8000")
+        InLeg:execute('answer')
+        InLeg:execute('playback', '/home/hnimminh/vietnamdeclaration.wav')
+        InLeg:execute('hangup')
 
     end
-    ----------------------------------------------------------
+    -----------------------------------------------------------
+    --- MAKE SURE CALL IS RELAESED
+    -----------------------------------------------------------
+    if InLeg then 
+        if (InLeg:ready()) then InLeg:hangup() end 
+    end
+    if OutLeg then 
+        if (OutLeg:ready()) then OutLeg:hangup() end
+    end
+    -----------------------------------------------------------
 
-    
-    if legIN then 
-        if (legIN:ready()) then 
-            legIN:hangup(); 
-        end; 
-    end
-    if legOUT then 
-        if (legOUT:ready()) then 
-            legOUT:hangup(); 
-        end; 
-    end
 end
-
-
 ---------------------******************************---------------------
 ---------------------*****|       MAIN       |*****---------------------
 ---------------------******************************---------------------

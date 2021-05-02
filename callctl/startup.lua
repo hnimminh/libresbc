@@ -1,5 +1,4 @@
-dofile("configuration.lua")
-dofile("utilities.lua")
+dofile("{{rundir}}/callctl/utilities.lua")
 
 ---------------------------------------------------------------------------
 local unpack = _G.unpack or table.unpack

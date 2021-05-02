@@ -58,11 +58,11 @@
       <settings>
         <!-- <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/> -->
         <!--
-        <param name="startup-script" value="startup.lua"/>
-        <hook event="CHANNEL_CREATE" script="events.lua"/>
-        <hook event="CHANNEL_UUID" script="events.lua"/>
-        <hook event="CHANNEL_DESTROY" script="events.lua"/>
-        <hook event="CHANNEL_HANGUP_COMPLETE" script="events.lua"/>
+        <param name="startup-script" value="$${callctld}/startup.lua"/>
+        <hook event="CHANNEL_CREATE" script="$${callctld}/events.lua"/>
+        <hook event="CHANNEL_UUID" script="$${callctld}/events.lua"/>
+        <hook event="CHANNEL_DESTROY" script="$${callctld}/events.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${callctld}/events.lua"/>
         -->
       </settings>
     </configuration>
@@ -120,22 +120,20 @@
     </configuration>
   </section>
   <!-- END: CONFIGURATION SECTION -->
-
   <!-- BEGIN: DIALPLAN SECTION -->
   <section name="dialplan" description="Regex/XML Dialplan">
     <context name="redirected">
       <extension name="any_to_any">
         <condition field="destination_number" expression="^.+$">
-          <action application="lua" data="redirection.lua"/>
+          <action application="lua" data="$${callctld}/redirection.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
         </condition>
       </extension>
     </context>
-
     <context name="interconnection">
       <extension name="interconnection_to_any">
         <condition regex="all">
-          <action application="lua" data="inbound.lua"/>
+          <action application="lua" data="$${callctld}/inbound.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
@@ -144,7 +142,7 @@
     <context name="core">
       <extension name="core_to_any">
         <condition regex="all">
-          <action application="lua" data="inbound.lua"/>
+          <action application="lua" data="$${callctld}/inbound.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
@@ -154,7 +152,7 @@
       <extension name="access_to_any">
         <condition regex="all">
           <!-- <regex field="${acl(${network_addr} ACL)}" expression="true"/> -->
-          <action application="lua" data="inbound.lua"/>
+          <action application="lua" data="$${callctld}/inbound.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
@@ -162,7 +160,6 @@
     </context>
   </section>
   <!-- END: DIALPLAN SECTION -->
-
   <!-- BEGIN: DIRECTORY SECTION -->
   <section name="directory" description="User Directory">
     <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/directory"/>
