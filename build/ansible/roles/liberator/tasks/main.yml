@@ -9,8 +9,8 @@
     mode: 0754
 
 # shell file
-- name: Copy a liberator.sh to /usr/local/bin/
-  copy:
+- name: Update a liberator.sh template to /usr/local/bin/
+  template:
     src: liberator.sh
     dest: /usr/local/bin/liberator.sh
     owner: root
@@ -18,8 +18,8 @@
     mode: u+rx,g+x,o-w
 
 # systemd control
-- name: Copy a liberator.service to systemd
-  copy:
+- name: Update a liberator.service template to systemd
+  template:
     src: liberator.service
     dest: /etc/systemd/system/liberator.service
     owner: root

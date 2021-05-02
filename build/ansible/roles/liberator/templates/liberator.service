@@ -9,9 +9,9 @@ Type=simple
 User=root
 Group=root
 #Environment="ENV=cloud"
-WorkingDirectory=/opt/libresbc/run/liberator
+WorkingDirectory={{rundir}}/liberator
 #ExecStart=/usr/local/bin/liberator.sh
-ExecStart=/usr/bin/python3 /opt/libresbc/run/liberator/main.py
+ExecStart=/usr/bin/python3 {{rundir}}/liberator/main.py
 
 SyslogIdentifier=libresbc
 SyslogFacility=5
