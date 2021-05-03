@@ -10,6 +10,7 @@ random = math.random
 ----------------------------------------------------------------------------
 -- FREESWITCH API
 fsapi = freeswitch.API()
+
 -- REDIS CONNECTION
 rdbconn = nil
 rdbstate, rdberror = pcall(redis.connect, REDIS_HOST, REDIS_PORT, REDIS_TIMEOUT)
@@ -103,6 +104,26 @@ function randompick(intable)
     return intable[random(#intable)]
 end
 
+
+function fieldjsonify(data)
+    if type(data)=='string' then
+        if startswith(data, ':bool:') then
+            if data == ':bool:true' then return true end
+            if data == ':bool:false' then return false end
+        elseif startswith(data, ':int:') then return tonumber(data:sub(5,#data))
+        elseif startswith(data, ':float:') then return tonumber(data:sub(7,#data))
+        elseif startswith(data, ':list:') then
+            if data==':list:' then return {} 
+            else return split(data:sub(6,#data), ',') 
+            end
+        elseif startswith(data, ':none:') then return nil
+        else 
+            return data 
+        end
+    else
+        return data
+    end
+end
 ---------------------******************************--------------------------
 ---------------------****|  RDB & MORE  FUNCTION   |****---------------------
 ---------------------******************************--------------------------
@@ -111,3 +132,11 @@ function get_inbound_intcon(name)
     data = rdbconn.hgetall('intcon:in:'..name)
 end
 
+
+function is_intcon_enable(name, direction)
+    if direction == INBOUND then
+        return fieldjsonify(rdbconn:hget('intcon:in:'..name, 'enable'))
+    else 
+        return fieldjsonify(rdbconn:hget('intcon:out:'..name, 'enable'))
+    end
+end
