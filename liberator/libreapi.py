@@ -2160,8 +2160,12 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
-        if name != identifier and rdbconn.exists(name_key):
-            response.status_code, result = 403, {'error': 'existent routing table name'}; return
+        if name != identifier:
+            if rdbconn.exists(name_key):
+                response.status_code, result = 403, {'error': 'existent routing table name'}; return
+            else:
+               response.status_code, result = 403, {'error': 'change name routing table is not allowed'}; return 
+
         # get current data
         _endpoints = fieldjsonify(rdbconn.hget(_name_key, 'endpoints'))
         # transaction block
