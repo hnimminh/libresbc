@@ -1,5 +1,5 @@
 -- configuration
-_SWVERSION = '{{version}}'
+SWVERSION = '{{version}}'
 NODEID = '{{nodeid}}'
 
 --- REDIS ENDPOINT
@@ -9,6 +9,11 @@ REDIS_DB = {{redis.database}}
 REDIS_PASSWORD = {{('%s')|format(redis.password)|to_json if redis.password else 'nil'}}
 SCAN_COUNT = 1000
 REDIS_TIMEOUT = 5
+
+---  CONSTANT
+INBOUND = 'inbound'
+OUTBOUND = 'outbound'
+CDR_TTL = 3600
 
 --- SECURITY
 _ROLLING_WINDOW_TIME = 1000                              --- use the exactly 1 second = 1000ms

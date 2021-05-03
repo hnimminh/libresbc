@@ -57,13 +57,12 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/> -->
-        <!--
-        <param name="startup-script" value="$${callctld}/startup.lua"/>
-        <hook event="CHANNEL_CREATE" script="$${callctld}/events.lua"/>
-        <hook event="CHANNEL_UUID" script="$${callctld}/events.lua"/>
-        <hook event="CHANNEL_DESTROY" script="$${callctld}/events.lua"/>
-        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${callctld}/events.lua"/>
-        -->
+        <param name="startup-script" value="$${callctld}/event.startup.lua"/>
+        <hook event="CHANNEL_CREATE" script="$${callctld}/event.capacity.lua"/>
+        <hook event="CHANNEL_UUID" script="$${callctld}/event.capacity.lua"/>
+        <hook event="CHANNEL_DESTROY" script="$${callctld}/event.capacity.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${callctld}/event.cdr.lua"/>
+        <hook event="CUSTOM" subclass="sofia::register_failure" script="$${callctld}/event.unauth.lua"/>
       </settings>
     </configuration>
     <!--- MODULES -->  

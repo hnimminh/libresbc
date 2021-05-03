@@ -7,6 +7,9 @@ json = require("json")
 redis = require("redis")
 random = math.random
 
+----------------------------------------------------------------------------
+-- FREESWITCH API
+fsapi = freeswitch.API()
 -- REDIS CONNECTION
 rdbconn = nil
 rdbstate, rdberror = pcall(redis.connect, REDIS_HOST, REDIS_PORT, REDIS_TIMEOUT)
@@ -15,9 +18,9 @@ if rdbstate then
     if REDIS_DB ~= 0 then rdbconn:select(REDIS_DB) end
     if REDIS_PASSWORD then rdbconn:auth(REDIS_PASSWORD) end
 end
--------------------------------------------------------------------------
---* FUNDAMENTAL FUNTION
--------------------------------------------------------------------------
+---------------------******************************--------------------------
+---------------------****|  FUNDAMENTAL FUNCTION   |****---------------------
+---------------------******************************--------------------------
 
 function logger(msg)
     syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
@@ -99,3 +102,12 @@ end
 function randompick(intable)
     return intable[random(#intable)]
 end
+
+---------------------******************************--------------------------
+---------------------****|  RDB & MORE  FUNCTION   |****---------------------
+---------------------******************************--------------------------
+
+function get_inbound_intcon(name)
+    data = rdbconn.hgetall('intcon:in:'..name)
+end
+
