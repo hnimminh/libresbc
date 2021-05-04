@@ -25,7 +25,7 @@
       * [sofia_glue.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_glue.c)
       * [sofia_json_api.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_json_api.c)
       * [sofia_media.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_media.c)
-      * sofia.c [here](./mod/endpoints/mod_sofia/sofia.c) [freesswitch](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia.c)
+      * sofia.c [here](./freeswitch/mod/endpoints/mod_sofia/sofia.c) [freesswitch](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/sofia.c)
 
 ### Kamailio
 *(will be added later for access layer)*
