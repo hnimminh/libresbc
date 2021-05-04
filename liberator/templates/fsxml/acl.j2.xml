@@ -1,12 +1,13 @@
-        {% for profilename, realm in sipprofiles.items() -%} 
+        {%- for profilename, realm in sipprofiles.items() %} 
         <list name="_REALM_ACL_{{profilename}}" default="deny"> 
           <node type="allow" domain="{{realm}}"/>
         </list>
-        {% endfor -%}
-        {% for defined_acl in defined_acls -%} 
+        {%- endfor %}
+        {%- for defined_acl in defined_acls %} 
         <list name="{{defined_acl.name}}" default="{{defined_acl.action}}">
-          {% for rule in defined_acl.rules -%}  
-          <node type="{{rule.action}}" {{rule.key}}="{{rule.value}}"/>{% endfor %}
+          {%- for rule in defined_acl.rules %}  
+          <node type="{{rule.action}}" {{rule.key}}="{{rule.value}}"/>
+          {%- endfor %}
         </list>
         {%- endfor %}
 
