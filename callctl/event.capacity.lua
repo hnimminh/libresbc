@@ -15,9 +15,8 @@ local function capacity_handler()
         else
             intcon = event:getHeader("variable_X-LIBRE-INTCON")
         end
-
         if intcon then
-            rdbconn:sadd('realtime:capacity:'..intcon..':'..NODEID, uuid)
+            rdbconn:sadd('realtime:concurentcalls:'..intcon..':'..NODEID, uuid)
         else
             local profilename = event:getHeader("variable_sofia_profile_name")
             local sip_network_ip = event:getHeader("variable_sip_network_ip")
@@ -34,8 +33,8 @@ local function capacity_handler()
         logify('module', 'callctl', 'space', 'event:capacity', 'action', 'capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
         if intcon and old_uuid then
             rdbconn:pipeline(function(p)
-                p:srem('realtime:capacity:'..intcon..':'..NODEID, old_uuid)
-                p:sadd('realtime:capacity:'..intcon..':'..NODEID, uuid)
+                p:srem('realtime:concurentcalls:'..intcon..':'..NODEID, old_uuid)
+                p:sadd('realtime:concurentcalls:'..intcon..':'..NODEID, uuid)
             end)
         else
             local profilename = event:getHeader("variable_sofia_profile_name")
@@ -57,7 +56,7 @@ local function capacity_handler()
         end
 
         if intcon then
-            rdbconn:srem('realtime:capacity:'..intcon..':'..NODEID, uuid)
+            rdbconn:srem('realtime:concurentcalls:'..intcon..':'..NODEID, uuid)
         end
     end
 end
