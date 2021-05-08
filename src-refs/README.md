@@ -1,4 +1,36 @@
-## REFERENCE:
+**This is the source code for quick reference when develop LibreSBC**
+
+### FreeSWITCH
+* [switch_code.c](https://github.com/signalwire/freeswitch/blob/master/src/switch_event.c)
+* [switch_event.c](https://github.com/signalwire/freeswitch/blob/master/src/switch_event.c)
+* [mod](./mod)
+  * [applications](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications)
+    * [mod_commands](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_commands)
+      * [mod_commands.c](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_commands/mod_commands.c)
+    * [mod_distributor](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_distributor)
+      * [mod_distributor.c](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_distributor/mod_distributor.c)
+    * [mod_dptools](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_dptools)
+      * [mod_dptools.c](https://github.com/signalwire/freeswitch/blob/master/src/mod/applications/mod_dptools/mod_dptools.c)
+  * [languages](https://github.com/signalwire/freeswitch/blob/master/src/mod/languages)
+    * [mod_lua](https://github.com/signalwire/freeswitch/blob/master/src/mod/languages/mod_lua)
+      * [mod_lua.cpp](https://github.com/signalwire/freeswitch/blob/master/src/mod/languages/mod_lua/mod_lua.cpp)  
+  * [endpoints](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints)
+    * [mod_sofia](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia)
+      * [conf](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/conf)
+        * [sofia.conf.xml](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/conf/sofia.conf.xml)  
+      * [mod_sofia.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/mod_sofia.c)
+      * [mod_sofia.h](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/mod_sofia.h)
+      * [rtp.c](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/rtp.c)
+      * [sip-dig.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sip-dig.c)
+      * [sofia_glue.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_glue.c)
+      * [sofia_json_api.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_json_api.c)
+      * [sofia_media.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_media.c)
+      * sofia.c [here](./freeswitch/mod/endpoints/mod_sofia/sofia.c) [freesswitch](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/sofia.c)
+
+### Kamailio
+*(will be added later for access layer)*
+
+### References
 * [RFC3261](https://tools.ietf.org/html/rfc3261)
 * [FAST API](https://fastapi.tiangolo.com/)
 * [STARLETTE](https://www.starlette.io/templates/)

@@ -74,7 +74,7 @@
             <param name="pass-callee-id" value="false" /> {# <!-- Disable sending X-FS-Support header --> #}
             <param name="stun-enabled" value="false"/> {# <!-- disable stun --> #}
             <param name="t38-passthru" value="true"/> {# <!-- t38 passthrough as sbc not support fax application --> #}
-            <param name="dtmf-type" value="{{sipprofile.dtfm_type}}"/>
+            <param name="dtmf-type" value="{{sipprofile.dtmf_type}}"/>
             <param name="pass-rfc2833" value="true"/>
             <param name="rtp-digit-delay" value="20"/>
             <param name="rtp-timer-name" value="soft"/>
