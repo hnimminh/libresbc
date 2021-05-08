@@ -29,7 +29,7 @@ local function clean_node_capacity()
     logify('module', 'callctl', 'space', 'event:startup', 'action', 'clean_node_capacity', 'node', NODEID)
 end
 
-local function environment():
+local function environment()
     local clustermebers = rdbconn:smembers('cluster:members')
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", table.concat(clustermebers, ","))
 end
