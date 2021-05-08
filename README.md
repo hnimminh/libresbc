@@ -32,7 +32,7 @@ Protect the network and other devices from:
 ### Quality of service 
 The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network and prioritization of flows is usually implemented by the SBC. It can include such functions as:
 * Resource allocation
-* [Rate limiting](https://en.wikipedia.org/wiki/Call_volume_(telecommunications)) include call per second (cps), concurrent calls (ccs)
+* [Rate limiting](https://en.wikipedia.org/wiki/Call_volume_(telecommunications)) include call per second (cps), concurrent calls (concurency)
 * Traffic Optimization by [token bucket](https://en.wikipedia.org/wiki/Token_bucket) and [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket)
 * [ToS](https://en.wikipedia.org/wiki/Type_of_service)/[DSCP](https://en.wikipedia.org/wiki/Differentiated_services) bit setting
 

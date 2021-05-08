@@ -1006,16 +1006,16 @@ class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     cps: int = Field(default=2, ge=1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
-    ccs: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
+    concurentcalls: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
     # validator
     @root_validator()
     def capacity_agreement(cls, values):
         cps = values.get('cps')
         if cps > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_calls_per_second'))//2:
             raise ValueError(f'the cps value is not valid for cluster capacity')
-        ccs = values.get('ccs')
-        if ccs > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_concurrent_calls'))//2:
-            raise ValueError(f'the ccs value is not valid for cluster capacity')
+        concurentcalls = values.get('concurentcalls')
+        if concurentcalls > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_concurrent_calls'))//2:
+            raise ValueError(f'the concurentcalls value is not valid for cluster capacity')
         return values
 
 
