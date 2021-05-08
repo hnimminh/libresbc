@@ -108,6 +108,9 @@ def listify(string, delimiter=':') -> list:
     assert isinstance(string, str)
     return string.split(delimiter)
 
+def stringify(data, delimiter=','):
+    return delimiter.join(data)
+
 def getnameid(string) -> str:
     array = string.split(':')
     if array[-1].startswith('_'): return array[-2]

@@ -15,7 +15,8 @@ from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
                            NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, getnameid, removekey
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getnameid, removekey
+from base import fssocket
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -144,7 +145,8 @@ def update_cluster(reqbody: ClusterModel, response: Response):
             'max_concurrent_calls': max_concurrent_calls,
             'max_calls_per_second': max_calls_per_second
         })
-
+        # set cluster member to fsvar
+        fssocket({'commands': [f'global_setvar CLUSTERMEMBERS={stringify(members)}'], 'requestid': get_request_uuid()})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None

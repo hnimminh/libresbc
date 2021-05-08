@@ -29,6 +29,11 @@ local function clean_node_capacity()
     logify('module', 'callctl', 'space', 'event:startup', 'action', 'clean_node_capacity', 'node', NODEID)
 end
 
+local function environment():
+    local clustermebers = rdbconn:smembers('cluster:members')
+    freeswitch.setGlobalVariable("CLUSTERMEMBERS", table.concat(clustermebers, ","))
+end
+
 -----------------**********************************--------------------
 -----------------*****|   STARTUP-SCRIPT     |*****--------------------
 -----------------**********************************--------------------
@@ -38,6 +43,7 @@ local function main()
     -- luarun ~freeswitch.consoleLog('debug','callflow run on '.._VERSION)
     clean_node_capacity()
     fire_startup_event()
+    environment()
 end
 
 ---------------------******************************---------------------

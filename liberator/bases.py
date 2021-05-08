@@ -29,7 +29,7 @@ def fssocket(reqdata):
             response = fs.send(f'api {command}')
             if response:
                 resultstr = response.data
-                if '+OK' in resultstr[:3].upper(): 
+                if resultstr[:3]=='+OK': 
                     _result = True
                 else: 
                     _result = False
