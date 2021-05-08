@@ -86,6 +86,7 @@ function topybool(data)
 end
 
 function split(inputstr, separator)
+    if not separator then separator = ',' end
     local array = {}
     local newstr = inputstr..separator
     for element in newstr:gmatch("([^"..separator.."]*)"..separator) do table.insert(array, element) end
@@ -93,6 +94,7 @@ function split(inputstr, separator)
 end
 
 function join(array, separator)
+    if not separator then separator = ',' end
     return table.concat(array, separator)
 end
 
@@ -110,11 +112,11 @@ function fieldjsonify(data)
         if startswith(data, ':bool:') then
             if data == ':bool:true' then return true end
             if data == ':bool:false' then return false end
-        elseif startswith(data, ':int:') then return tonumber(data:sub(5,#data))
-        elseif startswith(data, ':float:') then return tonumber(data:sub(7,#data))
+        elseif startswith(data, ':int:') then return tonumber(data:sub(6,#data))
+        elseif startswith(data, ':float:') then return tonumber(data:sub(8,#data))
         elseif startswith(data, ':list:') then
             if data==':list:' then return {} 
-            else return split(data:sub(6,#data), ',') 
+            else return split(data:sub(7,#data)) 
             end
         elseif startswith(data, ':none:') then return nil
         else 
@@ -124,12 +126,39 @@ function fieldjsonify(data)
         return data
     end
 end
+
+function jsonhash(data)
+    for key, value in pair(data) do
+        if type(value)=='string' then
+            if startswith(value, ':bool:') then
+                if data == ':bool:true' then return true end
+                if data == ':bool:false' then return false end
+            elseif startswith(data, ':int:') then return tonumber(data:sub(5,#data))
+            elseif startswith(data, ':float:') then return tonumber(data:sub(7,#data))
+            elseif startswith(data, ':list:') then
+                if data==':list:' then return {} 
+                else return split(data:sub(6,#data)) 
+                end
+            elseif startswith(data, ':none:') then return nil
+            else 
+                return data 
+            end
+        else
+            return data
+        end
+    end
+end
+
 ---------------------******************************--------------------------
 ---------------------****|  RDB & MORE  FUNCTION   |****---------------------
 ---------------------******************************--------------------------
 
-function get_inbound_intcon(name)
-    data = rdbconn.hgetall('intcon:in:'..name)
+function detail_intcon(name, direction)
+    if direction == INBOUND then
+        return rdbconn:hgetall('intcon:in:'..name)
+    else
+        return rdbconn:hgetall('intcon:out:'..name)
+    end
 end
 
 
@@ -138,5 +167,51 @@ function is_intcon_enable(name, direction)
         return fieldjsonify(rdbconn:hget('intcon:in:'..name, 'enable'))
     else 
         return fieldjsonify(rdbconn:hget('intcon:out:'..name, 'enable'))
+    end
+end
+
+-- get the concurentcalls key of interconnection in this node
+function concurentcallskey(name, node)
+    if node then
+        return 'realtime:concurentcalls:'..name..':'..node
+    else 
+        return 'realtime:concurentcalls:'..name..':'..NODEID
+    end
+end
+
+function concurentcallskeys(name)
+    local clustermembers = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
+    local _concurentcallskeys = {}
+    for i=1, #clustermembers do
+        table.insert( _concurentcallskeys, concurentcallskey(name, clustermembers[i]))
+    end
+    return _concurentcallskeys
+end
+
+
+function verify_concurentcalls(name, direction, uuid)
+    local clustermembers = freeswitch.getGlobalVariable('CLUSTERMEMBERS')
+    local cckeys = concurentcallskeys(name)
+    if direction == INBOUND then
+        local class = rdbconn:hget('intcon:in:'..name, 'capacity_class')
+        local max_concurentcalls = fieldjsonify(rdbconn:hget('class:capacity:'..class, 'concurentcalls'))
+        local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
+            txn:multi()
+            txn:sadd(concurentcallskey(name), uuid)
+            for i=1, #cckeys do txn:scard(cckeys) end
+        end)
+        local concurentcalls = 0
+        for i=2, #replies do concurentcalls = concurentcalls + tonumber(replies[i]) end
+        return concurentcalls, max_concurentcalls
+    else
+        local class = rdbconn:hget('intcon:out:'..name, 'capacity_class')
+        local max_concurentcalls = fieldjsonify(rdbconn:hget('class:capacity:'..class, 'concurentcalls'))
+        local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
+            txn:multi()
+            for i=1, #cckeys do txn:scard(cckeys[i]) end
+        end)
+        local concurentcalls = 0
+        for i=1, #replies do concurentcalls = concurentcalls + tonumber(replies[i]) end
+        return concurentcalls, max_concurentcalls
     end
 end

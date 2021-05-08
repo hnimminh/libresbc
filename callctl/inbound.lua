@@ -44,6 +44,13 @@ local function main()
             logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup' ,'intconname', intconname, 'status', 'disable')
             INLEG_HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_PEER'; goto ENDSESSION
         end
+
+        -- call will be blocked if inbound interconnection reach max capacity
+        concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup' ,'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
+        if concurentcalls > max_concurentcalls then
+            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
+        end
         -- call will be blocked if inbound interconnection is violated the cps
         --[[
         local is_violated, current_cps, max_cps, block_ms = check_cps(intconname, INBOUND)
