@@ -8,9 +8,6 @@ redis = require("redis")
 random = math.random
 
 ----------------------------------------------------------------------------
--- FREESWITCH API
-fsapi = freeswitch.API()
-
 -- REDIS CONNECTION
 rdbconn = nil
 rdbstate, rdberror = pcall(redis.connect, REDIS_HOST, REDIS_PORT, REDIS_TIMEOUT)
@@ -85,6 +82,18 @@ function topybool(data)
     return true
 end
 
+function toboolean(data)
+    local datatype = type(data)
+    if datatype=='string' then
+        if string.lower(data) == 'true' then return true
+        else return false
+    elseif datatype=='boolean' then 
+        return data 
+    else
+        return false
+    end
+end
+
 function split(inputstr, separator)
     if not separator then separator = ',' end
     local array = {}
@@ -148,3 +157,17 @@ function jsonhash(data)
     return data
 end
 
+
+---------------------------------------------------------------------------- GET KEY 
+function intconkey(name, direction)
+    if direction == INBOUND then
+        return 'intcon:in:'..name
+    else
+        return 'intcon:out:'..name
+    end 
+end
+
+function concurentcallskey(name, node)
+    if not node then node = NODEID end
+    return 'realtime:concurentcalls:'..name..':'..node
+end

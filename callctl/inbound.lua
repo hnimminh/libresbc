@@ -1,4 +1,3 @@
-dofile("{{rundir}}/callctl/utilities.lua")
 dofile("{{rundir}}/callctl/callfunc.lua")
 ---------------------******************************---------------------
 ---------------------****|  INBOUND CALLCTL   |****---------------------
@@ -62,15 +61,16 @@ local function main()
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
         end
 
+        -- codec negotiation
+        local codecstr = get_codec(intconname, INBOUND)
+        InLeg:setVariable("codec_string", codecstr)
 
-
-
+        -- translation calling party number
         -----------------------------------------------------------
         ----- TMP
         -----------------------------------------------------------
 
         InLeg:execute('ring_ready')
-        InLeg:setVariable("codec_string", "PCMA,OPUS,PCMU,G729")
         InLeg:execute('pre_answer')
         InLeg:setVariable("ringback", "%(2000,4000,440,480)")
         InLeg:execute('playback', '/home/hnimminh/ulaw08m.wav')

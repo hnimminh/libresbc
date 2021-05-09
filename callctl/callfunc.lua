@@ -1,32 +1,24 @@
+dofile("{{rundir}}/callctl/utilities.lua")
+---------------------******************************--------------------------
+---------------------****|  CALL RELATED FUNCTION   |****---------------------
+---------------------******************************--------------------------
 
----------------------******************************--------------------------
----------------------****|  RDB & MORE  FUNCTION   |****---------------------
----------------------******************************--------------------------
-function intconkey(name, direction)
-    if direction == INBOUND then
-        return 'intcon:in:'..name
-    else
-        return 'intcon:out:'..name
-    end 
-end
+-- FREESWITCH API
+fsapi = freeswitch.API()
+
+---------------------------------------------------------------------------------------------------------------------------------------------
 
 function detail_intcon(name, direction)
     return jsonhash(rdbconn:hgetall(intconkey(name, direction)))
 end
 
-
 function is_intcon_enable(name, direction)
     return fieldjsonify(rdbconn:hget(intconkey(name, direction), 'enable'))
 end
 
-
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- CONCURENT CALL 
 ---------------------------------------------------------------------------------------------------------------------------------------------
-function concurentcallskey(name, node)
-    if not node then node = NODEID end
-    return 'realtime:concurentcalls:'..name..':'..node
-end
 
 function concurentcallskeys(name)
     local clustermembers = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
@@ -123,8 +115,49 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
+function get_translation_rules(name, direction)
+    local classes = rdbconn:hget(intconkey(name, direction), 'translation_classes')
+    if #classes == 0 then 
+        return {}
+    else
+        local replies = rdbconn:pipeline(function(pipe)
+            for _, class in pairs(classes) do
+                pipe:hgetall('class:translation:'..class)
+            end
+        end)
+        return replies
+    end
+end
 
-
+function translate(caller, callee, name, direction)
+    local translated_caller = caller
+    local translated_callee = callee
+    local match_rules = {}
+    local rules = get_translation_rules(name, direction)
+    for i=1, #rules do
+        local caller_pattern = rules[i].caller_pattern
+        local callee_pattern = rules[i].callee_pattern
+        -- check condtion
+        local condition = true
+        if (#caller_pattern > 0) then
+            condition = toboolean(fsapi:execute('regex', translated_caller..'|'..caller_pattern..'|'))
+        end
+        if (condition and (#callee_pattern > 0)) then 
+            condition = toboolean(fsapi:execute('regex', translated_callee..'|'..callee_pattern..'|'))
+        end
+        -- translate only both conditions are true
+        if condition then
+            if (#caller_pattern > 0) then
+                translated_caller = fsapi:execute('regex', caller..'|'..caller_pattern..'|'..rules[i].caller_replacement)
+            end
+            if (#callee_pattern > 0) then
+                translated_callee = fsapi:execute('regex', caller..'|'..callee_pattern..'|'..rules[i].callee_replacement)
+            end
+            table.insert( match_rules, rules[i].name)
+        end
+    end
+    return translated_caller, translated_callee, match_rules
+end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- MANIPULATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
