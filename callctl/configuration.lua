@@ -16,8 +16,8 @@ OUTBOUND = 'outbound'
 CDR_TTL = 3600
 
 --- SECURITY
-_ROLLING_WINDOW_TIME = 1000                              --- use the exactly 1 second = 1000ms
-_VIOLATED_BLOCK_TIME = 60*_ROLLING_WINDOW_TIME           --- if violate block 60000ms, it can be increase if violate;
+ROLLING_WINDOW_TIME = 1000                             --- use the exactly 1 second = 1000ms
+VIOLATED_BLOCK_TIME = 60*ROLLING_WINDOW_TIME           --- if violate block 60000ms, it can be increase if violate;
 
 --- LOG
 LOGDIR = '{{logdir}}'
