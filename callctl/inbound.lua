@@ -1,5 +1,5 @@
 dofile("{{rundir}}/callctl/utilities.lua")
-
+dofile("{{rundir}}/callctl/callfunc.lua")
 ---------------------******************************---------------------
 ---------------------****|  INBOUND CALLCTL   |****---------------------
 ---------------------******************************---------------------
@@ -39,28 +39,32 @@ local function main()
         InLeg:setVariable("X-LIBRE-SIP-TRANSPORT", LIBRE_SIP_TRANSPORT)
         InLeg:setVariable("X-LIBRE-INTCON-NAME", intconname)
         InLeg:setVariable("rtp_secure_media", "optional:"..ENCRYPTION_SUITES)
-        -- call will be blocked if inbound interconnection is not enable
-        if not is_intcon_enable(intconname, INBOUND) then
-            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup' ,'intconname', intconname, 'status', 'disable')
+
+
+        -- call will be reject if inbound interconnection is not enable
+        local status = is_intcon_enable(intconname, INBOUND)
+        if not status then
+            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'state_check' ,'intconname', intconname, 'status', status)
             INLEG_HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_PEER'; goto ENDSESSION
         end
 
-        -- call will be blocked if inbound interconnection reach max capacity
-        concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup' ,'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
+        -- call will be reject if inbound interconnection reach max capacity
+        local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'concurency_check' ,'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
         end
-        -- call will be blocked if inbound interconnection is violated the cps
-        --[[
-        local is_violated, current_cps, max_cps, block_ms = check_cps(intconname, INBOUND)
-        if is_violated then
-            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup' ,'intconname', intconname, 'cps', current_cps)
-            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
-        end 
-        ]]
 
-        
+        -- call will be blocked if inbound interconnection is violated the cps
+        local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'cps_check' ,'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
+        if not is_passed then
+            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
+        end
+
+
+
+
         -----------------------------------------------------------
         ----- TMP
         -----------------------------------------------------------
