@@ -1,5 +1,4 @@
 dofile("{{rundir}}/callctl/utilities.lua")
-dofile("{{rundir}}/callctl/callfunc.lua")
 ---------------------------------------------------------------------------
 
 local function capacity_handler()
