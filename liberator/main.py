@@ -8,7 +8,7 @@ import uvicorn
 
 from utilities import logify, debugy
 from api import httpapi
-from bases import BaseEventHandler
+from basemgr import BaseEventHandler
 
 #---------------------------------------------------------------------------------------------------------------------------
 # MAIN APPLICATION

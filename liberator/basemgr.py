@@ -33,11 +33,11 @@ def fssocket(reqdata):
                     _result = True
                 else: 
                     _result = False
-                    logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+                    logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                 result = bool(result and _result)
-        logify(f"module=liberator, space=bases, action=fssocket, requestid={requestid}, commands={commands}, result={result}")
+        logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, commands={commands}, result={result}")
     except Exception as e:
-        logify(f"module=liberator, space=bases, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
+        logify(f"module=liberator, space=basemgr, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
     finally:
         return result    
 
@@ -55,7 +55,7 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=bases, node={NODEID}, action=start_base_event_handler_thread")
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=start_base_event_handler_thread")
         callengine_acl_event = f'event:callengine:acl:{NODEID}'
         callengine_sipprofile_event = f'event:callengine:sipprofile:{NODEID}'
         callengine_gateway_event = f'event:callengine:gateway:{NODEID}'
@@ -72,7 +72,7 @@ class BaseEventHandler(Thread):
                                         callengine_incon_event], REDIS_TIMEOUT)
                 if events:
                     eventkey, eventvalue = events[0], json.loads(events[1])
-                    logify(f"module=liberator, space=bases, action=catch_event, eventkey={eventkey}, eventvalue={eventvalue}")
+                    logify(f"module=liberator, space=basemgr, action=catch_event, eventkey={eventkey}, eventvalue={eventvalue}")
                     prewait = eventvalue.get('prewait')
                     # requestid = eventvalue.get('requestid')
                     # make the node run this task in different timestamp
@@ -110,7 +110,7 @@ class BaseEventHandler(Thread):
                         pass
                     # firewall reload
             except Exception as e:
-                logify(f"module=liberator, space=bases, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
+                logify(f"module=liberator, space=basemgr, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
                 time.sleep(5)
             finally:
                 pass

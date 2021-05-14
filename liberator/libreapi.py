@@ -16,7 +16,7 @@ from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION,
                            NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getnameid, removekey
-from bases import fssocket
+from basemgr import fssocket
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
