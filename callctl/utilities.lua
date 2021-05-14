@@ -86,7 +86,7 @@ function toboolean(data)
     local datatype = type(data)
     if datatype=='string' then
         if string.lower(data) == 'true' then return true
-        else return false
+        else return false end
     elseif datatype=='boolean' then 
         return data 
     else
