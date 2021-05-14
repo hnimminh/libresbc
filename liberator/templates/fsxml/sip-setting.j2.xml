@@ -3,8 +3,8 @@
           <gateways>
           {%- for gateway in sipprofile.gateways %}
             <gateway name="{{gateway.name}}">{% if gateway.auth_username is defined %}
-              <param name="auth-username" value="{{gateway.auth_username}}"/>
-              <param name="username" value="{{gateway.username}}"/>{% endif %}{% if gateway.realm is defined %}
+              <param name="auth-username" value="{{gateway.auth_username}}"/>{% endif %}
+              <param name="username" value="{{gateway.username}}"/>{% if gateway.realm is defined %}
               <param name="realm" value="{{gateway.realm}}"/>{% endif %}{% if gateway.from_user is defined %}
               <param name="from-user" value="{{gateway.from_user}}"/>{% endif %}{% if gateway.from_domain is defined %}
               <param name="from-domain" value="{{gateway.from_domain}}"/>{% endif %}
