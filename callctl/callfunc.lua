@@ -166,4 +166,61 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- ROUTING 
 ---------------------------------------------------------------------------------------------------------------------------------------------
+function routing_query(tablename, routingdata)
+    local routingrules = {}
+    local primary, secondary, load
+    ---
+    repeat
+        -- routing table process
+        local routevalue = nil
+        local schema = jsonhash(rdbconn:hgetall('routing:table:'..tablename))
+        -- return immediately if invalid schema
+        if (not topybool(schema)) then return nil, nil, routingrules end
+        table.insert(routingrules, tablename)
+        local schema_action = schema.action
+        if schema_action == BLOCK then
+            return BLOCK, BLOCK, routingrules
+        elseif schema_action == ROUTE then
+            primary, secondary = weighted_choice(schema.routes[1], schema.routes[2], tonumber(schema.routes[3])
+            return primary, secondary, routingrules
+        elseif schema_action == QUERY then
+            local variable = schema.variables[1]
+            local value = routingdata[variable]
+            -- return immediately if invalid schema
+            if (not value) then return nil, nil, routingrules end
+            routevalue = rdbconn:hgetall('routing:record:'..tablename..':em:'..value)
+            if topybool(routevalue) then
+                table.insert(routingrules, 'em-'..value)
+            else
+                for i=0, #value do
+                    local prefix = value:sub(1,#value-i)
+                    routevalue = rdbconn:hgetall('routing:record:'..tablename..':lpm:'..prefix)
+                    if topybool(routevalue) then
+                        table.insert(routingrules, 'lpm-'..prefix)
+                        break
+                    end
+                end
+            end
+        else
+            return nil, nil, routingrules
+        end
+        -- routing record process
+        if routevalue then
+            action = routevalue.action
+            if action == BLOCK then
+                return BLOCK, BLOCK, routingrules
+            elseif action == QUERY then
+                tablename, _ = weighted_choice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                goto REQUERYROUTE
+            elseif action == ROUTE then
+                primary, secondary = weighted_choice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                return primary, secondary, routingrules
+            else
+                return nil, nil, routingrules
+            end
+        end
+        ::REQUERYROUTE::
+    until (ismeberof(routingrules, tablename) or (#routingrules >= 10) or (primary))
+    return primary, secondary, routingrules
+end
 
