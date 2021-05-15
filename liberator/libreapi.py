@@ -2093,6 +2093,11 @@ class RoutingTableActionEnum(str, Enum):
     route = _ROUTE
     block = _BLOCK
     # request: reseved routing with http api 
+class RoutingVariableEnum(str, Enum):
+    calling_number = 'calling_number'
+    called_number = 'called_number'
+    intconname = 'intconname'
+
 
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
