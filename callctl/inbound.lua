@@ -43,20 +43,20 @@ local function main()
         -- call will be reject if inbound interconnection is not enable
         local status = is_intcon_enable(intconname, INBOUND)
         if not status then
-            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'state_check' ,'intconname', intconname, 'status', status)
+            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'status', status)
             INLEG_HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_PEER'; goto ENDSESSION
         end
 
         -- call will be reject if inbound interconnection reach max capacity
         local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'concurency_check' ,'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
         end
 
         -- call will be blocked if inbound interconnection is violated the cps
         local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'cps_check' ,'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
         if not is_passed then
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
         end
@@ -66,6 +66,24 @@ local function main()
         InLeg:setVariable("codec_string", codecstr)
 
         -- translation calling party number
+        local tablename = InLeg:getVariable("x-routing-plan")
+        routingdata = {tablename=tablename, intconname=intconname, called_number=_dnis, calling_number=_clid}
+        route1, route2, routingrules = routing_query(tablename, routingdata)
+
+        local routingrulestr = 'no.matching.route.found'
+        if (#routingrules > 0) then routingrulestr = join(routingrules) end
+        
+        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
+        if not (route1 and route2) then
+            INLEG_HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
+        end
+
+        -- CHECK IF THIS IS BLOCKING CALL
+        if (route1 == BLOCK) or (route2 == BLOCK) then
+            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup_as_block', 'uuid', uuid)
+            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
+        end
+
         -----------------------------------------------------------
         ----- TMP
         -----------------------------------------------------------
