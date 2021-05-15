@@ -166,6 +166,14 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- ROUTING 
 ---------------------------------------------------------------------------------------------------------------------------------------------
+function pchoice(a, b, p)
+    local x = random(100)
+    if x < p then return a, b
+    else return b, a end
+end
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+
 function routing_query(tablename, routingdata)
     local routingrules = {}
     local primary, secondary, load
@@ -181,7 +189,7 @@ function routing_query(tablename, routingdata)
         if schema_action == BLOCK then
             return BLOCK, BLOCK, routingrules
         elseif schema_action == ROUTE then
-            primary, secondary = weighted_choice(schema.routes[1], schema.routes[2], tonumber(schema.routes[3])
+            primary, secondary = pchoice(schema.routes[1], schema.routes[2], tonumber(schema.routes[3]))
             return primary, secondary, routingrules
         elseif schema_action == QUERY then
             local variable = schema.variables[1]
@@ -210,10 +218,10 @@ function routing_query(tablename, routingdata)
             if action == BLOCK then
                 return BLOCK, BLOCK, routingrules
             elseif action == QUERY then
-                tablename, _ = weighted_choice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                tablename, _ = pchoice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
                 goto REQUERYROUTE
             elseif action == ROUTE then
-                primary, secondary = weighted_choice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                primary, secondary = pchoice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
                 return primary, secondary, routingrules
             else
                 return nil, nil, routingrules
