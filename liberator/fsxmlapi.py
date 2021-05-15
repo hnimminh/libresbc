@@ -230,7 +230,7 @@ def directory(request: Request, response: Response):
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
         for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'sipprofile', 'sipaddrs', 'secret', 'authscheme')
+            pipe.hmget(mainkey, 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
         
         directories = dict()
         for mainkey, details in zip(mainkeys, pipe.execute()):
@@ -239,6 +239,7 @@ def directory(request: Request, response: Response):
             sipaddrs = fieldjsonify(details[1])
             secret = details[2]
             authscheme = details[3]
+            routing = details[4]
 
             if authscheme=='IP': 
                 password = DEFAULT_PASSWORD
@@ -253,8 +254,8 @@ def directory(request: Request, response: Response):
             for _profilename, _realm in sipprofiles.items():
                 if _profilename == profilename:
                     a1hash = hashlib.md5(f'{intconname}:{_realm}:{password}'.encode()).hexdigest()
-                    if _realm in directories: directories[_realm].append({'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash})
-                    else: directories[_realm] = [{'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash}]
+                    if _realm in directories: directories[_realm].append({'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing})
+                    else: directories[_realm] = [{'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing}]
 
         result = templates.TemplateResponse("directory.j2.xml",
                                             {"request": request, "directories": directories},

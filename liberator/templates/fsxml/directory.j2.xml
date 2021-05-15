@@ -5,6 +5,9 @@
         <params>
           <param name="a1-hash" value="{{user.a1hash}}"/>
         </params>
+        <variables>
+          <variable name="x-routing-plan" value="{{user.routing}}"/>
+        </variables>
       </user>
       {%- endfor %}
     </domain>
