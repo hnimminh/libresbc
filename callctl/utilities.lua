@@ -171,3 +171,13 @@ function concurentcallskey(name, node)
     if not node then node = NODEID end
     return 'realtime:concurentcalls:'..name..':'..node
 end
+
+----------------------------------------------------------------------------
+function writefile(filename, stringdata)
+    -- a: Append mode that opens an existing file or creates a new file for appending.
+    -- w: Write enabled mode that overwrites the existing file or creates a new file.
+    local file = io.open(filename, 'a')
+    file:write(stringdata, '\n')
+    -- closes the open file
+    file:close()
+end

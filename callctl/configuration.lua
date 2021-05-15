@@ -13,6 +13,14 @@ REDIS_TIMEOUT = 5
 ---  CONSTANT
 INBOUND = 'inbound'
 OUTBOUND = 'outbound'
+
+--- ROUTING ACTION
+QUERY = 'query'
+BLOCK = 'block'
+JUMPS = 'jumps'
+ROUTE = 'route'
+EMPTYSTRING = ''
+--- CDR 
 CDR_TTL = 3600
 
 --- SECURITY
