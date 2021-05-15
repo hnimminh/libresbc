@@ -69,17 +69,19 @@ end
 
 function topybool(data)
     local datatype = type(data)
-    if datatype == 'nil' then return false end
-    if datatype == 'string' or datatype == 'table' then
+    if datatype == 'nil' then return false
+    elseif datatype == 'string' then
         if #data == 0 then return false
         else return true end
-    end
-    if datatype == 'number' then
+    elseif datatype == 'table' then
+        if next(data)== nil then return false
+        else return true end
+    elseif datatype == 'number' then
         if data == 0 then return false
         else return true end
+    else
+        return true
     end
-
-    return true
 end
 
 function toboolean(data)
@@ -125,12 +127,9 @@ function fieldjsonify(data)
         elseif startswith(data, ':float:') then return tonumber(data:sub(8,#data))
         elseif startswith(data, ':list:') then
             if data==':list:' then return {} 
-            else return split(data:sub(7,#data)) 
-            end
+            else return split(data:sub(7,#data)) end
         elseif startswith(data, ':none:') then return nil
-        else 
-            return data 
-        end
+        else return data end
     else
         return data
     end
@@ -144,12 +143,12 @@ function jsonhash(data)
                 if startswith(value, ':bool:') then
                     if value == ':bool:true' then data[key] = true
                     else data[key] = false end
-                elseif startswith(value, ':int:') then data[key] = tonumber(data:sub(6,#data))
-                elseif startswith(value, ':float:') then data[key] = tonumber(data:sub(8,#data))
+                elseif startswith(value, ':int:') then data[key] = tonumber(value:sub(6,#value))
+                elseif startswith(value, ':float:') then data[key] = tonumber(value:sub(8,#value))
                 elseif startswith(value, ':list:') then
-                    if value==':list:' then return {} 
-                    else data[key] = split(data:sub(7,#data)) end
-                elseif startswith(data, ':none:') then data[key] = nil
+                    if value==':list:' then data[key] = {} 
+                    else data[key] = split(value:sub(7,#value)) end
+                elseif startswith(value, ':none:') then data[key] = nil
                 else end
             else end
         end
