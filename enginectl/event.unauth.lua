@@ -1,4 +1,4 @@
-dofile("{{rundir}}/callctl/utilities.lua")
+dofile("{{rundir}}/enginectl/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function unauth()
@@ -12,7 +12,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(unauth)
 if not result then
-    logger("module=callctl, space=event:unauth, action=exception, error="..tostring(error))
+    logger("module=enginectl, space=event:unauth, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

@@ -1,6 +1,6 @@
-dofile("{{rundir}}/callctl/callfunc.lua")
+dofile("{{rundir}}/enginectl/callfunc.lua")
 ---------------------******************************---------------------
----------------------****|  INBOUND CALLCTL   |****---------------------
+---------------------****|  INBOUND enginectl   |****---------------------
 ---------------------******************************---------------------
 local function main()
     local _manitables = {}
@@ -25,7 +25,7 @@ local function main()
         local realm = InLeg:getVariable("domain_name")
         local intconname = InLeg:getVariable("user_name")
         -- log the incoming call request
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'inbound-call' , 'uuid', uuid, 'context', context, 'direction', 'inbound', 
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'inbound-call' , 'uuid', uuid, 'context', context, 'direction', 'inbound', 
                'profilename', profilename, 'sip_from_user', sip_from_user, 'sip_to_user', sip_to_user, 
                'destination_number', destination_number, 'sip_network_ip', sip_network_ip, 'callid', sip_call_id,
                'sip_via_protocol', sip_via_protocol, 'intconname', intconname, 'realm', realm)
@@ -40,20 +40,20 @@ local function main()
         -- call will be reject if inbound interconnection is not enable
         local status = is_intcon_enable(intconname, INBOUND)
         if not status then
-            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'status', status)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'status', status)
             INLEG_HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_PEER'; goto ENDSESSION
         end
 
         -- call will be reject if inbound interconnection reach max capacity
         local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
         end
 
         -- call will be blocked if inbound interconnection is violated the cps
         local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
         if not is_passed then
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
         end
@@ -70,14 +70,14 @@ local function main()
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = join(routingrules) end
         
-        logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
         if not (route1 and route2) then
             INLEG_HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
 
         -- blocking call checking
         if (route1 == BLOCK) or (route2 == BLOCK) then
-            logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup_as_block', 'uuid', uuid)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'hangup_as_block', 'uuid', uuid)
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
 
@@ -130,12 +130,12 @@ local function main()
             --InLeg:execute("export", "nolocal:rtp_secure_media=optional:".._encryption_suites)
             --InLeg:setVariable("sdp_secure_savp_only", "true")
             
-            logify('module', 'callctl', 'space', 'inbound', 'action', 'connect_gateway' , 'sessionid', sessionid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
+            logify('module', 'enginectl', 'space', 'main', 'action', 'connect_gateway' , 'sessionid', sessionid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..destination_number, InLeg)
 
             -- check leg status
             local dialstatus = OutLeg:hangupCause()
-            logify('module', 'callctl', 'space', 'inbound', 'action', 'verify_state' , 'sessionid', sessionid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
+            logify('module', 'enginectl', 'space', 'main', 'action', 'verify_state' , 'sessionid', sessionid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
 
             -- stop if success
             if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then
@@ -152,7 +152,7 @@ local function main()
                 -- log information for leg B
                 local _real_uuid = OutLeg:get_uuid()
                 if _uuid ~= _real_uuid then
-                    logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'pseudo_uuid', _uuid, 'native_uuid', _real_uuid)
+                    logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'report', 'pseudo_uuid', _uuid, 'native_uuid', _real_uuid)
                 end
                 local _context = OutLeg:getVariable("context")
                 local _direction = OutLeg:getVariable("direction")
@@ -164,12 +164,12 @@ local function main()
                 local _sofia_profile_name = OutLeg:getVariable("sofia_profile_name")
                 local _sip_call_id = OutLeg:getVariable("sip_call_id")
 
-                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'uuid', _real_uuid,
+                logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'report', 'uuid', _real_uuid,
                        'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user, 
                        'to_user', _sip_to_user, 'destination_number', _destination_number, 'remote_ip', _sip_network_ip, 'callid', _sip_call_id)
                 
                 --- BRIDGE 2 LEGs
-                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
+                logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
                 freeswitch.bridge(InLeg, OutLeg)
 
                 -- HANGUP WHEN DONE FOR OUTLEG
@@ -177,7 +177,7 @@ local function main()
                     OutLeg:hangup(); 
                 end
             else
-                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'info', 'outbound.leg.not.connected')
+                logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'report', 'info', 'outbound.leg.not.connected')
             end
         end
 
@@ -229,7 +229,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logify("module=callctl, space=inbound,  action=exception, error="..tostring(error))
+    logify("module=enginectl, space=inbound,  action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

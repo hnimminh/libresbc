@@ -1,4 +1,4 @@
-dofile("{{rundir}}/callctl/utilities.lua")
+dofile("{{rundir}}/enginectl/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function cdrreporter()
@@ -93,7 +93,7 @@ local function cdrreporter()
     else 
         filename = os.date("%Y-%m-%d")..'.cdr.raw.json'
         cdrjson = json.encode(cdr_details)
-        logify('module', 'callctl', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdb.timeout', 'data', cdrjson, 'donext', 'append_to_file', 'filename', filename)
+        logify('module', 'enginectl', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdb.timeout', 'data', cdrjson, 'donext', 'append_to_file', 'filename', filename)
         writefile(filename, cdrjson)
     end
 end
@@ -103,7 +103,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(cdrreporter)
 if not result then
-    logger("module=callctl, space=event:cdr, action=exception, error="..tostring(error))
+    logger("module=enginectl, space=event:cdr, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

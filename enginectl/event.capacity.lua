@@ -1,4 +1,4 @@
-dofile("{{rundir}}/callctl/utilities.lua")
+dofile("{{rundir}}/enginectl/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function capacity_handler()
@@ -21,7 +21,7 @@ local function capacity_handler()
             local profilename = event:getHeader("variable_sofia_profile_name")
             local sip_network_ip = event:getHeader("variable_sip_network_ip")
             local sip_req_host = event:getHeader("variable_sip_req_host")
-            logify('module', 'callctl', 'space', 'event:capacity', 'action', 'capacity_handler', 'error', 'unrecognize_traffic', 'event', 'channel.create', 
+            logify('module', 'enginectl', 'space', 'event:capacity', 'action', 'capacity_handler', 'error', 'unrecognize_traffic', 'event', 'channel.create', 
                    'uuid', uuid, 'profilename', profilename, 'direction', direction, 'sip_network_ip', sip_network_ip, 'sip_req_host', sip_req_host)
         end
     end
@@ -30,7 +30,7 @@ local function capacity_handler()
     if event_name == 'CHANNEL_UUID' then
         intcon = event:getHeader("variable_X-LIBRE-INTCONNAME")
         local old_uuid = event:getHeader("Old-Unique-ID")
-        logify('module', 'callctl', 'space', 'event:capacity', 'action', 'capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
+        logify('module', 'enginectl', 'space', 'event:capacity', 'action', 'capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
         if intcon and old_uuid then
             rdbconn:pipeline(function(p)
                 p:srem(concurentcallskey(intcon), old_uuid)
@@ -40,7 +40,7 @@ local function capacity_handler()
             local profilename = event:getHeader("variable_sofia_profile_name")
             local sip_network_ip = event:getHeader("variable_sip_network_ip")
             local sip_req_host = event:getHeader("variable_sip_req_host")
-            logify('module', 'callctl', 'space', 'event:capacity', 'action', 'capacity_handler', 'error', 'unrecognize_traffic', 'event', 'channel.uuid', 
+            logify('module', 'enginectl', 'space', 'event:capacity', 'action', 'capacity_handler', 'error', 'unrecognize_traffic', 'event', 'channel.uuid', 
                    'uuid', uuid, 'profilename', profilename, 'direction', direction, 'sip_network_ip', sip_network_ip, 'sip_req_host', sip_req_host)
         end
     end
@@ -66,7 +66,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(capacity_handler)
 if not result then
-    logger("module=callctl, space=event:capacity, action=exception, error="..tostring(error))
+    logger("module=enginectl, space=event:capacity, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

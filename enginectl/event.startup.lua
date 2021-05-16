@@ -1,4 +1,4 @@
-dofile("{{rundir}}/callctl/utilities.lua")
+dofile("{{rundir}}/enginectl/utilities.lua")
 
 ---------------------------------------------------------------------------
 local unpack = _G.unpack or table.unpack
@@ -7,7 +7,7 @@ local function fire_startup_event()
     local key = 'event:callengine:startup:'..NODEID
     local value = json.encode({action='restart', prewait=0, requestid='uuid-of-callengine-startup-event'})
     rdbconn:lpush(key, value)
-    logify('module', 'callctl', 'space', 'event:startup', 'action', 'fire_startup_event', 'key', key, 'value', value)
+    logify('module', 'enginectl', 'space', 'event:startup', 'action', 'fire_startup_event', 'key', key, 'value', value)
 end
 
 local function clean_node_capacity()
@@ -26,13 +26,13 @@ local function clean_node_capacity()
         end
     end)
     ---
-    logify('module', 'callctl', 'space', 'event:startup', 'action', 'clean_node_capacity', 'node', NODEID)
+    logify('module', 'enginectl', 'space', 'event:startup', 'action', 'clean_node_capacity', 'node', NODEID)
 end
 
 local function environment()
     local clustermebers = join(rdbconn:smembers('cluster:members'))
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
-    logify('module', 'callctl', 'space', 'event:startup', 'action', 'environment', 'CLUSTERMEMBERS', clustermebers)
+    logify('module', 'enginectl', 'space', 'event:startup', 'action', 'environment', 'CLUSTERMEMBERS', clustermebers)
 end
 
 -----------------**********************************--------------------
@@ -52,7 +52,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logger("module=callctl, space=event:startup, action=exception, error="..tostring(error))
+    logger("module=enginectl, space=event:startup, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()
