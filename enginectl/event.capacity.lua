@@ -15,6 +15,7 @@ local function capacity_handler()
         else
             intcon = event:getHeader("variable_X-LIBRE-INTCONNAME")
         end
+        -- logify('module', 'enginectl', 'space', 'event:capacity', 'event_name', event_name, 'intcon', intcon, 'direction', direction)
         if intcon then
             rdbconn:sadd(concurentcallskey(intcon), uuid)
         else
@@ -52,9 +53,9 @@ local function capacity_handler()
         if direction == INBOUND then
             intcon = event:getHeader("variable_user_name")
         else
-            intcon = event:getHeader("variable_X-X-LIBRE-INTCONNAME")
+            intcon = event:getHeader("variable_X-LIBRE-INTCONNAME")
         end
-
+        -- logify('module', 'enginectl', 'space', 'event:capacity', 'event_name', event_name, 'intcon', intcon, 'direction', direction)
         if intcon then
             rdbconn:srem(concurentcallskey(intcon), uuid)
         end

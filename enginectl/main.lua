@@ -25,7 +25,7 @@ local function main()
         local realm = InLeg:getVariable("domain_name")
         local intconname = InLeg:getVariable("user_name")
         -- log the incoming call request
-        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'inbound-call' , 'uuid', uuid, 'context', context, 'direction', 'inbound', 
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'inbound_call' , 'uuid', uuid, 'context', context, 
                'profilename', profilename, 'sip_from_user', sip_from_user, 'sip_to_user', sip_to_user, 
                'destination_number', destination_number, 'sip_network_ip', sip_network_ip, 'callid', sip_call_id,
                'sip_via_protocol', sip_via_protocol, 'intconname', intconname, 'realm', realm)
@@ -96,7 +96,7 @@ local function main()
         ----- OUTLEG
         --------------------------------------------------------------------
         local _uuid
-        local routes = {route1, route2}
+        local routes = (route1==route2) and {route1} or {route1, route2}
         for attempt=1, #routes do
             _uuid = fsapi:execute('create_uuid')
             local route = routes[attempt]
@@ -104,10 +104,15 @@ local function main()
             -- if state is disable then try next route or drop call
             if not is_intcon_enable(route, OUTBOUND) then
                 logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', _uuid, 'route', route, 'state', 'disabled', 'donext', 'hangup_as_disabled')
-                if attempt >= #routes then HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION' end
-                goto ENDROUTING
+                if attempt >= #routes then HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION' end; goto ENDFAILOVER
             end
 
+            -- call will be reject if outbound interconnection reach max capacity
+            local _concurentcalls, _max_concurentcalls =  verify_concurentcalls(route, OUTBOUND, _uuid)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'route', route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
+            if _concurentcalls >= _max_concurentcalls then
+                if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL' end; goto ENDFAILOVER
+            end
 
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
@@ -144,11 +149,8 @@ local function main()
             local dialstatus = OutLeg:hangupCause()
             logify('module', 'enginectl', 'space', 'main', 'action', 'verify_state' , 'sessionid', sessionid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
 
-            -- stop if success
-            if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then
-                break
-            end
-            ::ENDROUTING::
+            if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then break end
+            ::ENDFAILOVER::
         end
 
         -- sleep to make sure channel available
