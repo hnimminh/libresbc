@@ -58,6 +58,11 @@ function get_defined_cps(name, direction)
     return fieldjsonify(rdbconn:hget('class:capacity:'..class, 'cps'))
 end
 
+-- LEAKY BUCKET: https://en.wikipedia.org/wiki/Leaky_bucket
+function leaky_bucket(bucket, timestamp)
+end
+
+
 -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
 function token_bucket(bucket, uuid, timestamp)
     return rdbconn:transaction(function(txn)

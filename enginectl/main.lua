@@ -47,14 +47,14 @@ local function main()
         local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
-            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL'; goto ENDSESSION
         end
 
         -- call will be blocked if inbound interconnection is violated the cps
         local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
         if not is_passed then
-            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
         end
 
         -- codec negotiation
@@ -111,9 +111,16 @@ local function main()
             local _concurentcalls, _max_concurentcalls =  verify_concurentcalls(route, OUTBOUND, _uuid)
             logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'route', route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
             if _concurentcalls >= _max_concurentcalls then
-                if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL' end; goto ENDFAILOVER
+                if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL' end; goto ENDFAILOVER
             end
 
+            -- call will be reject if outbound interconnection reach max cps
+            local is_passed, current_cps, max_cps, block_ms = verify_cps(route, OUTBOUND, _uuid)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'route', route, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
+            if not is_passed then
+                HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
+            end
+            
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
             local sipprofile = get_sipprofile(route, OUTBOUND)
