@@ -13,7 +13,7 @@ local function capacity_handler()
         if direction == INBOUND then
             intcon = event:getHeader("variable_user_name")
         else
-            intcon = event:getHeader("variable_X-LIBRE-INTCON")
+            intcon = event:getHeader("variable_X-LIBRE-INTCONNAME")
         end
         if intcon then
             rdbconn:sadd(concurentcallskey(intcon), uuid)
@@ -28,7 +28,7 @@ local function capacity_handler()
 
     -- CHANNEL CHANGE UUID EVENT
     if event_name == 'CHANNEL_UUID' then
-        intcon = event:getHeader("variable_X-LIBRE-INTCON")
+        intcon = event:getHeader("variable_X-LIBRE-INTCONNAME")
         local old_uuid = event:getHeader("Old-Unique-ID")
         logify('module', 'callctl', 'space', 'event:capacity', 'action', 'capacity_handler', 'event', 'channel.uuid', 'uuid', uuid, 'old_uuid', old_uuid)
         if intcon and old_uuid then
@@ -52,7 +52,7 @@ local function capacity_handler()
         if direction == INBOUND then
             intcon = event:getHeader("variable_user_name")
         else
-            intcon = event:getHeader("variable_X-LIBRE-INTCON")
+            intcon = event:getHeader("variable_X-X-LIBRE-INTCONNAME")
         end
 
         if intcon then
