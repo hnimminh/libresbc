@@ -10,12 +10,12 @@ SBCs commonly maintain full session state and offer the following functions:
 ### Connectivity & Compatibility
 Allow multiple networks to communicate through the use of a variety of techniques such as:
 * Advanced [NAT](https://en.wikipedia.org/wiki/Network_address_translation) Traversal Capabilities
-* [SIP](https://en.wikipedia.org/wiki/Session_Initiation_Protocol) normalization via SIP message and header manipulation
+* [SIP](https://en.wikipedia.org/wiki/Session_Initiation_Protocol) normalization, SIP message and header manipulation
 * Call Party Translatation
 * [VPN](https://en.wikipedia.org/wiki/Virtual_private_network) connectivity
 * Protocol translations between [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol), [TCP](https://en.wikipedia.org/wiki/Transmission_Control_Protocol) & [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security)
-* Built-in Powerful routing module.
-* Allowing control routing by 3rd-party software with via [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
+* Powerful built-in routing module.
+* Allowing control routing by 3rd-party software via [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
 * Dynamic Load Balancing, Failover, Distribution
 
 ### Security:
@@ -24,7 +24,6 @@ Protect the network and other devices from:
 * Toll fraud via rogue media streams
 * SIP Malformed Packet Protection
 * Topology hiding by back to back user agent ([B2BUA](https://en.wikipedia.org/wiki/Back-to-back_user_agent))
-* Malformed packet protection
 * Encryption of signaling (via TLS) and media ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol))
 * Access Control List
 * Smart IP Firewall
@@ -38,23 +37,23 @@ The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network 
 
 ### Media services
 Offer border-based media control and services such as:
-* Media encoding/decoding (SRTP/[RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol))
-* [DTMF](https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling) relay and interworking
-* Media Codec transcoding: [G711](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)).
+* Media encoding/decoding ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol)/[RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol))
+* [DTMF](https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling) relay and interworking include In-Band Signaling (touch tones), Out-of-Band Signaling ([RFC2833](https://www.ietf.org/rfc/rfc2833.txt)) and SIP INFO Method
+* Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)).
 * Tones and announcements
 * Data and fax interworking
 
 ### Intergration
 Support to intergrate with 3rd-party system or customer function easily
-* Flexible JSON Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to Webhook or Database server
+* Flexible JSON for Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to Webhook or Database server
 * Customization routing mechanism via HTTP API
-* Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/)
+* Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/) 
 * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) and/or [Prometheus](https://prometheus.io/) monitoring
 
 ### High Avaibility
 * [Distributed System](https://en.wikipedia.org/wiki/Distributed_computing)
 * Active-Active [Cluster](https://en.wikipedia.org/wiki/Computer_cluster) Concept
-* Healthcheck and Failure Autodetect
+* Healthcheck and Failure Autodetection
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/116818193-56850600-ab94-11eb-8a15-cbe25724c27f.png)
