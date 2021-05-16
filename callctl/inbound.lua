@@ -36,7 +36,7 @@ local function main()
         local LIBRE_SIP_TRANSPORT = 'udp'
         if sip_via_protocol then LIBRE_SIP_TRANSPORT = sip_via_protocol:lower() end
         InLeg:setVariable("X-LIBRE-SIP-TRANSPORT", LIBRE_SIP_TRANSPORT)
-        InLeg:setVariable("X-LIBRE-INTCON-NAME", intconname)
+        InLeg:setVariable("X-LIBRE-INTCONNAME", intconname)
         InLeg:setVariable("rtp_secure_media", "optional:"..ENCRYPTION_SUITES)
 
 
@@ -78,16 +78,20 @@ local function main()
             INLEG_HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
 
-        -- CHECK IF THIS IS BLOCKING CALL
+        -- blocking call checking
         if (route1 == BLOCK) or (route2 == BLOCK) then
             logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'hangup_as_block', 'uuid', uuid)
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
 
+
+
+
+
+
         -----------------------------------------------------------
         ----- TMP
         -----------------------------------------------------------
-
         InLeg:execute('ring_ready')
         InLeg:execute('pre_answer')
         InLeg:setVariable("ringback", "%(2000,4000,440,480)")

@@ -24,7 +24,7 @@ function concurentcallskeys(name)
     local clustermembers = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
     local _concurentcallskeys = {}
     for i=1, #clustermembers do
-        table.insert( _concurentcallskeys, concurentcallskey(name, clustermembers[i]))
+        arrayinsert( _concurentcallskeys, concurentcallskey(name, clustermembers[i]))
     end
     return _concurentcallskeys
 end
@@ -153,7 +153,7 @@ function translate(caller, callee, name, direction)
             if (#callee_pattern > 0) then
                 translated_callee = fsapi:execute('regex', caller..'|'..callee_pattern..'|'..rules[i].callee_replacement)
             end
-            table.insert( match_rules, rules[i].name)
+            arrayinsert( match_rules, rules[i].name)
         end
     end
     return translated_caller, translated_callee, match_rules
@@ -183,8 +183,8 @@ function routing_query(tablename, routingdata)
         local routevalue = nil
         local schema = jsonhash(rdbconn:hgetall('routing:table:'..tablename))
         -- return immediately if invalid schema
-        if (not topybool(schema)) then return nil, nil, routingrules end
-        table.insert(routingrules, tablename)
+        if (not next(schema)) then return nil, nil, routingrules end
+        arrayinsert(routingrules, tablename)
         local schema_action = schema.action
         if schema_action == BLOCK then
             return BLOCK, BLOCK, routingrules
@@ -197,14 +197,14 @@ function routing_query(tablename, routingdata)
             -- return immediately if invalid schema
             if (not value) then return nil, nil, routingrules end
             routevalue = rdbconn:hgetall('routing:record:'..tablename..':em:'..value)
-            if topybool(routevalue) then
-                table.insert(routingrules, 'em-'..value)
+            if next(routevalue) then
+                arrayinsert(routingrules, 'em-'..value)
             else
                 for i=0, #value do
                     local prefix = value:sub(1,#value-i)
                     routevalue = rdbconn:hgetall('routing:record:'..tablename..':lpm:'..prefix)
-                    if topybool(routevalue) then
-                        table.insert(routingrules, 'lpm-'..prefix)
+                    if next(routevalue) then
+                        arrayinsert(routingrules, 'lpm-'..prefix)
                         break
                     end
                 end

@@ -67,6 +67,12 @@ function mergetable(t1,t2)
     return t1
 end
 
+--- performance function compare to table.insert
+function arrayinsert(array, item)
+   array[#array+1] = item
+end
+
+
 function topybool(data)
     local datatype = type(data)
     if datatype == 'nil' then return false
@@ -100,7 +106,7 @@ function split(inputstr, separator)
     if not separator then separator = ',' end
     local array = {}
     local newstr = inputstr..separator
-    for element in newstr:gmatch("([^"..separator.."]*)"..separator) do table.insert(array, element) end
+    for element in newstr:gmatch("([^"..separator.."]*)"..separator) do arrayinsert(array, element) end
     return array
 end
 
