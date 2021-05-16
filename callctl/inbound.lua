@@ -33,12 +33,9 @@ local function main()
         -----------------------------------------------------------
         ---- IN LEG: INTIAL VAR
         -----------------------------------------------------------
-        local LIBRE_SIP_TRANSPORT = 'udp'
-        if sip_via_protocol then LIBRE_SIP_TRANSPORT = sip_via_protocol:lower() end
-        InLeg:setVariable("X-LIBRE-SIP-TRANSPORT", LIBRE_SIP_TRANSPORT)
+        InLeg:execute("export", "X-LIBRE-SESSIONID="..sessionid)
         InLeg:setVariable("X-LIBRE-INTCONNAME", intconname)
         InLeg:setVariable("rtp_secure_media", "optional:"..ENCRYPTION_SUITES)
-
 
         -- call will be reject if inbound interconnection is not enable
         local status = is_intcon_enable(intconname, INBOUND)
@@ -84,14 +81,110 @@ local function main()
             INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
 
+        --------------------------------------------------------------------
+        ----- PRESETTING
+        --------------------------------------------------------------------
+        InLeg:execute("export", "sip_copy_custom_headers=false")
+        -- InLeg:execute("export", "media_timeout=".._MAX_SILENT_TIMEOUT)
+        -- Keeping processe dialplan even called party is unreachable
+        InLeg:setVariable("continue_on_fail", "true")
+        InLeg:setVariable("hangup_after_bridge", "true")
+        --
+        InLeg:setVariable("call_timeout", "0")
+        InLeg:setVariable("fax_enable_t38", "true")
+        -- MAX DURATION CALL
+        -- InLeg:execute("sched_hangup", "+"..MAX_CALL_DURATION.." allotted_timeout")
+        --------------------------------------------------------------------
+        ----- OUTLEG
+        --------------------------------------------------------------------
+        local _uuid
+        local routes = {route1, route2}
+        for attempt=1, #routes do
+            _uuid = fsapi:execute('create_uuid')
+            local route = routes[attempt]
+            -- distributes calls to gateways in a weighted base
+            local forceroute = false 
+            local sipprofile = get_sipprofile(route, OUTBOUND)
+            local gateway = fsapi:execute('expand', 'distributor '..route..' ${sofia profile '..sipprofile..' gwlist down}')
+            if gateway == '-err' then
+                gateway = fsapi:execute('distributor', route)
+                forceroute = true
+            end
 
+            -- set variable on outbound leg 
+            InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
+            local outcodecstr = get_codec(route, OUTBOUND)
+            InLeg:execute("export", "nolocal:sip_cid_type=none")
+            InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
+            --InLeg:execute("export", "nolocal:origination_caller_id_name="..translated_out_clid)
+            --InLeg:execute("export", "nolocal:origination_caller_id_number="..translated_out_clid)
+            InLeg:execute("export", "nolocal:originate_timeout=90")
+            InLeg:execute("export", "nolocal:fax_enable_t38=true")
+            InLeg:execute("export", "nolocal:hangup_after_bridge=true")
+            InLeg:execute("export", "nolocal:origination_uuid=".._uuid)
+            InLeg:execute("export", "nolocal:sip_h_X-LIBRE-ORIGIN-HOP="..intconname)
+            InLeg:setVariable("sip_ph_X-LIBRE-NEXT-HOP", route)
+            InLeg:setVariable("sip_rh_X-LIBRE-NEXT-HOP", route)
+            InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..route)
+            -- RTP/SRTP DECISION
+            --InLeg:execute("export", "nolocal:rtp_secure_media=optional:".._encryption_suites)
+            --InLeg:setVariable("sdp_secure_savp_only", "true")
+            
+            logify('module', 'callctl', 'space', 'inbound', 'action', 'connect_gateway' , 'sessionid', sessionid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
+            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..destination_number, InLeg)
 
+            -- check leg status
+            local dialstatus = OutLeg:hangupCause()
+            logify('module', 'callctl', 'space', 'inbound', 'action', 'verify_state' , 'sessionid', sessionid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
 
+            -- stop if success
+            if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then
+                break
+            end
+            ::ENDROUTING::
+        end
 
+        -- sleep to make sure channel available
+        InLeg:sleep(500)
+
+        if OutLeg then 
+            if( OutLeg:ready() ) then
+                -- log information for leg B
+                local _real_uuid = OutLeg:get_uuid()
+                if _uuid ~= _real_uuid then
+                    logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'pseudo_uuid', _uuid, 'native_uuid', _real_uuid)
+                end
+                local _context = OutLeg:getVariable("context")
+                local _direction = OutLeg:getVariable("direction")
+                local _sip_from_user = OutLeg:getVariable("sip_from_user")
+                local _sip_req_uri = OutLeg:getVariable("sip_req_uri")
+                local _destination_number = OutLeg:getVariable("destination_number")
+                local _sip_to_user = OutLeg:getVariable("sip_to_user")
+                local _sip_network_ip = OutLeg:getVariable("sip_network_ip")
+                local _sofia_profile_name = OutLeg:getVariable("sofia_profile_name")
+                local _sip_call_id = OutLeg:getVariable("sip_call_id")
+
+                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'uuid', _real_uuid,
+                       'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user, 
+                       'to_user', _sip_to_user, 'destination_number', _destination_number, 'remote_ip', _sip_network_ip, 'callid', _sip_call_id)
+                
+                --- BRIDGE 2 LEGs
+                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
+                freeswitch.bridge(InLeg, OutLeg)
+
+                -- HANGUP WHEN DONE FOR OUTLEG
+                if (OutLeg:ready()) then 
+                    OutLeg:hangup(); 
+                end
+            else
+                logify('module', 'callctl', 'space', 'inbound', 'sessionid', sessionid, 'action', 'report', 'info', 'outbound.leg.not.connected')
+            end
+        end
 
         -----------------------------------------------------------
         ----- TMP
         -----------------------------------------------------------
+        --[[]
         InLeg:execute('ring_ready')
         InLeg:execute('pre_answer')
         InLeg:setVariable("ringback", "%(2000,4000,440,480)")
@@ -100,6 +193,15 @@ local function main()
         InLeg:execute('answer')
         InLeg:execute('playback', '/home/hnimminh/vietnamdeclaration.wav')
         InLeg:execute('hangup')
+        ]]
+
+        -----------------------------------------------------------
+        --- HANGUP ONCE DONE
+        -----------------------------------------------------------
+        if (InLeg:ready()) then 
+            InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
+            InLeg:hangup(INLEG_HANGUP_CAUSE); 
+        end
     end
 
     -----------------------------------------------------------

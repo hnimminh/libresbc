@@ -112,6 +112,11 @@ function get_codec(name, direction)
     return join(fieldjsonify(rdbconn:hget('class:codec:'..class, 'codecs')))
 end
 
+-- get siprofile of interconnection name
+function get_sipprofile(name, direction)
+    return rdbconn:hget(intconkey(name, direction), 'sipprofile')
+end
+
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
