@@ -8,7 +8,7 @@ local function main()
     local OutLeg = nil
     local sessionid = fsapi:execute('create_uuid')
     local ENCRYPTION_SUITES = table.concat(SRPT_ENCRYPTION_SUITES, ':')
-    local INLEG_HANGUP_CAUSE = 'NORMAL_CLEARING'
+    local HANGUP_CAUSE = 'NORMAL_CLEARING'
     local LIBRE_HANGUP_CAUSE = 'NONE'
     --- CALL PROCESSING
     if ( InLeg:ready() ) then
@@ -38,30 +38,28 @@ local function main()
         InLeg:setVariable("rtp_secure_media", "optional:"..ENCRYPTION_SUITES)
 
         -- call will be reject if inbound interconnection is not enable
-        local status = is_intcon_enable(intconname, INBOUND)
-        if not status then
-            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'status', status)
-            INLEG_HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_PEER'; goto ENDSESSION
+        if not is_intcon_enable(intconname, INBOUND) then
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'state', 'disabled', 'donext', 'hangup_as_disabled')
+            HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION'; goto ENDSESSION
         end
 
         -- call will be reject if inbound interconnection reach max capacity
         local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
-            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'VIOLATE_MAX_CONCURENT_CALL'; goto ENDSESSION
         end
 
         -- call will be blocked if inbound interconnection is violated the cps
         local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
         if not is_passed then
-            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'CPS_VIOLATION'; goto ENDSESSION
         end
 
         -- codec negotiation
         local codecstr = get_codec(intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
-
         -- translation calling party number
         local tablename = InLeg:getVariable("x-routing-plan")
         routingdata = {tablename=tablename, intconname=intconname, called_number=_dnis, calling_number=_clid}
@@ -72,13 +70,13 @@ local function main()
         
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
         if not (route1 and route2) then
-            INLEG_HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
+            HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
 
         -- blocking call checking
         if (route1 == BLOCK) or (route2 == BLOCK) then
             logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'hangup_as_block', 'uuid', uuid)
-            INLEG_HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
+            HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
 
         --------------------------------------------------------------------
@@ -102,6 +100,15 @@ local function main()
         for attempt=1, #routes do
             _uuid = fsapi:execute('create_uuid')
             local route = routes[attempt]
+
+            -- if state is disable then try next route or drop call
+            if not is_intcon_enable(route, OUTBOUND) then
+                logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'state_check' , 'uuid', _uuid, 'route', route, 'state', 'disabled', 'donext', 'hangup_as_disabled')
+                if attempt >= #routes then HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION' end
+                goto ENDROUTING
+            end
+
+
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
             local sipprofile = get_sipprofile(route, OUTBOUND)
@@ -200,7 +207,7 @@ local function main()
         -----------------------------------------------------------
         if (InLeg:ready()) then 
             InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
-            InLeg:hangup(INLEG_HANGUP_CAUSE); 
+            InLeg:hangup(HANGUP_CAUSE); 
         end
     end
 
@@ -212,7 +219,7 @@ local function main()
     if InLeg then 
         if (InLeg:ready()) then 
             InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
-            InLeg:hangup(INLEG_HANGUP_CAUSE) 
+            InLeg:hangup(HANGUP_CAUSE) 
         end 
     end
     if OutLeg then 
@@ -229,7 +236,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logify("module=enginectl, space=inbound,  action=exception, error="..tostring(error))
+    logger("module=enginectl, space=main,  action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()
