@@ -48,11 +48,6 @@ function dlogify(...)
 end
 
 -------------------------------------------------------------------------
-
-function dialmeta(intable)
-    return "{"..table.concat(intable, ",") .."}"
-end
-
 function ismeberof(intable, value)
 	for i=1, #intable do
 		if value == intable[i] then return true end
