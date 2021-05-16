@@ -24,7 +24,7 @@ function concurentcallskeys(name)
     local clustermembers = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
     local _concurentcallskeys = {}
     for i=1, #clustermembers do
-        arrayinsert( _concurentcallskeys, concurentcallskey(name, clustermembers[i]))
+        arrayinsert(_concurentcallskeys, 'realtime:concurentcalls:'..name..':'..clustermembers[i])
     end
     return _concurentcallskeys
 end
@@ -45,7 +45,7 @@ function verify_concurentcalls(name, direction, uuid)
     if direction == INBOUND then startpoint = 2 end
     local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
         txn:multi()
-        txn:sadd(concurentcallskey(name), uuid)
+        if direction == INBOUND then txn:sadd(concurentcallskey(name), uuid) end
         for i=1, #cckeys do txn:scard(cckeys) end
     end)
     for i=startpoint, #replies do concurentcalls = concurentcalls + tonumber(replies[i]) end
