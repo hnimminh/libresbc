@@ -167,9 +167,8 @@ function intconkey(name, direction)
     end 
 end
 
-function concurentcallskey(name, node)
-    if not node then node = NODEID end
-    return 'realtime:concurentcalls:'..name..':'..node
+function concurentcallskey(name)
+    return 'realtime:concurentcalls:'..name..':'..NODEID
 end
 
 ----------------------------------------------------------------------------

@@ -20,15 +20,14 @@ end
 -- CONCURENT CALL 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
-function concurentcallskeys(name)
-    local clustermembers = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
-    local _concurentcallskeys = {}
-    for i=1, #clustermembers do
-        arrayinsert(_concurentcallskeys, 'realtime:concurentcalls:'..name..':'..clustermembers[i])
-    end
-    return _concurentcallskeys
-end
 
+function concurentcallskeys(name)
+    local xvars = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
+    for i=1, #xvars do
+        xvars[i] = 'realtime:concurentcalls:'..name..':'..xvars[i]
+    end
+    return xvars
+end
 
 function get_defined_concurentcalls(name, direction)
     local class = rdbconn:hget(intconkey(name, direction), 'capacity_class')
