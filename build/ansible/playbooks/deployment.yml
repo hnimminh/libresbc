@@ -16,5 +16,5 @@
     - enginectl
     - freeswitch
     #- netfilter
-    - captagent
+    #- captagent
     - linking
