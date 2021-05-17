@@ -59,7 +59,23 @@ function get_defined_cps(name, direction)
 end
 
 -- LEAKY BUCKET: https://en.wikipedia.org/wiki/Leaky_bucket
-function leaky_bucket(bucket, timestamp)
+function leaky_bucket(bucket, timestamp, cps)
+
+    redis:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)
+
+    local last = redis:zrange(bucket, -1, -1)
+
+    local next
+    if #last > 0 then
+        next = tonumber(last[1]) + math.floor(ROLLING_WINDOW_TIME/cps+0.5)
+    end
+
+    if timestamp > next then
+        next = timestamp
+    end
+
+    redis.zadd(bucket, next, next)
+    return next - timestamp
 end
 
 
