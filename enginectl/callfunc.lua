@@ -59,25 +59,28 @@ function get_defined_cps(name, direction)
 end
 
 -- LEAKY BUCKET: https://en.wikipedia.org/wiki/Leaky_bucket
-function leaky_bucket(bucket, timestamp, cps)
+function leaky_bucket(bucket, cps)
+    timestamp = math.floor(1000 * socket.gettime())
+    earliest = timestamp - ROLLING_WINDOW_TIME
+    constantrate = ROLLING_WINDOW_TIME/cps
 
-    redis:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)
+    atomicity = [[
+    local bucket = KEYS[1]
+    local thistime  = tonumber(ARGV[1])
+    local nexttime = thistime
 
-    local last = redis:zrange(bucket, -1, -1)
+    redis.call('ZREMRANGEBYSCORE', bucket, '-inf', tonumber(ARGV[2]))
+    local last = redis.call('ZRANGE', bucket, -1, -1)
+    if #last > 0 then nexttime = tonumber(last[1]) + tonumber(ARGV[3]) end
 
-    local next
-    if #last > 0 then
-        next = tonumber(last[1]) + math.floor(ROLLING_WINDOW_TIME/cps+0.5)
-    end
+    if thistime > nexttime then nexttime = thistime end
+    redis.call('ZADD', bucket, nexttime, nexttime)
 
-    if timestamp > next then
-        next = timestamp
-    end
+    return nexttime - thistime
+    ]]
 
-    redis.zadd(bucket, next, next)
-    return next - timestamp
+    return rdbconn:eval(atomicity, 1, bucket, timestamp, earliest, constantrate)
 end
-
 
 -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
 function token_bucket(bucket, uuid, timestamp)
