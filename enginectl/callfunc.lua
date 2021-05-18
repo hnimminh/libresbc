@@ -88,7 +88,7 @@ function token_bucket(bucket, uuid, timestamp)
         txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)          -- rotare the the set by remove the member that older
         txn:zadd(bucket, timestamp, uuid)                                              -- add this request to history
         txn:zcard(bucket)                                                              -- can use ZCARD to get number of member in the set p:zrange(history_key, 0, -1, 'withscores')
-        txn:pexpire(bucket, 3*ROLLING_WINDOW_TIME)                                     -- auto remove the key if no request in milisecond, can just be _ROLLING_WINDOW_TIME
+        txn:pexpire(bucket, 2*ROLLING_WINDOW_TIME)                                     -- auto remove the key if no request in milisecond, can just be _ROLLING_WINDOW_TIME
     end)
 end
 
@@ -102,12 +102,10 @@ function verify_cps(name, direction, uuid)
     local current_blocking_time = rdbconn:pttl(violate_key)
     -- mean this traffic is blocked
     if 0 < current_blocking_time then
-        -- below block is a optimization, you can comeback once you understand the rest of code.
-        -- the call already blocked with VIOLATED_BLOCK=60000 ms and ROLLING_WINDOW=1000ms
-        -- you just need to update from 59,000 to current timepoint; the update is useless for ealier
-        -- if current_blocking_time < ROLLING_WINDOW_TIME then token_bucket() end
-        -- increase by triple violated blocking time
-        rdbconn:psetex(violate_key, 2*VIOLATED_BLOCK_TIME, timestamp)
+        -- the call already blocked with VIOLATED_BLOCK=60000ms and ROLLING_WINDOW=1000ms
+        if current_blocking_time < VIOLATED_BLOCK_TIME then
+            rdbconn:psetex(violate_key, 3*VIOLATED_BLOCK_TIME, timestamp)
+        end
         -- return
         return false, nil, nil, current_blocking_time
     else
