@@ -58,34 +58,38 @@ function get_defined_cps(name, direction)
     return fieldjsonify(rdbconn:hget('class:capacity:'..class, 'cps'))
 end
 
--- LEAKY BUCKET: https://en.wikipedia.org/wiki/Leaky_bucket
-function leaky_bucket(bucket, cps)
-    timestamp = math.floor(1000 * socket.gettime())
-    earliest = timestamp - ROLLING_WINDOW_TIME
-    constantrate = ROLLING_WINDOW_TIME/cps
 
-    atomicity = [[
+function average_cps(name, direction)
+    -- LEAKY BUCKET: https://en.wikipedia.org/wiki/Leaky_bucket
+    -- shaping traffic with contant rate, eg: 10cps mean call every 100ms
+    local leakybucket =[[
     local bucket = KEYS[1]
-    local thistime  = tonumber(ARGV[1])
-    local nexttime = thistime
-
-    redis.call('ZREMRANGEBYSCORE', bucket, '-inf', tonumber(ARGV[2]))
-    local last = redis.call('ZRANGE', bucket, -1, -1)
-    if #last > 0 then nexttime = tonumber(last[1]) + tonumber(ARGV[3]) end
-
-    if thistime > nexttime then nexttime = thistime end
-    redis.call('ZADD', bucket, nexttime, nexttime)
-
-    return nexttime - thistime
+    local current = tonumber(ARGV[1])
+    local leakyms = tonumber(ARGV[2])
+    local nextcall = current
+    local lastcall = redis.call('GET', bucket)
+    if lastcall then
+        if current < tonumber(lastcall) + leakyms then
+            nextcall = tonumber(lastcall) + leakyms
+        end
+    end
+    local waitms = nextcall - current
+    redis.call('PSETEX', bucket, waitms+leakyms, nextcall)
+    return waitms
     ]]
-
-    return rdbconn:eval(atomicity, 1, bucket, timestamp, earliest, constantrate)
+    local bucket = 'realtime:leaky:bucket:'..name
+    local timestamp = math.floor(1000 * socket.gettime())
+    local max_cps = get_defined_cps(name, direction)
+    local leakyms = math.floor(ROLLING_WINDOW_TIME/max_cps + 0.5)
+    local waitms = rdbconn:eval(leakybucket, 1, bucket, timestamp, leakyms)
+    local current_cps = math.floor(waitms/leakyms + 0.5)
+    return waitms, max_cps
 end
 
 
 function verify_cps(name, direction, uuid)
-    local violate_key = 'call:cps:violation:'..name
-    local history_key = 'call:cps:history:'..name
+    local violate_key = 'realtime:cps:violation:'..name
+    local bucket = 'realtime:token:bucket:'..name
     local timestamp = math.floor(1000 * socket.gettime())                                       -- time stamp in ms; same as unit of ROLLING_WINDOW_TIME
     -- check if interconnection is blocked, use PTTL O(1) instead of EXISTS O(1): 
     -- -2 if the key does not exist, -1 if the key exists but has no associated expire, +n milisecond if any
@@ -101,7 +105,7 @@ function verify_cps(name, direction, uuid)
         -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
         -- eg: 10cps mean 10 call as last 1000ms and not 10 call at 999ms and next 10 calls more at 1001
         local tokenbucket = rdbconn:transaction(function(txn)
-            txn:zremrangebyscore(history_key, '-inf', timestamp - ROLLING_WINDOW_TIME)          -- rotare the the set by remove the member that older
+            txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)          -- rotare the the set by remove the member that older
             txn:zadd(bucket, timestamp, uuid)                                                   -- add this request to history
             txn:zcard(bucket)                                                                   -- can use ZCARD to get number of member in the set p:zrange(history_key, 0, -1, 'withscores')
             txn:pexpire(bucket, 2*ROLLING_WINDOW_TIME)                                          -- auto remove the key if no request in milisecond, can just be ROLLING_WINDOW_TIME
