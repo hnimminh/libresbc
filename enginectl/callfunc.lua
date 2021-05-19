@@ -140,7 +140,7 @@ end
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_translation_rules(name, direction)
-    local classes = rdbconn:hget(intconkey(name, direction), 'translation_classes')
+    local classes = fieldjsonify(rdbconn:hget(intconkey(name, direction), 'translation_classes'))
     if #classes == 0 then 
         return {}
     else
@@ -172,10 +172,10 @@ function translate(caller, callee, name, direction)
         -- translate only both conditions are true
         if condition then
             if (#caller_pattern > 0) then
-                translated_caller = fsapi:execute('regex', caller..'|'..caller_pattern..'|'..rules[i].caller_replacement)
+                translated_caller = fsapi:execute('regex', translated_caller..'|'..caller_pattern..'|'..rules[i].caller_replacement)
             end
             if (#callee_pattern > 0) then
-                translated_callee = fsapi:execute('regex', caller..'|'..callee_pattern..'|'..rules[i].callee_replacement)
+                translated_callee = fsapi:execute('regex', translated_callee..'|'..callee_pattern..'|'..rules[i].callee_replacement)
             end
             arrayinsert( match_rules, rules[i].name)
         end
