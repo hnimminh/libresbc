@@ -109,18 +109,18 @@ local function main()
 
             -- call will be reject if outbound interconnection reach max capacity
             local _concurentcalls, _max_concurentcalls =  verify_concurentcalls(route, OUTBOUND, _uuid)
-            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', uuid, 'route', route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'concurency_check' , 'uuid', _uuid, 'route', route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
             if _concurentcalls >= _max_concurentcalls then
                 if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL' end; goto ENDFAILOVER
             end
 
             -- call will be reject if outbound interconnection reach max cps
-            local is_passed, current_cps, max_cps, block_ms = verify_cps(route, OUTBOUND, _uuid)
-            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'cps_check' ,'uuid', uuid, 'route', route, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
-            if not is_passed then
-                HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
-            end
-            
+            local waitms, queue, max_cps = average_cps(route, OUTBOUND)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'average_cps' ,'uuid', _uuid, 'route', route, 'waitms', waitms, 'queue', queue, 'max_cps', max_cps)
+            if queue >  max_cps then
+                HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_QUEUE'; goto ENDFAILOVER
+            else InLeg:sleep(waitms) end
+
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
             local sipprofile = get_sipprofile(route, OUTBOUND)

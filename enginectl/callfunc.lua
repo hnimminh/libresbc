@@ -64,26 +64,26 @@ function average_cps(name, direction)
     -- shaping traffic with contant rate, eg: 10cps mean call every 100ms
     local leakybucket =[[
     local bucket = KEYS[1]
-    local current = tonumber(ARGV[1])
-    local leakyms = tonumber(ARGV[2])
+    local leakyms = tonumber(ARGV[1])
+    local timestamp = redis.call('TIME')
+    local current = math.ceil(1000*timestamp[1] + timestamp[2]/1000)
     local nextcall = current
     local lastcall = redis.call('GET', bucket)
     if lastcall then
-        if current < tonumber(lastcall) + leakyms then
-            nextcall = tonumber(lastcall) + leakyms
-        end
+        nextcall = math.max(tonumber(lastcall) + leakyms, current)
     end
-    local waitms = nextcall - current
-    redis.call('PSETEX', bucket, waitms+leakyms, nextcall)
-    return waitms
+    nextcall = math.max(nextcall, current)
+    redis.call('PSETEX', bucket, nextcall-current+leakyms, nextcall)
+    return {nextcall, current}
     ]]
     local bucket = 'realtime:leaky:bucket:'..name
-    local timestamp = math.floor(1000 * socket.gettime())
     local max_cps = get_defined_cps(name, direction)
-    local leakyms = math.floor(ROLLING_WINDOW_TIME/max_cps + 0.5)
-    local waitms = rdbconn:eval(leakybucket, 1, bucket, timestamp, leakyms)
-    local current_cps = math.floor(waitms/leakyms + 0.5)
-    return waitms, max_cps
+    local leakyms = math.ceil(1000/max_cps)
+    local timers = rdbconn:eval(leakybucket, 1, bucket, leakyms)
+    local nextcall, current = timers[1], timers[2]
+    local waitms = nextcall - current
+    local queue = math.ceil((nextcall-current)/leakyms)
+    return waitms, queue, max_cps, leakyms, current, nextcall
 end
 
 
