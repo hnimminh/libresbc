@@ -110,6 +110,10 @@ function join(array, separator)
     return table.concat(array, separator)
 end
 
+function rulejoin(array)
+    return '['..table.concat(array, ',')..']'
+end
+
 function startswith(originstr, startstr)
     return originstr:sub(1, #startstr) == startstr
 end
