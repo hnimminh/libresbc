@@ -16,20 +16,18 @@ local function main()
         local uuid = InLeg:get_uuid()
         local context = InLeg:getVariable("context")
         local profilename = InLeg:getVariable("sofia_profile_name")
-        local sip_from_user = InLeg:getVariable("sip_from_user")
-        local destination_number = InLeg:getVariable("destination_number")
-        local sip_to_user = InLeg:getVariable("sip_to_user")
-        local sip_network_ip = InLeg:getVariable("sip_network_ip")
-        local sip_call_id = InLeg:getVariable("sip_call_id")
-        local sip_via_protocol = InLeg:getVariable("sip_via_protocol")
+        local network_ip = InLeg:getVariable("sip_network_ip")
         local realm = InLeg:getVariable("domain_name")
         local intconname = InLeg:getVariable("user_name")
+        local call_id = InLeg:getVariable("sip_call_id")
+        local transport = InLeg:getVariable("sip_via_protocol")
+        local caller_name = InLeg:getVariable("caller_id_name")
+        local caller_number = InLeg:getVariable("caller_id_number")
+        local destination_number = InLeg:getVariable("destination_number")
         -- log the incoming call request
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'inbound_call' , 'uuid', uuid, 'context', context, 
-               'profilename', profilename, 'sip_from_user', sip_from_user, 'sip_to_user', sip_to_user, 
-               'destination_number', destination_number, 'sip_network_ip', sip_network_ip, 'callid', sip_call_id,
-               'sip_via_protocol', sip_via_protocol, 'intconname', intconname, 'realm', realm)
-
+               'profilename', profilename, 'network_ip', network_ip, 'realm', realm, 'intconname', intconname, 'call_id', call_id,
+               'transport', transport, 'caller_name', caller_name, 'caller_number', caller_number, 'destination_number', destination_number)
         -----------------------------------------------------------
         ---- IN LEG: INTIAL VAR
         -----------------------------------------------------------
