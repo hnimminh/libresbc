@@ -54,17 +54,19 @@ local function main()
         if not is_passed then
             HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
         end
-
+        -- translation
+        local clid, dnis, tranrules = translate(caller_number, destination_number, intconname, INBOUND)
+        logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'clid', clid, 'dnis', dnis)
         -- codec negotiation
         local codecstr = get_codec(intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
         -- translation calling party number
         local tablename = InLeg:getVariable("x-routing-plan")
-        routingdata = {tablename=tablename, intconname=intconname, called_number=_dnis, calling_number=_clid}
+        routingdata = {tablename=tablename, intconname=intconname, caller_number=clid, destination_number=dnis}
         route1, route2, routingrules = routing_query(tablename, routingdata)
 
         local routingrulestr = 'no.matching.route.found'
-        if (#routingrules > 0) then routingrulestr = join(routingrules) end
+        if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
         
         logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
         if not (route1 and route2) then
@@ -81,14 +83,11 @@ local function main()
         ----- PRESETTING
         --------------------------------------------------------------------
         InLeg:execute("export", "sip_copy_custom_headers=false")
-        -- InLeg:execute("export", "media_timeout=".._MAX_SILENT_TIMEOUT)
-        -- Keeping processe dialplan even called party is unreachable
         InLeg:setVariable("continue_on_fail", "true")
         InLeg:setVariable("hangup_after_bridge", "true")
-        --
         InLeg:setVariable("call_timeout", "0")
         InLeg:setVariable("fax_enable_t38", "true")
-        -- MAX DURATION CALL
+        -- InLeg:execute("export", "media_timeout=".._MAX_SILENT_TIMEOUT)
         -- InLeg:execute("sched_hangup", "+"..MAX_CALL_DURATION.." allotted_timeout")
         --------------------------------------------------------------------
         ----- OUTLEG
@@ -118,7 +117,11 @@ local function main()
             if queue >  max_cps then
                 HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_QUEUE'; goto ENDFAILOVER
             else InLeg:sleep(waitms) end
-
+            
+            -- translation
+            local _clid, _dnis, _tranrules = translate(clid, dnis, route, OUTBOUND)
+            logify('module', 'enginectl', 'space', 'main', 'sessionid', sessionid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'clid', _clid, 'dnis', _dnis)
+            
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
             local sipprofile = get_sipprofile(route, OUTBOUND)
@@ -133,8 +136,8 @@ local function main()
             local outcodecstr = get_codec(route, OUTBOUND)
             InLeg:execute("export", "nolocal:sip_cid_type=none")
             InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
-            --InLeg:execute("export", "nolocal:origination_caller_id_name="..translated_out_clid)
-            --InLeg:execute("export", "nolocal:origination_caller_id_number="..translated_out_clid)
+            InLeg:execute("export", "nolocal:origination_caller_id_name=".._clid)
+            InLeg:execute("export", "nolocal:origination_caller_id_number=".._dnis)
             InLeg:execute("export", "nolocal:originate_timeout=90")
             InLeg:execute("export", "nolocal:fax_enable_t38=true")
             InLeg:execute("export", "nolocal:hangup_after_bridge=true")
@@ -148,7 +151,7 @@ local function main()
             --InLeg:setVariable("sdp_secure_savp_only", "true")
             
             logify('module', 'enginectl', 'space', 'main', 'action', 'connect_gateway' , 'sessionid', sessionid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
-            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..destination_number, InLeg)
+            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/".._dnis, InLeg)
 
             -- check leg status
             local dialstatus = OutLeg:hangupCause()
