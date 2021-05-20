@@ -1142,10 +1142,11 @@ def list_capacity_class(response: Response):
 class TranslationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of translation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    caller_pattern: str = Field(max_length=128, description='caller pattern use pcre')
-    callee_pattern: str = Field(max_length=128, description='callee pattern use pcre')
-    caller_replacement: str = Field(max_length=128, description='replacement that refer to caller pattern use pcre')
-    callee_replacement: str = Field(max_length=128, description='replacement that refer to callee pattern use pcre')
+    caller_number_pattern: str = Field(max_length=128, description='caller number pattern use pcre')
+    destination_number_pattern: str = Field(max_length=128, description='destination number pattern use pcre')
+    caller_number_replacement: str = Field(max_length=128, description='replacement that refer to caller number pattern use pcre')
+    destination_number_replacement: str = Field(max_length=128, description='replacement that refer to destination number pattern use pcre')
+    caller_name: Optional[str] = Field(default='_auto', max_length=128, description='set caller name, value can be any string or defined conventions: _auto, _caller_number(use caller id number as name)') 
 
 @librerouter.post("/libreapi/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
