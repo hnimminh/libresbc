@@ -153,34 +153,45 @@ function get_translation_rules(name, direction)
     end
 end
 
-function translate(caller, callee, name, direction)
-    local translated_caller = caller
-    local translated_callee = callee
+function translate(clidnum, clidname, destnum, name, direction)
+    local translated_clidnum = clidnum
+    local translated_clidname = clidname
+    local translated_destnum = destnum
     local match_rules = {}
     local rules = get_translation_rules(name, direction)
     for i=1, #rules do
-        local caller_pattern = rules[i].caller_pattern
-        local callee_pattern = rules[i].callee_pattern
+        local caller_number_pattern = rules[i].caller_number_pattern
+        local destination_number_pattern = rules[i].destination_number_pattern
         -- check condtion
         local condition = true
-        if (#caller_pattern > 0) then
-            condition = toboolean(fsapi:execute('regex', translated_caller..'|'..caller_pattern..'|'))
+        if (#caller_number_pattern > 0) then
+            condition = toboolean(fsapi:execute('regex', translated_clidnum..'|'..caller_number_pattern..'|'))
         end
-        if (condition and (#callee_pattern > 0)) then 
-            condition = toboolean(fsapi:execute('regex', translated_callee..'|'..callee_pattern..'|'))
+        if (condition and (#destination_number_pattern > 0)) then 
+            condition = toboolean(fsapi:execute('regex', translated_destnum..'|'..destination_number_pattern..'|'))
         end
         -- translate only both conditions are true
         if condition then
-            if (#caller_pattern > 0) then
-                translated_caller = fsapi:execute('regex', translated_caller..'|'..caller_pattern..'|'..rules[i].caller_replacement)
+            if (#caller_number_pattern > 0) then
+                translated_clidnum = fsapi:execute('regex', translated_clidnum..'|'..caller_number_pattern..'|'..rules[i].caller_number_replacement)
             end
-            if (#callee_pattern > 0) then
-                translated_callee = fsapi:execute('regex', translated_callee..'|'..callee_pattern..'|'..rules[i].callee_replacement)
+            if (#destination_number_pattern > 0) then
+                translated_destnum = fsapi:execute('regex', translated_destnum..'|'..destination_number_pattern..'|'..rules[i].destination_number_replacement)
+            end
+            -- caler id name
+            local caller_name = rules[i].caller_name
+            if caller_name then
+                if caller_name == '_caller_number' then
+                    translated_clidname = translated_clidnum
+                elseif caller_name == '_auto' then
+                else
+                    translated_clidname = caller_name
+                end
             end
             arrayinsert( match_rules, rules[i].name)
         end
     end
-    return translated_caller, translated_callee, match_rules
+    return translated_clidnum, translated_clidname, translated_destnum,  match_rules
 end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- MANIPULATION 
