@@ -49,7 +49,7 @@ local function cdrreport()
         direction=direction,
         sipprofile=sipprofile,
         context=context,
-        nodeid=nodeid,
+        nodeid=NODEID,
         intconname=intconname,
         gateway_name=gateway_name,
         user_agent=user_agent,
