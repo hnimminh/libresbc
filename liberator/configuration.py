@@ -37,3 +37,11 @@ ESL_PORT = 8021
 ESL_SECRET = '{{callengine.secret}}'
 # DEFAULT SIP SECRET
 DEFAULT_PASSWORD = '{{callengine.sipsecret}}'
+
+# LOG DIRECTORY
+LOGDIR = '{{logdir}}'
+
+#-----------------------------------------------------------------------------------------------------
+# HTTPCDR DATA
+#-----------------------------------------------------------------------------------------------------
+HTTPCDR_ENDPOINTS = {{httpcdr.endpoints if httpcdr else 'None'}}
