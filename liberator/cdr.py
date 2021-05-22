@@ -155,7 +155,7 @@ SIP_DISPOSITIONS = {
 def fmtime(epochtime):
     try:
         epochtime = float(epochtime)
-        if epochtime == 0: return str()
+        if epochtime == 0: None
         else: return datetime.fromtimestamp(epochtime, tz=timezone.utc).isoformat()
     except: 
         return None

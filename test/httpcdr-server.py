@@ -22,16 +22,16 @@ class S(BaseHTTPRequestHandler):
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
-        logging.info(f"POST request,\nPath: {str(self.path)}\nHeaders:\n{str(self.headers)}\n\nBody:\n{post_data.decode('utf-8')}\n")
+        logging.info(f"POST request,\nPath: {str(self.path)}\nHeaders:\n{str(self.headers)}\nBody:\n{post_data.decode('utf-8')}\n")
 
         self._set_response()
         self.wfile.write("POST request for {}".format(self.path).encode('utf-8'))
 
-def run(server_class=HTTPServer, handler_class=S, ipaddr='127.0.0.0', port=54321):
+def run(server_class=HTTPServer, handler_class=S, ipaddr='127.0.0.1', port=54321):
     logging.basicConfig(level=logging.INFO)
     server_address = (ipaddr, port)
     httpd = server_class(server_address, handler_class)
-    logging.info('Starting httpd...\n')
+    logging.info(f'Starting httpd, listen on {ipaddr}:{port}\n')
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
