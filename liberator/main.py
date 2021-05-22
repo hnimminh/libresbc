@@ -9,6 +9,7 @@ import uvicorn
 from utilities import logify, debugy
 from api import httpapi
 from basemgr import BaseEventHandler
+from cdr import CDREvent
 
 #---------------------------------------------------------------------------------------------------------------------------
 # MAIN APPLICATION
@@ -19,6 +20,9 @@ if __name__ == '__main__':
         # EVENT HANDLER
         eventthead = BaseEventHandler()
         eventthead.start()
+        # CDR HANDLER
+        cdrthread = CDREvent()
+        cdrthread.start()
         # HTTP API
         uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, reload=True )
     except Exception as e:
