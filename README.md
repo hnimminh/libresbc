@@ -45,7 +45,7 @@ Offer border-based media control and services such as:
 
 ### Intergration
 Support to intergrate with 3rd-party system or customer function easily
-* Flexible JSON for Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to Webhook or Database server
+* Flexible JSON for Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to HTTP API, enabling customized/3rd-party usage such as databases, data analysis or billing purpose. 
 * Customization routing mechanism via HTTP API
 * Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/) 
 * [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) and/or [Prometheus](https://prometheus.io/) monitoring
