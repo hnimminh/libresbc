@@ -232,10 +232,11 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
         data.update({'addresses': addressesstr})
         rdbconn.hmset(name_key, redishash(data))
+        # proactive get list who use this netalias
+        _engaged_key = f'engagement:{_name_key}'
+        engaged_key = f'engagement:{name_key}'
+        engagements = rdbconn.smembers(_engaged_key)
         if name != identifier:
-            _engaged_key = f'engagement:{_name_key}'
-            engaged_key = f'engagement:{name_key}'
-            engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 if rdbconn.hget(engagement, 'rtp_address') == identifier:
                     pipe.hset(engagement, 'rtp_address', name)
@@ -246,9 +247,10 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        # fire-event netalias change, process reload only if there is some-one use it
+        if engagements:
+            for index, node in enumerate(CLUSTERS.get('members')):
+                pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'sipprofiles': engagements, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -272,9 +274,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:netalias:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        # delete action perform only no one use it so no-one use mean no need reload as this not loaded to memory
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -405,10 +405,11 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('key')}:{rule.get('value')}", rules))
         data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
+        # proactive get list who use this acl
+        _engaged_key = f'engagement:{_name_key}'
+        engaged_key = f'engagement:{name_key}'
+        engagements = rdbconn.smembers(_engaged_key)
         if name != identifier:
-            _engaged_key = f'engagement:{_name_key}'
-            engaged_key = f'engagement:{name_key}'
-            engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 pipe.hset(engagement, 'local_network_acl', name)
             if rdbconn.exists(_engaged_key):
@@ -416,9 +417,10 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        # fire-event acl change, process reload only if there is some-one use it
+        if engagements:
+            for index, node in enumerate(CLUSTERS.get('members')):
+                pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'sipprofiles': engagements, 'name': name, '_name': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -442,7 +444,8 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change
+        # delete action perform only no one use it so no-one use it, by right this should be clean on memory 
+        # however best practice of optimization it will be luckily clear sometime later if acl change
         for index, node in enumerate(CLUSTERS.get('members')):
             pipe.rpush(f'event:callengine:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
@@ -1379,7 +1382,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire event for update gateway
+        # fire event for update gateway only if gatetway in used
         intconname = rdbconn.srandmember(engaged_key); sipprofile = None
         if intconname:
             sipprofile = rdbconn.hget(f'intcon:out:{intconname}', 'sipprofile')
@@ -1599,7 +1602,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
         for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'sipprofile': sipprofile, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1648,7 +1651,13 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
+        # remove intcon out of the  gateways engagement list, and built the map of gateway and number of intcon use this gateway
+        _gws =  dict()
+        for gateway in _gateways:
+            gw_engaged_key = f'engagement:base:gateway:{gateway}'
+            _gws[gateway] = rdbconn.scard(gw_engaged_key)
+            pipe.srem(gw_engaged_key, identifier)
+
         pipe.delete(f'{_name_key}:_gateways')
         # processing: adding new-one
         data.pop('gateways'); data.update({'rtpaddrs': rtpaddrs, 'nodes': nodes })
@@ -1687,11 +1696,12 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # fire-event outbound interconnect update
-        for index, node in enumerate(CLUSTERS.get('members')):
-            key = f'event:callengine:outbound:intcon:{node}'
-            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value)); pipe.execute()
+        # fire-event outbound interconnect update only if gateway or sipprofile change
+        if sipprofile != sipprofile or set(gateway.keys()) == set(_gateways.keys()):
+            for index, node in enumerate(CLUSTERS.get('members')):
+                key = f'event:callengine:outbound:intcon:{node}'
+                value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': gateways.keys(), '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
+                pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1727,14 +1737,21 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for gateway in _gateways: pipe.srem(f'engagement:base:gateway:{gateway}', identifier)
+        # remove intcon out of the  gateways engagement list, and built the map of gateway and number of intcon use this gateway
+        _gws =  dict()
+        for gateway in _gateways:
+            gw_engaged_key = f'engagement:base:gateway:{gateway}'
+            _gws[gateway] = rdbconn.scard(gw_engaged_key)
+            pipe.srem(gw_engaged_key, identifier)
+
         pipe.delete(f'{_name_key}:_gateways')
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        if _gws:
+            for index, node in enumerate(CLUSTERS.get('members')):
+                pipe.rpush(f'event:callengine:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, '_sipprofile': _sipprofile, '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
