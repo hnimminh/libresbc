@@ -89,7 +89,7 @@
             {#- <!-- DIALPLAN--> #}
             <param name="dialplan" value="XML"/>
             <param name="context" value="{{sipprofile.context}}"/>
-            <param name="dbname" value="/dev/shm/libresbc/sip_{{sipprofile.name}}.db"/>
+            <param name="dbname" value="/dev/shm/libresbc_sip_{{sipprofile.name}}.db"/>
             {#- <!-- SERVER BINDING --> #}
             <param name="rtp-ip" value="{{ netaliases[sipprofile.rtp_address][NODEID]['listen'] }}"/>
             <param name="sip-ip" value="{{ netaliases[sipprofile.sip_address][NODEID]['listen'] }}"/>
