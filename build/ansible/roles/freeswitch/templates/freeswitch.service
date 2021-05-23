@@ -1,8 +1,8 @@
 [Unit]
 Description=FreeSwitch
 Wants=network-online.target
-Requires=network.target local-fs.target liberator.service
-After=network.target network-online.target local-fs.target liberator.service
+Requires=network.target local-fs.target
+After=network.target network-online.target local-fs.target
 
 [Service]
 Type=forking
