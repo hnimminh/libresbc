@@ -1891,13 +1891,13 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent inbound interconnection'}; return
         # guaranted that the address not overlap eachother
-        _recognitions = rdbconn.smembers(f'recognition:{sipprofile}')
+        _farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{sipprofile}')
         for sipaddr in sipaddrs:
             cidr = IPv4Network(sipaddr)
-            for _recognition in _recognitions:
-                _cidr = IPv4Network(_recognition)
+            for _farendsipaddr in _farendsipaddrs:
+                _cidr = IPv4Network(_farendsipaddr)
                 if _cidr.overlaps(cidr):
-                        response.status_code, result = 403, {'error': f'These addresses {sipaddr} & {_recognition} are overlaped'}; return
+                        response.status_code, result = 403, {'error': f'These addresses {sipaddr} & {_farendsipaddr} are overlaped'}; return
         # processing
         data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
@@ -1909,7 +1909,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        for sipaddr in sipaddrs: pipe.sadd(f'recognition:{sipprofile}', sipaddr)
+        for sipaddr in sipaddrs: pipe.sadd(f'farendsipaddrs:in:{sipprofile}', sipaddr)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
@@ -1962,13 +1962,13 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         if sipprofile == _sipprofile: newaddrs = sipaddrs - _sipaddrs
         else: newaddrs = sipaddrs
         if newaddrs:
-            _recognitions = rdbconn.smembers(f'recognition:{_sipprofile}')
+            _farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{_sipprofile}')
             for newaddr in newaddrs:
                 cidr = IPv4Network(newaddr)
-                for _recognition in _recognitions:
-                    _cidr = IPv4Network(_recognition)
+                for _farendsipaddr in _farendsipaddrs:
+                    _cidr = IPv4Network(_farendsipaddr)
                     if _cidr.overlaps(cidr):
-                            response.status_code, result = 403, {'error': f'These addresses {newaddr} & {_recognition} are overlaped'}; return
+                            response.status_code, result = 403, {'error': f'These addresses {newaddr} & {_farendsipaddr} are overlaped'}; return
         # transaction block
         pipe.multi()
         # processing: removing old-one
@@ -1982,7 +1982,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
         if sipprofile == _sipprofile: 
             oldaddrs = _sipaddrs - sipaddrs
-            for oldaddr in oldaddrs: pipe.srem(f'recognition:{_sipprofile}', oldaddr)
+            for oldaddr in oldaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', oldaddr)
         # processing: adding new-one
         data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
@@ -1994,7 +1994,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
-        for newaddr in newaddrs: pipe.sadd(f'recognition:{sipprofile}', newaddr)
+        for newaddr in newaddrs: pipe.sadd(f'farendsipaddrs:in:{sipprofile}', newaddr)
         # remove the unintended-field
         for _field in _data:
             if _field not in data:
@@ -2043,7 +2043,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for _sipaddr in _sipaddrs: pipe.srem(f'recognition:{_sipprofile}', _sipaddr)  
+        for _sipaddr in _sipaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', _sipaddr)  
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
