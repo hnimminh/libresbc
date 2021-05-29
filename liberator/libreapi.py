@@ -604,6 +604,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.sadd(f'engagement:base:netalias:{rtp_address}', name_key)
         pipe.sadd(f'engagement:base:realm:{realm}', name_key)
+        pipe.sadd(f'nameset:siprofile', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
@@ -663,6 +664,8 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
+            pipe.srem(f'nameset:siprofile', identifier)
+            pipe.sadd(f'nameset:siprofile', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
@@ -696,6 +699,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
         pipe.delete(f'engagement:base:realm:{_realm}')
+        pipe.srem(f'nameset:siprofile', identifier)
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
         pipe.execute()
