@@ -58,18 +58,13 @@ def acl(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
         # IP LIST OF SIP PROFILE AND REALM
-        # {profilename: realm}
-        KEYPATTERN = 'sipprofile:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hget(mainkey, 'realm' )
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        for profilename in profilenames:
+            pipe.hget(f'sipprofile:{profilename}', 'realm' )
         realms = pipe.execute()
         sipprofiles = dict()
-        for mainkey, realm in zip(mainkeys, realms):
-            sipprofiles[getnameid(mainkey)] = realm
+        for profilename, realm in zip(profilenames, realms):
+            sipprofiles.update({profilename: realm})
 
         # DEFINED ACL LIST
         # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
@@ -152,17 +147,13 @@ def sip(request: Request, response: Response):
 
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
-        KEYPATTERN = 'sipprofile:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hgetall(mainkey)
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        for profilename in profilenames:
+            pipe.hgetall(f'sipprofile:{profilename}')
         details = pipe.execute()
         sipprofiles = dict()
-        for mainkey, detail in zip(mainkeys, details):
-            sipprofiles[getnameid(mainkey)] = jsonhash(detail)
+        for profilename, detail in zip(profilenames, details):
+            sipprofiles.update({profilename: jsonhash(detail)})
 
         # get the mapping siprofile name and interconnection name
         # {profilename1: [intconname,...], profilename2: [intconname,...]}
@@ -209,37 +200,31 @@ def directory(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
         # IP LIST OF SIP PROFILE AND REALM
-        # {profilename: realm}
-        KEYPATTERN = 'sipprofile:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hget(mainkey, 'realm' )
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        for profilename in profilenames:
+            pipe.hget(f'sipprofile:{profilename}', 'realm' )
         realms = pipe.execute()
         sipprofiles = dict()
-        for mainkey, realm in zip(mainkeys, realms):
-            sipprofiles[getnameid(mainkey)] = realm
+        for profilename, realm in zip(profilenames, realms):
+            sipprofiles.update({profilename: realm})
 
         # IP LIST OF INBOUND INTERCONNECTION
         # {profilename: {profilename, sipaddrs, secret}}
-        KEYPATTERN = 'intcon:in:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hmget(mainkey, 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
-        
+        for profilename in profilenames:
+            pipe.smembers(f'engagement:sipprofile:{profilename}')
+        intconsets = pipe.execute()
+        intconnames = [item for sublist in intconsets for item in sublist if item.startswith('in:')]
+        for intconname in intconnames:
+            pipe.hmget(f'intcon:{intconname}', 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
+        details = pipe.execute()
+
         directories = dict()
-        for mainkey, details in zip(mainkeys, pipe.execute()):
-            intconname = getnameid(mainkey)
-            profilename = details[0]
-            sipaddrs = fieldjsonify(details[1])
-            secret = details[2]
-            authscheme = details[3]
-            routing = details[4]
+        for intconname, detail in zip(intconnames, details):
+            profilename = detail[0]
+            sipaddrs = fieldjsonify(detail[1])
+            secret = detail[2]
+            authscheme = detail[3]
+            routing = detail[4]
 
             if authscheme=='IP': 
                 password = DEFAULT_PASSWORD
