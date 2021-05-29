@@ -59,7 +59,7 @@ class BaseEventHandler(Thread):
     def run(self):
         logify(f"module=liberator, space=basemgr, node={NODEID}, action=start_base_event_handler_thread")
         libreapi_netalias_event = f'event:libreapi:netalias:{NODEID}' # need reload sipprofile that use this netalias
-        libreapi_acl_event = f'event:api:libreapi:{NODEID}'
+        libreapi_acl_event = f'event:libreapi:{NODEID}'
         libreapi_sipprofile_event = f'event:libreapi:sipprofile:{NODEID}'
         libreapi_gateway_event = f'event:libreapi:gateway:{NODEID}'
         libreapi_outcon_event = f'event:libreapi:outbound:intcon:{NODEID}'
