@@ -62,7 +62,7 @@ local function main()
         InLeg:setVariable("codec_string", codecstr)
         -- translation calling party number
         local tablename = InLeg:getVariable("x-routing-plan")
-        routingdata = {tablename=tablename, intconname=intconname, caller_number=clid, destination_number=dnis}
+        routingdata = {tablename=tablename, intconname=intconname, caller_number=clidnum, destination_number=dnisnum}
         route1, route2, routingrules = routing_query(tablename, routingdata)
 
         local routingrulestr = 'no.matching.route.found'
