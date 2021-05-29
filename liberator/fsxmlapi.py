@@ -7,11 +7,11 @@ import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from configuration import (NODEID, CLUSTERS,
-                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD,
+from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_,
+                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getnameid, listify
+from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
@@ -57,7 +57,7 @@ def esl(request: Request, response: Response):
 def acl(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
-        # IP LIST OF SIP PROFILE AND REALM
+        # SIP PROFILE AND REALM
         profilenames = rdbconn.smembers('nameset:sipprofile')
         for profilename in profilenames:
             pipe.hget(f'sipprofile:{profilename}', 'realm' )
@@ -66,26 +66,25 @@ def acl(request: Request, response: Response):
         for profilename, realm in zip(profilenames, realms):
             sipprofiles.update({profilename: realm})
 
-        # DEFINED ACL LIST
+        # ENGAGMENT ACL LIST
         # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
-        KEYPATTERN = 'base:acl:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hgetall(mainkey)
-        defined_acls = list()
-        for detail in pipe.execute():
+        for profilename in profilenames:
+            pipe.hget(f'sipprofile:{profilename}', 'local_network_acl')
+        engagedacls = [acl for acl in pipe.execute() if acl not in _BUILTIN_ACLS_]
+        for engagedacl in engagedacls:
+            pipe.hgetall(f'base:acl:{engagedacl}')
+        details = pipe.execute()
+        acls = list()
+        for detail in details:
             if detail:
                 name = detail.get('name')
                 action = detail.get('action')
                 rulestrs = fieldjsonify(detail.get('rules'))
                 rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
-                defined_acls.append({'name': name, 'action': action, 'rules': rules})
+                acls.append({'name': name, 'action': action, 'rules': rules})
 
         result = templates.TemplateResponse("acl.j2.xml",
-                                            {"request": request, "sipprofiles": sipprofiles, "defined_acls": defined_acls},
+                                            {"request": request, "sipprofiles": sipprofiles, "acls": acls},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
@@ -99,20 +98,19 @@ def acl(request: Request, response: Response):
 def distributor(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
-        KEYPATTERN = 'intcon:out:*:_gateways'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-
-        for mainkey in mainkeys:
-            pipe.hgetall(mainkey)
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        for profilename in profilenames:
+            pipe.smembers(f'engagement:sipprofile:{profilename}')
+        intconsets = pipe.execute()
+        intconnameids = [item for sublist in intconsets for item in sublist if item.startswith('out:')]
+        for intconnameid in intconnameids:
+            pipe.hgetall(f'intcon:{intconnameid}:_gateways')
         details = pipe.execute()
 
         interconnections = dict()
-        for mainkey, detail in zip(mainkeys, details):
-            intconname = getnameid(mainkey)
-            interconnections[intconname] = jsonhash(detail)
+        for intconnameid, detail in zip(intconnameids, details):
+            intconname = getaname(intconnameid)
+            interconnections.update({intconname: jsonhash(detail)})
 
         result = templates.TemplateResponse("distributor.j2.xml",
                                             {"request": request, "interconnections": interconnections},
@@ -141,7 +139,7 @@ def sip(request: Request, response: Response):
         details = pipe.execute()
         netaliases = dict()
         for mainkey, detail in zip(mainkeys, details):
-            aliasname = getnameid(mainkey)
+            aliasname = getaname(mainkey)
             addresses = list(map(listify, fieldjsonify(detail)))
             netaliases[aliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
 
@@ -213,13 +211,14 @@ def directory(request: Request, response: Response):
         for profilename in profilenames:
             pipe.smembers(f'engagement:sipprofile:{profilename}')
         intconsets = pipe.execute()
-        intconnames = [item for sublist in intconsets for item in sublist if item.startswith('in:')]
-        for intconname in intconnames:
-            pipe.hmget(f'intcon:{intconname}', 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
+        intconnameids = [item for sublist in intconsets for item in sublist if item.startswith('in:')]
+        for intconnameid in intconnameids:
+            pipe.hmget(f'intcon:{intconnameid}', 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
         details = pipe.execute()
 
         directories = dict()
-        for intconname, detail in zip(intconnames, details):
+        for intconnameid, detail in zip(intconnameids, details):
+            intconname = getaname(intconnameid)
             profilename = detail[0]
             sipaddrs = fieldjsonify(detail[1])
             secret = detail[2]

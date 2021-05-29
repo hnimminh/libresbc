@@ -13,9 +13,9 @@ from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
-                           NODEID, SWCODECS, CLUSTERS,
+                           NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getnameid, removekey
+from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
 from basemgr import fssocket
 
 
@@ -318,7 +318,7 @@ def list_netalias(response: Response):
         for mainkey in mainkeys:
             pipe.hget(mainkey, 'desc')
         descs = pipe.execute()
-        data = [{'name': getnameid(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
+        data = [{'name': getaname(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
@@ -491,7 +491,7 @@ def list_acl(response: Response):
         for mainkey in mainkeys:
             pipe.hget(mainkey, 'desc')
         descs = pipe.execute()
-        data = [{'name': getnameid(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
+        data = [{'name': getaname(mainkey), 'desc': desc} for mainkey, desc in zip(mainkeys, descs)]
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
@@ -503,7 +503,6 @@ def list_acl(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SIP PROFILES 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto']
 
 class ContextEnum(str, Enum):
     core = "core"
@@ -576,7 +575,7 @@ class SIPProfileModel(BaseModel):
         if realm:
             _profile = rdbconn.srandmember(f'engagement:base:realm:{realm}')
             if _profile:
-                _name = getnameid(_profile)
+                _name = getaname(_profile)
                 if _name != name: raise ValueError(f'realm is used by {_name}')
         else:
             values['realm'] = f'{name}.libresbc'
@@ -749,7 +748,7 @@ def list_sipprofile(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -872,7 +871,7 @@ def list_ringtone_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1001,7 +1000,7 @@ def list_codec_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1135,7 +1134,7 @@ def list_capacity_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -1264,7 +1263,7 @@ def list_translation_class(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append({'name': getnameid(mainkey), 'desc': detail[0]})
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
@@ -1459,7 +1458,7 @@ def list_gateway(response: Response):
         data = list()
         for mainkey, detail in zip(mainkeys, details):
             if detail:
-                data.append(jsonhash({'name': getnameid(mainkey), 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]}))
+                data.append(jsonhash({'name': getaname(mainkey), 'desc': detail[0], 'ip': detail[1], 'port': detail[2], 'transport': detail[3]}))
 
         response.status_code, result = 200, data
     except Exception as e:
@@ -2094,7 +2093,7 @@ def list_inbound_interconnect(response: Response):
 
         data = list()
         for mainkey, detail in zip(mainkeys, details):
-            data.append({'name': getnameid(mainkey), 'desc': detail[0], 'sipprofile': detail[1], 'routing': detail[2]})
+            data.append({'name': getaname(mainkey), 'desc': detail[0], 'sipprofile': detail[1], 'routing': detail[2]})
 
         response.status_code, result = 200, data
     except Exception as e:

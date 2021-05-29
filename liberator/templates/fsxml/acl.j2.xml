@@ -3,9 +3,9 @@
           <node type="allow" domain="{{realm}}"/>
         </list>
         {%- endfor %}
-        {%- for defined_acl in defined_acls %} 
-        <list name="{{defined_acl.name}}" default="{{defined_acl.action}}">
-          {%- for rule in defined_acl.rules %}  
+        {%- for acl in acls %} 
+        <list name="{{acl.name}}" default="{{acl.action}}">
+          {%- for rule in acl.rules %}  
           <node type="{{rule.action}}" {{rule.key}}="{{rule.value}}"/>
           {%- endfor %}
         </list>

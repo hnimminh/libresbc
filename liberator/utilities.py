@@ -111,7 +111,7 @@ def listify(string, delimiter=':') -> list:
 def stringify(data, delimiter=':') -> str:
     return delimiter.join(data)
 
-def getnameid(string) -> str:
+def getaname(string) -> str:
     array = string.split(':')
     if array[-1].startswith('_'): return array[-2]
     else: return array[-1]
