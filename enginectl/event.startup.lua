@@ -1,7 +1,5 @@
 dofile("{{rundir}}/enginectl/utilities.lua")
-
 ---------------------------------------------------------------------------
-local unpack = _G.unpack or table.unpack
 
 local function fire_startup_event()
     local key = 'event:callengine:startup:'..NODEID

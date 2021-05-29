@@ -6,7 +6,8 @@ syslog = require("posix.syslog")
 json = require("json")
 redis = require("redis")
 random = math.random
-
+----
+unpack = _G.unpack or table.unpack
 ----------------------------------------------------------------------------
 -- REDIS CONNECTION
 rdbconn = nil

@@ -231,15 +231,15 @@ function routing_query(tablename, routingdata)
             local value = routingdata[variable]
             -- return immediately if invalid schema
             if (not value) then return nil, nil, routingrules end
-            routevalue = rdbconn:hgetall('routing:record:'..tablename..':em:'..value)
-            if next(routevalue) then
-                arrayinsert(routingrules, 'em-'..value)
+            routevalue = rdbconn:get('routing:record:'..tablename..':em:'..value)
+            if routevalue then
+                arrayinsert(routingrules, 'em'..value)
             else
                 for i=0, #value do
                     local prefix = value:sub(1,#value-i)
-                    routevalue = rdbconn:hgetall('routing:record:'..tablename..':lpm:'..prefix)
-                    if next(routevalue) then
-                        arrayinsert(routingrules, 'lpm-'..prefix)
+                    routevalue = rdbconn:get('routing:record:'..tablename..':lpm:'..prefix)
+                    if routevalue then
+                        arrayinsert(routingrules, 'lpm'..prefix)
                         break
                     end
                 end
@@ -249,14 +249,14 @@ function routing_query(tablename, routingdata)
         end
         -- routing record process
         if routevalue then
-            action = routevalue.action
+            local action, p, s, l = unpack(split(routevalue, ':'))
             if action == BLOCK then
                 return BLOCK, BLOCK, routingrules
             elseif action == QUERY then
-                tablename, _ = pchoice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                tablename, _ = pchoice(p, l, tonumber(l))
                 goto REQUERYROUTE
             elseif action == ROUTE then
-                primary, secondary = pchoice(routevalue.routes[1], routevalue.routes[2], tonumber(routevalue.routes[3]))
+                primary, secondary = pchoice(p, l, tonumber(l))
                 return primary, secondary, routingrules
             else
                 return nil, nil, routingrules

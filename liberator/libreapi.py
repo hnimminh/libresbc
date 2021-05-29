@@ -55,7 +55,9 @@ _ROUTE = 'route'
 # reserved for value empty string
 __DEFAULT_ENTRY__ = '__DEFAULT_ENTRY__'
 __EMPTY_STRING__ = ''
-
+__COLON__ = ':'
+__COMMA__ = ','
+__SEMICOLON__ = ';'
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -146,7 +148,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
             'max_calls_per_second': max_calls_per_second
         })
         # set cluster member to fsvar
-        fssocket({'commands': [f'global_setvar CLUSTERMEMBERS={stringify(members)}'], 'requestid': get_request_uuid()})
+        fssocket({'commands': [f'global_setvar CLUSTERMEMBERS={stringify(members,__COMMA__)}'], 'requestid': get_request_uuid()})
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -2280,7 +2282,8 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         _routes = data.get('routes')
         if _routes:
             data['routes'] = {'primary': _routes[0], 'secondary': _routes[1], 'load': int(_routes[2])}
-        # get rocords
+        
+        # get records
         pipe = rdbconn.pipeline()
         KEYPATTERN = f'routing:record:{identifier}:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
@@ -2288,17 +2291,18 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
 
-        for mainkey in mainkeys: pipe.hgetall(mainkey)
+        for mainkey in mainkeys: pipe.get(mainkey)
         details = pipe.execute()
 
         records = list()
         for mainkey, detail in zip(mainkeys, details):
-            _, _, _, value, match = listify(mainkey)
-            detail.update({'match': match, 'value': value if value else __DEFAULT_ENTRY__})
-            routes = fieldjsonify(detail.get('routes'))
-            if routes:
-                detail['routes'] = {'primary': routes[0], 'secondary': routes[1], 'load': int(routes[2])}
-            records.append(detail)
+            _, _, _, match, value = listify(mainkey)
+            record = {'match': match, 'value': value if value else __DEFAULT_ENTRY__}
+            splitdetail = listify(detail)
+            action = splitdetail[0]
+            if action in [_JUMPS, _ROUTE]:
+                record['routes'] = {'primary': splitdetail[1], 'secondary': splitdetail[2], 'load': int(splitdetail[3])}
+            records.append(record)
         engagements = rdbconn.smembers(_engaged_key)
         data.update({'records': records, 'engagements': engagements})
         response.status_code, result = 200, data
@@ -2355,13 +2359,13 @@ class RoutingRecordModel(BaseModel):
     value: str = Field(min_length=1, max_length=128, regex=_DIAL_, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
     routes: Optional[RouteModel] = Field(description='route model data')
-    # validation
+    # validation and transform data
     @root_validator()
     def routing_record_agreement(cls, values):
         #try:
         values = jsonable_encoder(values)
         table = values.get('table')
-        action = values.get('action')
+        action = values.pop('action')
         if not rdbconn.exists(f'routing:table:{table}'):
             raise ValueError('nonexistent routing table')
 
@@ -2385,11 +2389,8 @@ class RoutingRecordModel(BaseModel):
                             raise ValueError(f'routing loop to itself')
                         if not rdbconn.exists(f'routing:table:{_table}'):
                             raise ValueError('nonexistent routing table')
-                values['routes'] = [primary, secondary, load]
+                values['routes'] = [action, primary, secondary, load]
         return values
-        #except Exception as e:
-        #    logify(f"module=liberator, space=libreapi, action=validator, traceback={traceback.format_exc()}")
-        #    raise RuntimeError(e)
 
 
 @librerouter.post("/libreapi/routing/record", status_code=200)
@@ -2402,21 +2403,20 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         match = data.get('match')
         value = data.get('value')
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
-        action = data.get('action')
         routes = data.get('routes')
 
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'existent routing record'}; return
 
-        data.pop('table'); data.pop('match'); data.pop('value')
-        pipe.hmset(record_key, redishash(data))
+        action = routes[0]
         if action==_ROUTE:
-            for route in routes:
+            for route in routes[1:3]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
         elif action==_JUMPS:
-            for route in routes:
+            for route in routes[1:3]:
                 pipe.sadd(f'engagement:routing:table:{route}', nameid)
+        pipe.set(record_key, stringify(map(str, routes)))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2436,38 +2436,32 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         match = data.get('match')
         value = data.get('value')
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
-        action = data.get('action')
-        routes = data.get('routes')
 
         nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'non existent routing record'}; return
-        # get current data
-        _data = jsonhash(rdbconn.hgetall(record_key))
-        _action = _data.get('action')
-        _routes = _data.get('routes')
-        # update new-one
-        data.pop('table'); data.pop('match'); data.pop('value')
-        pipe.hmset(record_key, redishash(data))
-        # remove new-one
+        # process old data
+        _routes = listify(rdbconn.get(record_key))
+        _action = _routes[0]
         if _action==_ROUTE:
-            for _route in _routes:
+            for _route in _routes[1:3]:
                 pipe.srem(f'engagement:intcon:out:{_route}', nameid)
         elif _action==_JUMPS:
-            for _route in _routes:
+            for _route in _routes[1:3]:
                 pipe.srem(f'engagement:routing:table:{_route}', nameid)
-        else: pass    
+        else: pass
+        # process new data
+        routes = data.get('routes')
+        action = routes[0]
         if action==_ROUTE:
-            for route in routes:
+            for route in routes[1:3]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
         elif action==_JUMPS:
-            for route in routes:
+            for route in routes[1:3]:
                 pipe.sadd(f'engagement:routing:table:{route}', nameid)
         else: pass
-        # remove uninteded fields
-        for _field in _data:
-            if _field not in data:
-                pipe.hdel(record_key, _field)
+
+        pipe.set(record_key, stringify(map(str, routes)))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2487,17 +2481,15 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         if not rdbconn.exists(record_key):
             response.status_code, result = 403, {'error': 'notexistent routing record'}; return
 
-        _data = jsonhash(rdbconn.hgetall(record_key))
-        _action = _data.get('action')
-        _routes = _data.get('routes')
-
-        pipe.delete(record_key)
+        _routes = listify(rdbconn.get(record_key))
+        _action = _routes[0]
         if _action==_ROUTE:
-            for _route in _routes:
+            for _route in _routes[1:3]:
                 pipe.srem(f'engagement:intcon:out:{_route}', nameid)
         if _action==_JUMPS:
-            for _route in _routes:
+            for _route in _routes[1:3]:
                 pipe.srem(f'engagement:routing:table:{_route}', nameid)
+        pipe.delete(record_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:

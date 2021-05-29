@@ -108,7 +108,7 @@ def listify(string, delimiter=':') -> list:
     assert isinstance(string, str)
     return string.split(delimiter)
 
-def stringify(data, delimiter=','):
+def stringify(data, delimiter=':') -> str:
     return delimiter.join(data)
 
 def getnameid(string) -> str:
