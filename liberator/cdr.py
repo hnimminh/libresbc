@@ -383,14 +383,14 @@ class CDRHandler(Thread):
             return result
 
 
-class CDREvent(Thread):
+class CDRMaster(Thread):
     def __init__(self):
         self.stop = False
         Thread.__init__(self)
-        self.setName('CDREvent')
+        self.setName('CDRMaster')
     
     def run(self):
-        logify(f"module=liberator, space=cdr, action=start_cdrevent_thread")
+        logify(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
         while not self.stop:
             try:
@@ -410,7 +410,7 @@ class CDREvent(Thread):
                 # wait and try again
                 time.sleep(5)
             except Exception as e:
-                logify(f"module=liberator, space=cdr, class=CDREvent, action=run, exception={e}, tracings={traceback.format_exc()}")
+                logify(f"module=liberator, space=cdr, class=CDRMaster, action=run, exception={e}, tracings={traceback.format_exc()}")
                 time.sleep(2)
             finally: pass
 
