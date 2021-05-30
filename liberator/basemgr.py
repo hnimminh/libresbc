@@ -3,19 +3,21 @@ import traceback
 import random
 import json
 from threading import Thread
+from subprocess import Popen, PIPE
+import os
 
 import redis
 import greenswitch
+from jinja2 import Environment, FileSystemLoader
 
 from configuration import (NODEID, ESL_HOST, ESL_PORT, ESL_SECRET, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
-from utilities import logify, debugy, threaded
+from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
                                                      decode_responses=True, max_connections=5, timeout=REDIS_TIMEOUT)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
-pipe = rdbconn.pipeline()
 
 LIBRESBC_ENGINE_STARTUP = False
 
@@ -44,10 +46,86 @@ def fssocket(reqdata):
         return result    
 
 
-def netfilter():
-    pass
+def osrename(old, new):
+    try:
+        if os.path.exists(old):
+            os.rename(old, new)
+    except: 
+        return False
+    return True
 
 
+def osdelete(filename):
+    try:
+        if os.path.exists(filename): 
+            os.remove(filename)
+    except: 
+        return False
+    return True
+
+
+_ENV = Environment(loader=FileSystemLoader('templates/nft'))
+def nftupdate():
+    result = True
+    try:
+        pipe = rdbconn.pipeline()
+        # RTP PORTRANGE
+        rtpportrange = list(map(fieldjsonify ,rdbconn.hmget('cluster:attributes', 'rtp_start_port', 'rtp_end_port')))
+        # NETALIAS
+        netaliasnames = rdbconn.smembers('nameset:netalias')
+        for netaliasname in netaliasnames:
+            pipe.hget(f'base:netalias:{netaliasname}', 'addresses')
+        details = pipe.execute()
+        netaliases = dict()
+        for netaliasname, detail in zip(netaliasnames, details):
+            addresses = list(map(listify, fieldjsonify(detail)))
+            netaliases[netaliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
+        # SIP PROFILES AND LISTEN ADDRESS/PORT
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        sipprofiles = dict()
+        for profilename in profilenames:
+            sip_port, sips_port, sip_address, rtp_address = rdbconn.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
+            sip_ip = netaliases[sip_address][NODEID]['listen']
+            rtp_ip = netaliases[rtp_address][NODEID]['listen']
+
+            intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
+            for intconnameid in intconnameids:
+                pipe.hget(f'intcon:{intconnameid}', 'rtpaddrs')
+            rtpaddrstrlist = pipe.execute()
+
+            farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
+            farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
+
+            sipprofiles[profilename] = {'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]), 
+                                        'sipudpports': set([fieldjsonify(sip_port)]), 
+                                        'sip_ip': sip_ip,
+                                        'rtp_ip': rtp_ip,
+                                        'farendrtpaddrs': stringify(farendrtpaddrs, ','),
+                                        'farendsipaddrs': stringify(farendsipaddrs, ',')}
+
+        template = _ENV.get_template("nftables.j2.conf")
+        stream = template.render(sipprofiles=sipprofiles, rtpportrange=rtpportrange)
+        nftfile = '/etc/nftables.conf.new'
+        with open(nftfile, 'w') as nftf: nftf.write(stream)
+
+        nftcmd = Popen(['/usr/sbin/nft', '-f', nftfile], stdout=PIPE, stderr=PIPE)    
+        _, stderr = bdecode(nftcmd.communicate())
+        if stderr:
+            result = False
+            stderr = stderr.replace('\n', '')
+            logify(f"module=liberator, space=basemgr, action=nftupdate, nftfile={nftfile}, error={stderr}")
+        else:
+            old = osrename('/etc/nftables.conf', '/etc/nftables.conf.old')
+            new = osrename('/etc/nftables.conf.new', '/etc/nftables.conf')
+            if not (old and new):
+                logify(f"module=liberator, space=basemgr, action=osrename, subtasks=rename:{old}:{new}")
+            else:
+                logify(f"module=liberator, space=basemgr, action=nftupdate")
+    except Exception as e:
+        result = False
+        logify(f"module=liberator, space=basemgr, action=nftupdate, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 class BaseEventHandler(Thread):
     def __init__(self):
@@ -151,7 +229,9 @@ class BaseEventHandler(Thread):
                     # execute esl commands
                     eventvalue.update({'commands': commands})
                     threaded(fssocket, eventvalue)
-                    # firewall reload
+                    # firewall update
+                    if eventkey in [libreapi_netalias_event, libreapi_acl_event, libreapi_incon_event, libreapi_outcon_event, libreapi_sipprofile_event, callengine_startup_event]:
+                        threaded(nftupdate)
             except Exception as e:
                 logify(f"module=liberator, space=basemgr, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
                 time.sleep(5)

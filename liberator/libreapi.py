@@ -671,6 +671,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             pipe.delete(_name_key)
             pipe.srem(f'nameset:sipprofile', identifier)
             pipe.sadd(f'nameset:sipprofile', name)
+            pipe.rename(f'farendsipaddrs:in:{identifier}', f'farendsipaddrs:in:{name}')
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
