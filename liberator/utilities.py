@@ -27,13 +27,13 @@ def bool2int(booleaner):
     assert type(booleaner) == bool
     return 1 if booleaner else 0
 
-def rembytes(data):
+def bdecode(data):
     if isinstance(data, bytes):       return data.decode()
     if isinstance(data, (str,int)):   return data
-    if isinstance(data, dict):        return dict(map(rembytes, data.items()))
-    if isinstance(data, tuple):       return tuple(map(rembytes, data))
-    if isinstance(data, list):        return list(map(rembytes, data))
-    if isinstance(data, set):         return set(map(rembytes, data))
+    if isinstance(data, dict):        return dict(map(bdecode, data.items()))
+    if isinstance(data, tuple):       return tuple(map(bdecode, data))
+    if isinstance(data, list):        return list(map(bdecode, data))
+    if isinstance(data, set):         return set(map(bdecode, data))
 
 
 def fieldredisify(data):
