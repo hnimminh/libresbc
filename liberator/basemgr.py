@@ -184,7 +184,7 @@ class BaseEventHandler(Thread):
                         elif action=='delete':
                             commands = [f'sofia profile {_sipprofile} stop', 'reloadxml']
                         elif action=='update':
-                            if sipprofile == sipprofile: 
+                            if sipprofile == _sipprofile: 
                                 commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
                             else: 
                                 commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
