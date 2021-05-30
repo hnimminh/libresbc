@@ -1,8 +1,0 @@
----
-# handlers file for NetFilter
-- name: restart netfilter
-  systemd:
-    name: netfilter
-    enabled: true
-    state: restarted
-    daemon_reload: true

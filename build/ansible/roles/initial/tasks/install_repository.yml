@@ -22,12 +22,12 @@
       - git
       - wget
       - curl
-      - ipset
       - net-tools
       - rsyslog
       - logrotate
       - rsync
       - lsof
+      - nftables
     state: present
 
 - name: Remove useless packages from the cache

@@ -1,0 +1,4 @@
+
+{% if firewalls %}{% for firewall in firewalls %}
+{{firewall.transport}} dport { {{firewall.destports|join(',')}} } ip saddr { {{firewall.sourceips|join(',')}} } counter accept
+{% endfor %}{% endif %}

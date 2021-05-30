@@ -12,7 +12,7 @@
       msg:
       - timezone {{timezone}}
       - hostname {{inventory_hostname}} {{ansible_hostname}}
-      - nodename {{nodename}}
-      - clustername {{clustername}}
+      - nodeid {{nodeid}}
+      - firewall {%- for firewall in firewalls %} {{firewall.transport}} dport { {{firewall.destports|join(',')}} } ip saddr { {{firewall.sourceips|join(',')}} } counter accepts {%- endfor %}
       verbosity: 0
 ...

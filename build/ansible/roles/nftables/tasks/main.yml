@@ -1,0 +1,32 @@
+---
+# tasks file for nftables
+- name: Update firewall rule for nftables
+  template:
+    src: "{{sourcedir}}/platform/nftables/preset.libre.nft"
+    dest: "{{destinationdir}}/platform/nftables/preset.libre.nft"
+    owner: root
+    group: root
+    mode: u+rx,g+x,o-w
+
+- name: Update a symbolic link preset nftables
+  file:
+    src: "{{destinationdir}}/platform/nftables/preset.libre.nft"
+    dest: /etc/preset.libre.nft
+    state: link
+    force: true
+
+#- name: Update a nftables.service to systemd
+#  copy:
+#    src: "{{sourcedir}}/platform/nftables/nftables.service"
+#    # /usr/lib/systemd/system/nftables.service
+#    dest: /etc/systemd/system/nftables.service
+#    owner: root
+#    group: root
+#    mode: 0754
+
+- name: handle nftables daemon 
+  debug: 
+    msg: "nftables will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart nftables
