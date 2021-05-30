@@ -128,20 +128,14 @@ def sip(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
         # get netalias
-        # {profilename1: profiledata1, profilename2: profiledata2}
-        KEYPATTERN = 'base:netalias:*'
-        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
-        while next:
-            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
-            mainkeys += tmpkeys
-        for mainkey in mainkeys:
-            pipe.hget(mainkey, 'addresses')
+        netaliasnames = rdbconn.smembers('nameset:netalias')
+        for netaliasname in netaliasnames:
+            pipe.hget(f'base:netalias:{netaliasname}', 'addresses')
         details = pipe.execute()
         netaliases = dict()
-        for mainkey, detail in zip(mainkeys, details):
-            aliasname = getaname(mainkey)
+        for netaliasname, detail in zip(netaliasnames, details):
             addresses = list(map(listify, fieldjsonify(detail)))
-            netaliases[aliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
+            netaliases[netaliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
 
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
@@ -250,3 +244,45 @@ def directory(request: Request, response: Response):
         logify(f"module=liberator, space=fsxmlapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+'''
+def nftable():
+    try:
+        pipe = rdbconn.pipeline()
+        # SIP PROFILES AND LISTEN ADDRESS/PORT
+        profilenames = rdbconn.smembers('nameset:sipprofile')
+        for profilename in profilenames:
+            pipe.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
+        details = pipe.execute()
+        sipprofiles = dict()
+        for profilename, detail in zip(profilenames, details):
+
+            sipprofiles.update({profilename: detail})
+
+        
+        
+        
+        engagedacls = [acl for acl in pipe.execute() if acl not in _BUILTIN_ACLS_]
+        for engagedacl in engagedacls:
+            pipe.hgetall(f'base:acl:{engagedacl}')
+        details = pipe.execute()
+        acls = list()
+        for detail in details:
+            if detail:
+                name = detail.get('name')
+                action = detail.get('action')
+                rulestrs = fieldjsonify(detail.get('rules'))
+                rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
+                acls.append({'name': name, 'action': action, 'rules': rules})
+
+        result = templates.TemplateResponse("acl.j2.xml",
+                                            {"request": request, "sipprofiles": sipprofiles, "acls": acls},
+                                            media_type="application/xml")
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, str()
+        logify(f"module=liberator, space=fsxmlapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+'''

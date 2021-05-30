@@ -202,6 +202,7 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
+        pipe = rdbconn.pipeline()
         name = reqbody.name
         name_key = f'base:netalias:{name}'
         if rdbconn.exists(name_key):
@@ -209,7 +210,9 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
         data = jsonable_encoder(reqbody)
         addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
         data.update({'addresses': addressesstr})
-        rdbconn.hmset(name_key, redishash(data))
+        pipe.hmset(name_key, redishash(data))
+        pipe.sadd(f'nameset:netalias', name)
+        pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
@@ -247,6 +250,8 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
+            pipe.srem(f'nameset:netalias', identifier)
+            pipe.sadd(f'nameset:netalias', name)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event netalias change, process reload only if there is some-one use it
@@ -274,6 +279,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
         pipe.delete(_engage_key)
         pipe.delete(_name_key)
+        pipe.srem(f'nameset:netalias', identifier)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # delete action perform only no one use it so no-one use mean no need reload as this not loaded to memory
