@@ -232,8 +232,9 @@ def directory(request: Request, response: Response):
             for _profilename, _realm in sipprofiles.items():
                 if _profilename == profilename:
                     a1hash = hashlib.md5(f'{intconname}:{_realm}:{password}'.encode()).hexdigest()
-                    if _realm in directories: directories[_realm].append({'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing})
-                    else: directories[_realm] = [{'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing}]
+                    directory = {'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing}
+                    if _realm in directories: directories[_realm].append(directory)
+                    else: directories[_realm] = [directory]
 
         result = templates.TemplateResponse("directory.j2.xml",
                                             {"request": request, "directories": directories},
