@@ -17,7 +17,7 @@
 
 #- name: Update a nftables.service to systemd
 #  copy:
-#    src: "{{sourcedir}}/platform/nftables/nftables.service"
+#    src: nftables.service
 #    # /usr/lib/systemd/system/nftables.service
 #    dest: /etc/systemd/system/nftables.service
 #    owner: root
