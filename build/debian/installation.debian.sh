@@ -141,12 +141,6 @@ mv /usr/local/captagent/etc/captagent /usr/local/captagent/etc/captagent.origin
 apt-get install redis-server
 systemctl enable redis-server
 #------------------------------------------------------------------------------------------------------------
-#                   NETFILTER
-#------------------------------------------------------------------------------------------------------------
-apt-get install ipset iptables
-ipset create rtpset hash:net family inet hashsize 1024 maxelem 65536 -exist
-ipset create sipset hash:net family inet hashsize 1024 maxelem 65536 -exist
-#------------------------------------------------------------------------------------------------------------
 #                   LIBRESBC
 #------------------------------------------------------------------------------------------------------------
 mkdir -p /var/log/libresbc/cdr
