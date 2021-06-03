@@ -79,8 +79,7 @@ def acl(request: Request, response: Response):
             if detail:
                 name = detail.get('name')
                 action = detail.get('action')
-                rulestrs = fieldjsonify(detail.get('rules'))
-                rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
+                rules = fieldjsonify(detail.get('rules'))
                 acls.append({'name': name, 'action': action, 'rules': rules})
 
         result = templates.TemplateResponse("acl.j2.xml",

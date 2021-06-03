@@ -170,8 +170,9 @@ class BaseEventHandler(Thread):
                         name = eventvalue.get('name')
                         _name = eventvalue.get('_name')
                         if name != _name: 
-                            sipprofile = eventvalue.get('_name')
-                            commands.append(f'sofia profile {sipprofile} rescan')
+                            sipprofiles = eventvalue.get('sipprofiles')
+                            for sipprofile in sipprofiles:
+                                commands.append(f'sofia profile {sipprofile} rescan')
                         commands.append('reloadacl')
                     elif eventkey == libreapi_incon_event:
                         commands = ['reloadacl']

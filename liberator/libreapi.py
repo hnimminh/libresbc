@@ -381,9 +381,6 @@ def create_acl(reqbody: ACLModel, response: Response):
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent acl name'}; return
         data = jsonable_encoder(reqbody)
-        rules = data.get('rules')
-        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('key')}:{rule.get('value')}", rules))
-        data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
@@ -409,9 +406,6 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         data = jsonable_encoder(reqbody)
-        rules = data.get('rules')
-        rulestrs = set(map(lambda rule: f"{rule.get('action')}:{rule.get('key')}:{rule.get('value')}", rules))
-        data.update({'rules': rulestrs})
         rdbconn.hmset(name_key, redishash(data))
         # proactive get list who use this acl
         _engaged_key = f'engagement:{_name_key}'
@@ -427,8 +421,10 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change, process reload only if there is some-one use it
         if engagements:
+            sipprofiles = [getaname(engagement) for engagement in engagements]
             for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:acl:{node}', json.dumps({'sipprofiles': engagements, 'name': name, '_name': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+                pipe.rpush(f'event:libreapi:acl:{node}', json.dumps({'sipprofiles': sipprofiles, 'name': name, '_name': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}))
+                pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -471,9 +467,6 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        rulestrs = result.get('rules')
-        rules = list(map(lambda rule: {'action': rule[0], 'key': rule[1], 'value': rule[2]}, map(listify, rulestrs)))
-        result.update({'rules': rules})
         engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
         response.status_code = 200
