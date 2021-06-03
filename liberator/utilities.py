@@ -1,4 +1,5 @@
 import syslog
+import json
 from threading import Thread
 from uuid import uuid4
 from hashlib import md5
@@ -42,9 +43,13 @@ def fieldredisify(data):
         else: return ':bool:false'
     elif isinstance(data, int): return f':int:{data}'
     elif isinstance(data, float): return f':float:{data}'
-    elif isinstance(data, (list,set)): 
-        try: return f':list:{_delimiter_.join(data)}'
-        except: return f':list:{_delimiter_.join([str(i) for i in data])}'
+    elif isinstance(data, (list,set)):
+        if list(filter(lambda d: (isinstance(d, str) and _delimiter_ in d) or isinstance(d,(list,set,dict)), data)):
+            return f':json:{json.dumps(data)}'
+        else:
+            try: return f':list:{_delimiter_.join(data)}'
+            except: return f':list:{_delimiter_.join([str(i) for i in data])}'
+    elif isinstance(data, dict): f':json:{json.dumps(data)}'
     elif data is None: return ':none:'
     else: return data
 
@@ -57,9 +62,13 @@ def redishash(data: dict) -> dict:
                 else: data.update({key: ':bool:false'})
             elif isinstance(value, int): data.update({key: f':int:{value}'})
             elif isinstance(value, float): data.update({key: f':float:{value}'})
-            elif isinstance(value, (list,set)): 
-                try: data.update({key: f':list:{_delimiter_.join(value)}'})
-                except: data.update({key: f':list:{_delimiter_.join([str(v) for v in value])}'})
+            elif isinstance(value, (list,set)):
+                if list(filter(lambda d: (isinstance(d, str) and _delimiter_ in d) or isinstance(d,(list,set,dict)), value)):
+                    data.update({key: f':json:{json.dumps(value)}'})
+                else:
+                    try: data.update({key: f':list:{_delimiter_.join(value)}'})
+                    except: data.update({key: f':list:{_delimiter_.join([str(v) for v in value])}'})
+            elif isinstance(value, dict): data.update({key: f':json:{json.dumps(data)}'})
             elif value is None: data.update({key: ':none:'})
             else: pass
     return data
@@ -78,6 +87,7 @@ def fieldjsonify(data):
                 _data = data[6:].split(_delimiter_)
                 try: return [int(v) for v in _data]
                 except: return _data
+        elif data.startswith(':json:'): return json.loads(data[6:])
         elif data.startswith(':none:'): return None
         else: return data
     else: return data
@@ -98,6 +108,8 @@ def jsonhash(data: dict) -> dict:
                         _value = value[6:].split(_delimiter_)
                         try: data.update({key: [int(v) for v in _value]})
                         except: data.update({key: _value})
+                elif value.startswith(':json:'):
+                    data.update({key: json.loads(value[6:])})
                 elif value.startswith(':none:'): data.update({key: None})
                 else: pass
     return data

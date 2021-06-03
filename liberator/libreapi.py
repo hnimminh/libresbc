@@ -766,39 +766,56 @@ def list_sipprofile(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# RINGTONE CLASS 
+# PREANSWER CLASS 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class RingtoneModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of ringtone class (identifier)')
-    desc: Optional[str] = Field(default='', max_length=64, description='description')
-    data: str = Field(min_length=8, max_length=256, description='ringtone data which can be full-path of audio file or tone script follow ITU-T Recommendation E.180')
 
-@librerouter.post("/libreapi/class/ringtone", status_code=200)
-def create_ringtone_class(reqbody: RingtoneModel, response: Response):
+
+class PreAnswerTypeEnum(str, Enum):
+    tone = 'tone'
+    media = 'media'
+    speak = 'speak'
+
+class PreAnswerStream(BaseModel):
+    type: PreAnswerTypeEnum = Field(default='tone', description='media type: tone - tone script follow ITU-T Recommendation E.180, media - filename (fullpath) of audio file, speak - text to speak')
+    stream: str = Field(min_length=8, max_length=511, description='stream data follow the media type')
+    # will do validate yet in next release
+    @root_validator()
+    def preanswer_stream_agreement(cls, stream):
+        streamtype = stream.get('type')
+        streamdata = stream.get('stream')
+        return stream
+
+class PreAnswerModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of preanswer class (identifier)')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
+    streams: List[PreAnswerStream] = Field(min_items=1, max_items=8, description='List of PreAnswer Stream')
+
+@librerouter.post("/libreapi/class/preanswer", status_code=200)
+def create_preanswer_class(reqbody: PreAnswerModel, response: Response):
     result = None
     try:
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        name_key = f'class:ringtone:{name}'
+        name_key = f'class:preanswer:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=create_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libreapi/class/ringtone/{identifier}", status_code=200)
-def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.put("/libreapi/class/preanswer/{identifier}", status_code=200)
+def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        _name_key = f'class:ringtone:{identifier}'
-        name_key = f'class:ringtone:{name}'
+        _name_key = f'class:preanswer:{identifier}'
+        name_key = f'class:preanswer:{name}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -809,7 +826,7 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'intcon:{engagement}', 'ringtone_class', name)
+                pipe.hset(f'intcon:{engagement}', 'preanswer_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -817,16 +834,16 @@ def update_ringtone_class(reqbody: RingtoneModel, response: Response, identifier
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=update_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.delete("/libreapi/class/ringtone/{identifier}", status_code=200)
-def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.delete("/libreapi/class/preanswer/{identifier}", status_code=200)
+def delete_preanswer_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        _name_key = f'class:ringtone:{identifier}'
+        _name_key = f'class:preanswer:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
             response.status_code, result = 403, {'error': 'engaged class'}; return
@@ -838,15 +855,15 @@ def delete_ringtone_class(response: Response, identifier: str=Path(..., regex=_N
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=delete_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libreapi/class/ringtone/{identifier}", status_code=200)
-def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.get("/libreapi/class/preanswer/{identifier}", status_code=200)
+def detail_preanswer_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
-        _name_key = f'class:ringtone:{identifier}'
+        _name_key = f'class:preanswer:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -856,16 +873,16 @@ def detail_ringtone_class(response: Response, identifier: str=Path(..., regex=_N
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=detail_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libreapi/class/ringtone", status_code=200)
-def list_ringtone_class(response: Response):
+@librerouter.get("/libreapi/class/preanswer", status_code=200)
+def list_preanswer_class(response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        KEYPATTERN = f'class:ringtone:*'
+        KEYPATTERN = f'class:preanswer:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -883,7 +900,7 @@ def list_ringtone_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_ringtone_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=list_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1827,11 +1844,11 @@ def check_existent_routing(table):
         raise ValueError('nonexistent routing')
     return table
 
-def check_existent_ringtone(ringtone):
-    if ringtone:
-        if not rdbconn.exists(f'class:ringtone:{ringtone}'):
+def check_existent_preanswer(preanswer):
+    if preanswer:
+        if not rdbconn.exists(f'class:preanswer:{preanswer}'):
             raise ValueError('nonexistent class')
-    return ringtone
+    return preanswer
 
 class AuthSchemeEnum(str, Enum):
     IP = 'IP'
@@ -1850,13 +1867,13 @@ class InboundInterconnection(BaseModel):
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
-    ringtone_class: str = Field(default=None, description='nameid of ringtone class')
+    preanswer_class: str = Field(default=None, description='nameid of preanswer class')
     authscheme: AuthSchemeEnum = Field(default='IP', description='auth scheme for inbound, include: ip, digest, both')
     secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound', hidden_field=True)
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
-    _existenringtone = validator('ringtone_class')(check_existent_ringtone)
+    _existenpreanswer = validator('preanswer_class')(check_existent_preanswer)
     _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
@@ -1891,7 +1908,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         sipaddrs = set(data.get('sipaddrs'))
         rtpaddrs = set(data.get('rtpaddrs'))
         codec_class = data.get('codec_class')
-        ringtone_class = data.get('ringtone_class')
+        preanswer_class = data.get('preanswer_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
@@ -1915,7 +1932,8 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:routing:table:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
         pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:class:ringtone:{ringtone_class}', nameid)
+        if preanswer_class:
+            pipe.sadd(f'engagement:class:preanswer:{preanswer_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
@@ -1945,7 +1963,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         rtpaddrs = set(data.get('rtpaddrs'))
         routing = data.get('routing')
         codec_class = data.get('codec_class')
-        ringtone_class = data.get('ringtone_class')
+        preanswer_class = data.get('preanswer_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
@@ -1963,7 +1981,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         _routing = _data.get('routing')
         _nodes = set(_data.get('nodes'))
         _codec_class = _data.get('codec_class')
-        _ringtone_class = _data.get('ringtone_class')
+        _preanswer_class = _data.get('preanswer_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
@@ -1986,7 +2004,8 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:routing:table:{_routing}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
         pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:class:ringtone:{_ringtone_class}', _nameid)
+        if _preanswer_class:
+            pipe.srem(f'engagement:class:preanswer:{_preanswer_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
@@ -2000,7 +2019,8 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:routing:table:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
         pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
-        pipe.sadd(f'engagement:class:ringtone:{ringtone_class}', nameid)
+        if preanswer_class:
+            pipe.sadd(f'engagement:class:preanswer:{preanswer_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
@@ -2040,7 +2060,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         _sipprofile = _data.get('sipprofile')
         _nodes = _data.get('nodes')
         _codec_class = _data.get('codec_class')
-        _ringtone_class = _data.get('ringtone_class')
+        _preanswer_class = _data.get('preanswer_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
@@ -2049,7 +2069,8 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
         pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
-        pipe.srem(f'engagement:class:ringtone:{_ringtone_class}', _nameid)
+        if _preanswer_class:
+            pipe.srem(f'engagement:class:preanswer:{_preanswer_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
