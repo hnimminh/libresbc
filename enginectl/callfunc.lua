@@ -136,6 +136,26 @@ function get_sipprofile(name, direction)
     return rdbconn:hget(intconkey(name, direction), 'sipprofile')
 end
 
+-- early media processing
+function earlyMediaProcess(name, DxLeg)
+    local class = rdbconn:hget(intconkey(name, INBOUND), 'preanswer_class')
+    local streams
+    if class then streams = fieldjsonify(rdbconn:hget('class:preanswer:'..class, 'streams')) end
+    if streams then
+        for i=1, #streams do
+            stype = streams[i].type
+            sdata = streams[i].stream
+            if stype == 'tone' then
+                DxLeg:execute('gentones', sdata)
+            elseif stype == 'media' then
+                DxLeg:execute('playback', sdata)
+            elseif stype == 'speak' then
+                DxLeg:execute('speak', 'flite|slt|'..sdata)
+            else end
+        end
+    end
+end
+
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------

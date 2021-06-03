@@ -78,7 +78,9 @@ local function main()
             logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'hangup_as_block', 'uuid', uuid)
             HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
-
+        --------------------------------------------------------------------
+        if InLeg:getVariable("x-ringready") then InLeg:execute('ring_ready') end
+        earlyMediaProcess(intconname, InLeg)
         --------------------------------------------------------------------
         ----- PRESETTING
         --------------------------------------------------------------------
@@ -196,21 +198,6 @@ local function main()
                 logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'report', 'info', 'outbound.leg.not.connected')
             end
         end
-
-        -----------------------------------------------------------
-        ----- TMP
-        -----------------------------------------------------------
-        --[[]
-        InLeg:execute('ring_ready')
-        InLeg:execute('pre_answer')
-        InLeg:setVariable("ringback", "%(2000,4000,440,480)")
-        InLeg:execute('playback', '/home/hnimminh/ulaw08m.wav')
-        InLeg:execute("sleep", "8000")
-        InLeg:execute('answer')
-        InLeg:execute('playback', '/home/hnimminh/vietnamdeclaration.wav')
-        InLeg:execute('hangup')
-        ]]
-
         -----------------------------------------------------------
         --- HANGUP ONCE DONE
         -----------------------------------------------------------
