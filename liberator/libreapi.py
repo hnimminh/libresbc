@@ -180,8 +180,8 @@ def netalias_agreement(addresses):
         raise ValueError('The alias must be set for only/all cluster members')
     for address in _addresses:
         member = address['member']
-        if member not in CLUSTERS.get('members'):
-            raise ValueError(f'{member} is invalid member')
+        if not rdbconn.sismember('cluster:candidates', member):
+            raise ValueError(f'{member} is invalid candidates')
     return addresses
 
 class IPSuite(BaseModel):
@@ -208,8 +208,6 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
         data = jsonable_encoder(reqbody)
-        addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
-        data.update({'addresses': addressesstr})
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'nameset:netalias', name)
         pipe.execute()
@@ -234,8 +232,6 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
         data = jsonable_encoder(reqbody)
-        addresses = data.get('addresses'); addressesstr = set(map(lambda address: f"{address.get('member')}:{address.get('listen')}:{address.get('advertise')}", addresses))
-        data.update({'addresses': addressesstr})
         rdbconn.hmset(name_key, redishash(data))
         # proactive get list who use this netalias
         _engaged_key = f'engagement:{_name_key}'
@@ -256,8 +252,9 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         response.status_code, result = 200, {'passed': True}
         # fire-event netalias change, process reload only if there is some-one use it
         if engagements:
+            sipprofiles = [getaname(engagement) for engagement in engagements]
             for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:netalias:{node}', json.dumps({'sipprofiles': engagements, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+                pipe.rpush(f'event:libreapi:netalias:{node}', json.dumps({'sipprofiles': sipprofiles, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -270,7 +267,6 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
     result = None
     try:
         pipe = rdbconn.pipeline()
-        #
         _name_key = f'base:netalias:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
@@ -298,9 +294,6 @@ def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        addressesstr = result.get('addresses')
-        addresses = list(map(lambda address: {'member': address[0], 'listen': address[1], 'advertise': address[2]}, map(listify, addressesstr)))
-        result.update({'addresses': addresses})
         engagements = rdbconn.smembers(_engage_key)
         result.update({'engagements': engagements})
         response.status_code = 200

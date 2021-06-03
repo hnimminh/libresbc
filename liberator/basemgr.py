@@ -78,15 +78,15 @@ def nftupdate():
         details = pipe.execute()
         netaliases = dict()
         for netaliasname, detail in zip(netaliasnames, details):
-            addresses = list(map(listify, fieldjsonify(detail)))
-            netaliases[netaliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
+            addresses = [address for address in fieldjsonify(detail) if address.get('member') == NODEID][0]
+            netaliases.update({netaliasname: addresses})
         # SIP PROFILES AND LISTEN ADDRESS/PORT
         profilenames = rdbconn.smembers('nameset:sipprofile')
         sipprofiles = dict()
         for profilename in profilenames:
             sip_port, sips_port, sip_address, rtp_address = rdbconn.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
-            sip_ip = netaliases[sip_address][NODEID]['listen']
-            rtp_ip = netaliases[rtp_address][NODEID]['listen']
+            sip_ip = netaliases[sip_address]['listen']
+            rtp_ip = netaliases[rtp_address]['listen']
 
             intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
             for intconnameid in intconnameids:

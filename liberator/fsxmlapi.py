@@ -133,9 +133,8 @@ def sip(request: Request, response: Response):
         details = pipe.execute()
         netaliases = dict()
         for netaliasname, detail in zip(netaliasnames, details):
-            addresses = list(map(listify, fieldjsonify(detail)))
-            netaliases[netaliasname] = {address[0]: {'listen': address[1], 'advertise': address[2]} for address in addresses}
-
+            addresses = [address for address in fieldjsonify(detail) if address.get('member') == NODEID][0]
+            netaliases.update({netaliasname: addresses})
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
         profilenames = rdbconn.smembers('nameset:sipprofile')
