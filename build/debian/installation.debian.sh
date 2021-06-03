@@ -50,6 +50,7 @@ formats/mod_sndfile
 xml_int/mod_xml_rpc
 xml_int/mod_xml_curl
 codecs/mod_opus
+asr_tts/mod_flite
 EOF
 
 ./configure -C --prefix=/usr/local --with-rundir=/var/run/ --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl

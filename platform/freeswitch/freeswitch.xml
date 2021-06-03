@@ -81,6 +81,7 @@
         <load module="mod_spandsp"/>
         <load module="mod_sndfile"/>
         <load module="mod_opus"/>
+        <load module="mod_flite"/>
       </modules>
     </configuration>
     <!--- OPUS CODEC --> 
