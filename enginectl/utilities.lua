@@ -134,6 +134,7 @@ function fieldjsonify(data)
         elseif startswith(data, ':list:') then
             if data==':list:' then return {} 
             else return split(data:sub(7,#data)) end
+        elseif startswith(data, ':json:') then return json.decode(data:sub(7,#data))
         elseif startswith(data, ':none:') then return nil
         else return data end
     else
@@ -154,6 +155,7 @@ function jsonhash(data)
                 elseif startswith(value, ':list:') then
                     if value==':list:' then data[key] = {} 
                     else data[key] = split(value:sub(7,#value)) end
+                elseif startswith(value, ':json:') then data[key] = json.decode(value:sub(7,#value))
                 elseif startswith(value, ':none:') then data[key] = nil
                 else end
             else end
