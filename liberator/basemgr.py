@@ -33,7 +33,7 @@ def fssocket(reqdata):
                 response = fs.send(f'api {command}')
                 if response:
                     resultstr = response.data
-                    if '+OK' in resultstr: 
+                    if '+OK' in resultstr or 'Success' in resultstr: 
                         _result = True
                     else: 
                         _result = False
@@ -120,7 +120,7 @@ def nftupdate():
             if not (old and new):
                 logify(f"module=liberator, space=basemgr, action=osrename, subtasks=rename:{old}:{new}")
             else:
-                logify(f"module=liberator, space=basemgr, action=nftupdate")
+                logify(f"module=liberator, space=basemgr, action=nftupdate, result=success")
     except Exception as e:
         result = False
         logify(f"module=liberator, space=basemgr, action=nftupdate, exception={e}, traceback={traceback.format_exc()}")
