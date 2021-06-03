@@ -6,7 +6,8 @@
           <param name="a1-hash" value="{{user.a1hash}}"/>
         </params>
         <variables>
-          <variable name="x-routing-plan" value="{{user.routing}}"/>
+          <variable name="x-routing-plan" value="{{user.routing}}"/>{% if user.ringready %}
+          <variable name="x-ringready" value="{{user.ringready}}"/>{% endif %}
         </variables>
       </user>
       {%- endfor %}

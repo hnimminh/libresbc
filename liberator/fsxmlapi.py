@@ -205,7 +205,7 @@ def directory(request: Request, response: Response):
         intconsets = pipe.execute()
         intconnameids = [item for sublist in intconsets for item in sublist if item.startswith('in:')]
         for intconnameid in intconnameids:
-            pipe.hmget(f'intcon:{intconnameid}', 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing')
+            pipe.hmget(f'intcon:{intconnameid}', 'sipprofile', 'sipaddrs', 'secret', 'authscheme', 'routing', 'ringready')
         details = pipe.execute()
 
         directories = dict()
@@ -216,6 +216,7 @@ def directory(request: Request, response: Response):
             secret = detail[2]
             authscheme = detail[3]
             routing = detail[4]
+            ringready = fieldjsonify(detail[5])
 
             if authscheme=='IP': 
                 password = DEFAULT_PASSWORD
@@ -230,7 +231,7 @@ def directory(request: Request, response: Response):
             for _profilename, _realm in sipprofiles.items():
                 if _profilename == profilename:
                     a1hash = hashlib.md5(f'{intconname}:{_realm}:{password}'.encode()).hexdigest()
-                    directory = {'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing}
+                    directory = {'id': intconname, 'cidrs': cidrs, 'a1hash': a1hash, 'routing': routing, 'ringready': ringready}
                     if _realm in directories: directories[_realm].append(directory)
                     else: directories[_realm] = [directory]
 
