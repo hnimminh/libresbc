@@ -1712,10 +1712,10 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update only if gateway or sipprofile change
-        if sipprofile != sipprofile or set(gateway.keys()) == set(_gateways.keys()):
+        if sipprofile != _sipprofile or set(gateways.keys()) == set(_gateways.keys()):
             for index, node in enumerate(CLUSTERS.get('members')):
                 key = f'event:libreapi:outbound:intcon:{node}'
-                value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': gateways.keys(), '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
+                value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': list(gateways.keys()), '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
                 pipe.rpush(key, json.dumps(value)); pipe.execute()
     except Exception as e:
         response.status_code, result = 500, None
