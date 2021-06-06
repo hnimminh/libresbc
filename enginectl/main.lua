@@ -33,8 +33,6 @@ local function main()
         -----------------------------------------------------------
         InLeg:execute("export", "X-LIBRE-SESHID="..seshid)
         InLeg:setVariable("X-LIBRE-INTCONNAME", intconname)
-        InLeg:setVariable("rtp_secure_media", "optional:"..ENCRYPTION_SUITES)
-
         -- call will be reject if inbound interconnection is not enable
         if not is_intcon_enable(intconname, INBOUND) then
             logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'state', 'disabled', 'donext', 'hangup_as_disabled')
@@ -57,9 +55,14 @@ local function main()
         -- translation
         local clidnum, clidname, dnisnum, tranrules = translate(caller_number, caller_name, destination_number, intconname, INBOUND)
         logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'clidnum', clidnum, 'clidname', clidname, 'dnisnum', dnisnum)
-        -- codec negotiation
+        -- media negotiation
         local codecstr = get_codec(intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
+        if transport:lower()=='tls' then
+            InLeg:setVariable("rtp_secure_media", "mandatory:"..ENCRYPTION_SUITES)
+            InLeg:setVariable("sdp_secure_savp_only", "true")
+        end
+
         -- translation calling party number
         local tablename = InLeg:getVariable("x-routing-plan")
         routingdata = {tablename=tablename, intconname=intconname, caller_number=clidnum, destination_number=dnisnum}
@@ -134,11 +137,22 @@ local function main()
             end
             -- callerid type and privacy process
             callerIdPrivacyProcess(route, InLeg)
-            --------------------------------------------------------------------
-            -- set variable on outbound leg 
+            -------------------------------------------------------------------- 
+            local gwproxy, gwport, gwtransport = getgw(gateway)
+            local sipadvertip = freeswitch.getGlobalVariable(sipprofile..':advertising')
+            --- from:to
+            InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
+            InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..sipadvertip..">" )
+            InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
+            -- media negotiation
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
             local outcodecstr = get_codec(route, OUTBOUND)
             InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
+            if gwtransport:lower() == 'tls' then
+                InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..ENCRYPTION_SUITES)
+                InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
+            end
+            --
             InLeg:execute("export", "nolocal:origination_caller_id_name=".._clidname)
             InLeg:execute("export", "nolocal:origination_caller_id_number=".._clidnum)
             InLeg:execute("export", "nolocal:originate_timeout=90")
@@ -148,9 +162,6 @@ local function main()
             InLeg:execute("export", "nolocal:X-LIBRE-ORIGIN-HOP="..intconname)
             InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..route)
             InLeg:setVariable("X-LIBRE-NEXT-HOP", route)
-            -- RTP/SRTP DECISION
-            InLeg:execute("export", "nolocal:rtp_secure_media=optional:"..ENCRYPTION_SUITES)
-            --InLeg:setVariable("sdp_secure_savp_only", "true")
 
             logify('module', 'enginectl', 'space', 'main', 'action', 'connect_gateway' , 'seshid', seshid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/".._dnisnum, InLeg)
