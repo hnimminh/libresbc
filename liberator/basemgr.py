@@ -22,13 +22,21 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 LIBRESBC_ENGINE_STARTUP = False
 
 def fssocket(reqdata):
-    result = True
+    result, fs = True, None
     try:
         commands = reqdata.get('commands')
         requestid = reqdata.get('requestid')
-        if commands:
-            fs = greenswitch.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET)
-            fs.connect()
+        defer = reqdata.get('defer')
+        if defer: time.sleep(defer)
+        # connecting
+        fs = greenswitch.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET)
+        for _ in range(0,9):
+            try:
+                fs.connect()
+                if fs.connected: break
+            except: time.sleep(5)
+        # send api commands
+        if commands and fs.connected:
             for command in commands:
                 response = fs.send(f'api {command}')
                 if response:
@@ -39,11 +47,12 @@ def fssocket(reqdata):
                         _result = False
                         logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                     result = bool(result and _result)
-        logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, commands={commands}, result={result}")
+        logify(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
     except Exception as e:
         logify(f"module=liberator, space=basemgr, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
     finally:
-        return result    
+        if fs and fs.connected: fs.stop()
+        return result
 
 
 def osrename(old, new):
