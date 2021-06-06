@@ -91,10 +91,10 @@
             <param name="context" value="{{sipprofile.context}}"/>
             <param name="dbname" value="/dev/shm/libresbc_sip_{{sipprofile.name}}.db"/>
             {#- <!-- SERVER BINDING --> #}
-            <param name="rtp-ip" value="{{ netaliases[sipprofile.rtp_address]['listen'] }}"/>
-            <param name="sip-ip" value="{{ netaliases[sipprofile.sip_address]['listen'] }}"/>
-            <param name="ext-rtp-ip" value="autonat:{{ netaliases[sipprofile.rtp_address]['advertise'] }}"/>
-            <param name="ext-sip-ip" value="autonat:{{ netaliases[sipprofile.sip_address]['advertise'] }}"/>
+            <param name="rtp-ip" value="{{sipprofile.rtp_ip }}"/>
+            <param name="sip-ip" value="{{sipprofile.sip_ip }}"/>
+            <param name="ext-rtp-ip" value="autonat:{{sipprofile.ext_rtp_ip}}"/>
+            <param name="ext-sip-ip" value="autonat:{{sipprofile.ext_sip_ip}}"/>
             <param name="sip-port" value="{{sipprofile.sip_port}}"/>
             {%- if sipprofile.tls %}
             <param name="tls" value="{{sipprofile.tls|lower}}"/>
