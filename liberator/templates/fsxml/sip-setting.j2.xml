@@ -106,7 +106,7 @@
             <param name="tls-cert-dir" value="{{sipprofile.tls_cert_dir|default('/usr/local/etc/freeswitch/tls')}}"/>
             <param name="tls-ciphers" value="ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH"/>
             <param name="tls-verify-policy" value="none"/>
-            {%- endif %}    
+            {%- endif %}
           </settings>
         </profile>
         {%- endfor %}
