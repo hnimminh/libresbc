@@ -1531,6 +1531,19 @@ class Distribution(str, Enum):
     hash_src_ip = HASHIPADDR
     hash_destination_number = HASHDESTNO 
 
+class PrivacyEnum(str, Enum):
+    auto = 'auto'
+    none = 'none'
+    screen = 'screen'
+    name = 'name'
+    number = 'number'
+
+class CallerIDType(str, Enum):
+    auto = 'auto'
+    none = 'none'
+    rpid = 'rpid'
+    pidd = 'pid'
+
 class DistributedGatewayModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='gateway name')
     weight:  int = Field(default=1, ge=0, le=127, description='weight value use for distribution')
@@ -1546,6 +1559,8 @@ class OutboundInterconnection(BaseModel):
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+    privacy: List[PrivacyEnum] = Field(default=['auto'], min_items=1, max_item=3, description='callerid header mechanism: rpid, pid, none')
+    cid_type: Optional[CallerIDType] = Field(default='auto', description='callerid header mechanism: rpid, pid, none')
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
@@ -1578,6 +1593,14 @@ class OutboundInterconnection(BaseModel):
 
             if distribution != WEIGHTBASE:
                 gateway['weight'] = 1
+
+        privacy = values.get('privacy')
+        privacilen = len(privacy)
+        if 'none' in privacy and privacilen > 1: raise ValueError('none can not configured with others')
+        elif 'auto' in privacy:
+            if privacilen > 1 and ('number' in privacy or 'name' in privacy): 
+                raise ValueError('auto can not configured with others except screen')
+        else: pass
 
         return values
 
