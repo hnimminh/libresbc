@@ -184,7 +184,9 @@ function callerIdPrivacyProcess(name, DxLeg)
             arrayinsert(privacys, 'hide_number')
         else end
     end
-    if #privacys > 0 then DxLeg:execute("export", "nolocal:origination_privacy="..join(privacys, '+')) end
+    if #privacys > 0 then  DxLeg:execute("export", "nolocal:origination_privacy="..join(privacys, '+')) end
+    --
+    return cid_type, privacys
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
