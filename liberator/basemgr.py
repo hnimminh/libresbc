@@ -35,7 +35,7 @@ def fssocket(reqdata):
                     resultstr = response.data
                     if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr: 
                         _result = True
-                    else: 
+                    else:
                         _result = False
                         logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                     result = bool(result and _result)
