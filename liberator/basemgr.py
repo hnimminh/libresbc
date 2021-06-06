@@ -33,7 +33,7 @@ def fssocket(reqdata):
                 response = fs.send(f'api {command}')
                 if response:
                     resultstr = response.data
-                    if '+OK' in resultstr or 'Success' in resultstr: 
+                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr: 
                         _result = True
                     else: 
                         _result = False
