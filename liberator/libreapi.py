@@ -1293,7 +1293,7 @@ class TransportEnum(str, Enum):
 class CidTypeEnum(str, Enum):
     none = 'none'
     rpid = 'rpid'
-    pidd = 'pid'
+    pid = 'pid'
 
 class GatewayModel(BaseModel):
     name: str = Field(regex=_NAME_,min_length=2, max_length=32, description='name of translation class')
