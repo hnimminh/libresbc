@@ -132,11 +132,12 @@ local function main()
                 gateway = fsapi:execute('distributor', route)
                 forceroute = true
             end
-
+            -- callerid type and privacy process
+            callerIdPrivacyProcess(route, InLeg)
+            --------------------------------------------------------------------
             -- set variable on outbound leg 
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
             local outcodecstr = get_codec(route, OUTBOUND)
-            InLeg:execute("export", "nolocal:sip_cid_type=none")
             InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
             InLeg:execute("export", "nolocal:origination_caller_id_name=".._clidname)
             InLeg:execute("export", "nolocal:origination_caller_id_number=".._clidnum)
@@ -185,7 +186,7 @@ local function main()
                 logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'report', 'uuid', _real_uuid,
                        'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user, 
                        'to_user', _sip_to_user, 'destination_number', _destination_number, 'remote_ip', _sip_network_ip, 'callid', _sip_call_id)
-                
+
                 --- BRIDGE 2 LEGs
                 logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
                 freeswitch.bridge(InLeg, OutLeg)

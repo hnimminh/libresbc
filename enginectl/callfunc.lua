@@ -136,7 +136,9 @@ function get_sipprofile(name, direction)
     return rdbconn:hget(intconkey(name, direction), 'sipprofile')
 end
 
+---------------------------------------------------------------------------------------------------------------------------------------------
 -- early media processing
+---------------------------------------------------------------------------------------------------------------------------------------------
 function earlyMediaProcess(name, DxLeg)
     local class = rdbconn:hget(intconkey(name, INBOUND), 'preanswer_class')
     local streams
@@ -157,6 +159,34 @@ function earlyMediaProcess(name, DxLeg)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
+-- privacy and caller id type
+---------------------------------------------------------------------------------------------------------------------------------------------
+function callerIdPrivacyProcess(name, DxLeg)
+    -- caller id type
+    local cid_type = rdbconn:hget(intconkey(name, OUTBOUND), 'cid_type')
+    if cid_type == 'auto' then cid_type = DxLeg:getVariable("sip_cid_type") end
+    if not cid_type then cid_type = 'none' end
+    DxLeg:execute("export", "nolocal:sip_cid_type="..cid_type)
+    -- privacy
+    local privacys = {}
+    local dbprivacy = fieldjsonify(rdbconn:hget(intconkey(name, OUTBOUND), 'privacy'))
+    for i=1, #dbprivacy do
+        if dbprivacy[i] == 'none' then
+            arrayinsert(privacys, '')
+        elseif dbprivacy[i] == 'auto' then
+            if DxLeg:getVariable("privacy_hide_name") == 'true' then arrayinsert(privacys, 'hide_name') end 
+            if DxLeg:getVariable("privacy_hide_number") == 'true' then arrayinsert(privacys, 'hide_number') end
+        elseif dbprivacy[i] == 'screen' then
+            arrayinsert(privacys, 'screen')
+        elseif dbprivacy[i] == 'name' then 
+            arrayinsert(privacys, 'hide_name')
+        elseif dbprivacy[i] == 'number' then
+            arrayinsert(privacys, 'hide_number')
+        else end
+    end
+    if #privacys > 0 then DxLeg:execute("export", "nolocal:origination_privacy="..join(privacys, '+')) end
+end
+
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_translation_rules(name, direction)
