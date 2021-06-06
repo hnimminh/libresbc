@@ -126,7 +126,7 @@ local function main()
             -- translation
             local _clidnum, _clidname, _dnisnum, _tranrules = translate(clidnum, clidname, dnisnum, route, OUTBOUND)
             logify('module', 'enginectl', 'space', 'main', 'seshid', seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'clidnum', _clidnum, 'clidname', _clidname, 'dnisnum', _dnisnum)
-            
+
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
             local sipprofile = get_sipprofile(route, OUTBOUND)
@@ -135,15 +135,15 @@ local function main()
                 gateway = fsapi:execute('distributor', route)
                 forceroute = true
             end
-            -- callerid type and privacy process
-            callerIdPrivacyProcess(route, InLeg)
             -------------------------------------------------------------------- 
             local gwproxy, gwport, gwtransport = getgw(gateway)
-            local sipadvertip = freeswitch.getGlobalVariable(sipprofile..':advertising')
-            --- from:to
-            InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
-            InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..sipadvertip..">" )
-            InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
+            -- callerid type and privacy process
+            local cidtype, _ = callerIdPrivacyProcess(route, InLeg)
+            if cidtype~='none' then
+                InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
+                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(sipprofile..':advertising')..">" )
+                InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
+            end
             -- media negotiation
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
             local outcodecstr = get_codec(route, OUTBOUND)
