@@ -187,6 +187,13 @@ function callerIdPrivacyProcess(name, DxLeg)
     if #privacys > 0 then DxLeg:execute("export", "nolocal:origination_privacy="..join(privacys, '+')) end
 end
 
+---------------------------------------------------------------------------------------------------------------------------------------------
+--- gateway connection param
+function getgw(name)
+    local proxy, _port, transport = unpack(rdbconn:hmget('base:gateway:'..name, {'proxy', 'port', 'transport'}))
+    return proxy, tonumber(_port:sub(6,#_port)), transport
+end
+---------------------------------------------------------------------------------------------------------------------------------------------
 -- TRANSLATION 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_translation_rules(name, direction)
