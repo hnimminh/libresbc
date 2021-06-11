@@ -26,7 +26,8 @@ Protect the network and other devices from:
 * Topology hiding by back to back user agent ([B2BUA](https://en.wikipedia.org/wiki/Back-to-back_user_agent))
 * Encryption of signaling (via TLS) and media ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol))
 * Access Control List
-* Auto Control IP Firewall
+* Auto Control Network Firewall
+* SIP Firewall Level
 
 ### Quality of service 
 The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network and prioritization of flows is usually implemented by the SBC. It can include such functions as:
