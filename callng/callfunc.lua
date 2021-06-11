@@ -105,7 +105,7 @@ function verify_cps(name, direction, uuid)
         -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
         -- eg: 10cps mean 10 call as last 1000ms and not 10 call at 999ms and next 10 calls more at 1001
         local tokenbucket = rdbconn:transaction(function(txn)
-            txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)          -- rotare the the set by remove the member that older
+            txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)               -- rotare the the set by remove the member that older
             txn:zadd(bucket, timestamp, uuid)                                                   -- add this request to history
             txn:zcard(bucket)                                                                   -- can use ZCARD to get number of member in the set p:zrange(history_key, 0, -1, 'withscores')
             txn:pexpire(bucket, 2*ROLLING_WINDOW_TIME)                                          -- auto remove the key if no request in milisecond, can just be ROLLING_WINDOW_TIME
@@ -124,11 +124,11 @@ function verify_cps(name, direction, uuid)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- CODEC 
+-- MEDIA 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_codec(name, direction)
-    local class = rdbconn:hget(intconkey(name, direction), 'codec_class')
-    return join(fieldjsonify(rdbconn:hget('class:codec:'..class, 'codecs')))
+    local class = rdbconn:hget(intconkey(name, direction), 'media_class')
+    return join(fieldjsonify(rdbconn:hget('class:media:'..class, 'codecs')))
 end
 
 -- get siprofile of interconnection name
@@ -342,10 +342,10 @@ function routing_query(tablename, routingdata)
             if action == BLOCK then
                 return BLOCK, BLOCK, routingrules
             elseif action == QUERY then
-                tablename, _ = pchoice(p, l, tonumber(l))
+                tablename, _ = pchoice(p, s, tonumber(l))
                 goto REQUERYROUTE
             elseif action == ROUTE then
-                primary, secondary = pchoice(p, l, tonumber(l))
+                primary, secondary = pchoice(p, s, tonumber(l))
                 return primary, secondary, routingrules
             else
                 return nil, nil, routingrules
