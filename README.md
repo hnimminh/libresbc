@@ -57,7 +57,7 @@ Support to intergrate with 3rd-party system or customer function easily
 * Healthcheck and Failure Autodetection
 
 ## Architecture
-![image](https://user-images.githubusercontent.com/58973699/116818193-56850600-ab94-11eb-8a15-cbe25724c27f.png)
+![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
 
 ## Performance Test
 * System Under Test
