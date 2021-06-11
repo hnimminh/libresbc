@@ -1,4 +1,4 @@
-dofile("{{rundir}}/enginectl/utilities.lua")
+dofile("{{rundir}}/callng/utilities.lua")
 ---------------------------------------------------------------------------
 
 local function cdrreport()
@@ -93,7 +93,7 @@ local function cdrreport()
     else 
         filename = os.date("%Y-%m-%d")..'.cdr.raw.json'
         writefile(LOGDIR..'/cdr/'..filename, cdrjson)
-        logify('module', 'enginectl', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdbtimeout', 'data', cdrjson, 'donext', 'writefile', 'filename', filename)
+        logify('module', 'callng', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdbtimeout', 'data', cdrjson, 'donext', 'writefile', 'filename', filename)
     end
 end
 
@@ -102,7 +102,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(cdrreport)
 if not result then
-    logger("module=enginectl, space=event:cdr, action=exception, error="..tostring(error))
+    logger("module=callng, space=event:cdr, action=exception, error="..tostring(error))
 end
 ---- close log ----
 syslog.closelog()

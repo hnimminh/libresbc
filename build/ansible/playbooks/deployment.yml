@@ -13,7 +13,7 @@
     - logrotate
     - nginx
     - liberator
-    - enginectl
+    - callng
     - freeswitch
     - nftables
     #- captagent

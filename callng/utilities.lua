@@ -1,4 +1,4 @@
-dofile("{{rundir}}/enginectl/configuration.lua")
+dofile("{{rundir}}/callng/configuration.lua")
 
 -- REQUIRE
 socket = require("socket")

@@ -57,12 +57,12 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value=" /usr/share/lua/5.2/?.lua"/> -->
-        <param name="startup-script" value="$${enginectld}/event.startup.lua"/>
-        <hook event="CHANNEL_CREATE" script="$${enginectld}/event.capacity.lua"/>
-        <hook event="CHANNEL_UUID" script="$${enginectld}/event.capacity.lua"/>
-        <hook event="CHANNEL_DESTROY" script="$${enginectld}/event.capacity.lua"/>
-        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${enginectld}/event.cdr.lua"/>
-        <hook event="CUSTOM" subclass="sofia::register_failure" script="$${enginectld}/event.unauth.lua"/>
+        <param name="startup-script" value="$${callngd}/event.startup.lua"/>
+        <hook event="CHANNEL_CREATE" script="$${callngd}/event.capacity.lua"/>
+        <hook event="CHANNEL_UUID" script="$${callngd}/event.capacity.lua"/>
+        <hook event="CHANNEL_DESTROY" script="$${callngd}/event.capacity.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="$${callngd}/event.cdr.lua"/>
+        <hook event="CUSTOM" subclass="sofia::register_failure" script="$${callngd}/event.unauth.lua"/>
       </settings>
     </configuration>
     <!--- MODULES -->  
@@ -125,7 +125,7 @@
     <context name="redirected">
       <extension name="any_to_any">
         <condition field="destination_number" expression="^.+$">
-          <action application="lua" data="$${enginectld}/redirection.lua"/>
+          <action application="lua" data="$${callngd}/redirection.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
         </condition>
       </extension>
@@ -133,7 +133,7 @@
     <context name="interconnection">
       <extension name="interconnection_to_any">
         <condition regex="all">
-          <action application="lua" data="$${enginectld}/main.lua"/>
+          <action application="lua" data="$${callngd}/main.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
@@ -142,7 +142,7 @@
     <context name="core">
       <extension name="core_to_any">
         <condition regex="all">
-          <action application="lua" data="$${enginectld}/main.lua"/>
+          <action application="lua" data="$${callngd}/main.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
@@ -152,7 +152,7 @@
       <extension name="access_to_any">
         <condition regex="all">
           <!-- <regex field="${acl(${network_addr} ACL)}" expression="true"/> -->
-          <action application="lua" data="$${enginectld}/main.lua"/>
+          <action application="lua" data="$${callngd}/main.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>
           <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
         </condition>
