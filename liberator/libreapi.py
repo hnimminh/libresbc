@@ -2331,18 +2331,30 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
 
-        for mainkey in mainkeys: pipe.get(mainkey)
+        for mainkey in mainkeys: 
+            if mainkey.endswith(':compare:'): pipe.hgetall(mainkey)
+            else: pipe.get(mainkey)           
         details = pipe.execute()
-
         records = list()
         for mainkey, detail in zip(mainkeys, details):
             _, _, _, match, value = listify(mainkey)
-            record = {'match': match, 'value': value if value else __DEFAULT_ENTRY__}
-            splitdetail = listify(detail)
-            action = splitdetail[0]
-            if action in [_JUMPS, _ROUTE]:
-                record['routes'] = {'primary': splitdetail[1], 'secondary': splitdetail[2], 'load': int(splitdetail[3])}
-            records.append(record)
+            if value==__EMPTY_STRING__: value = __DEFAULT_ENTRY__
+            if match=='compare':
+                for hashfield, valuefield in detail.items():
+                    compare, param = listify(hashfield)
+                    recordvalue = listify(valuefield)
+                    action = recordvalue[0]
+                    record = {'matching': compare, 'value': param, 'action': action}
+                    if action != 'block':
+                        record.update({'routes':{'primary': recordvalue[1], 'secondary': recordvalue[2], 'load': int(recordvalue[3])}})
+                    records.append(record)
+            else:
+                splitdetail = listify(detail)
+                action = splitdetail[0]
+                record = {'match': match, 'value': value, 'action': action}
+                if action != _BLOCK:
+                    record.update({'routes': {'primary': splitdetail[1], 'secondary': splitdetail[2], 'load': int(splitdetail[3])}})
+                records.append(record)
         engagements = rdbconn.smembers(_engaged_key)
         data.update({'records': records, 'engagements': engagements})
         response.status_code, result = 200, data
@@ -2387,6 +2399,12 @@ def list_routing_table(response: Response):
 class MatchingEnum(str, Enum):
     lpm = 'lpm'
     em = 'em'
+    eq = 'eq'
+    ne = 'ne'
+    gt = 'gt'
+    lt = 'le'
+
+_COMPARESET = {'eq', 'ne', 'gt', 'lt'}
 
 class RoutingRecordActionEnum(str, Enum): 
     route = _ROUTE
@@ -2445,9 +2463,17 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
         routes = data.get('routes')
 
-        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
-        if rdbconn.exists(record_key):
-            response.status_code, result = 403, {'error': 'existent routing record'}; return
+        nameid = f'record:{table}:{match}:{value}'
+        hashfield = None
+        if match in _COMPARESET:
+            record_key = f'routing:record:{table}:compare:'
+            hashfield = f'{match}:{value}'
+            if rdbconn.hexists(record_key, hashfield):
+                response.status_code, result = 403, {'error': 'existent routing record'}; return
+        else:
+            record_key = f'routing:{nameid}'
+            if rdbconn.exists(record_key):
+                response.status_code, result = 403, {'error': 'existent routing record'}; return
 
         action = routes[0]
         if action==_ROUTE:
@@ -2456,7 +2482,9 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         elif action==_JUMPS:
             for route in routes[1:3]:
                 pipe.sadd(f'engagement:routing:table:{route}', nameid)
-        pipe.set(record_key, stringify(map(str, routes)))
+
+        if hashfield: pipe.hset(record_key, hashfield, stringify(map(str, routes)))
+        else: pipe.set(record_key, stringify(map(str, routes)))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2476,12 +2504,22 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         match = data.get('match')
         value = data.get('value')
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
+        
+        nameid = f'record:{table}:{match}:{value}'
+        hashfield = None
+        if match in _COMPARESET:
+            record_key = f'routing:record:{table}:compare:'
+            hashfield = f'{match}:{value}'
+            if not rdbconn.hexists(record_key, hashfield):
+                response.status_code, result = 403, {'error': 'non existent routing record'}; return
+        else:
+            record_key = f'routing:{nameid}'
+            if not rdbconn.exists(record_key):
+                response.status_code, result = 403, {'error': 'non existent routing record'}; return
 
-        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
-        if not rdbconn.exists(record_key):
-            response.status_code, result = 403, {'error': 'non existent routing record'}; return
         # process old data
-        _routes = listify(rdbconn.get(record_key))
+        if hashfield: _routes = listify(rdbconn.hget(record_key, hashfield))
+        else: _routes = listify(rdbconn.get(record_key))
         _action = _routes[0]
         if _action==_ROUTE:
             for _route in _routes[1:3]:
@@ -2501,7 +2539,8 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
                 pipe.sadd(f'engagement:routing:table:{route}', nameid)
         else: pass
 
-        pipe.set(record_key, stringify(map(str, routes)))
+        if hashfield: pipe.hset(record_key, hashfield, stringify(map(str, routes)))
+        else: pipe.set(record_key, stringify(map(str, routes)))
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2512,16 +2551,27 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
 
 
 @librerouter.delete("/libreapi/routing/record/{table}/{match}/{value}", status_code=200)
-def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_), table:str=Path(..., regex=_NAME_), match:str=Path(..., regex='^(em|lpm)$')):
+def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_), table:str=Path(..., regex=_NAME_), 
+                          match:str=Path(..., regex='^(em|lpm|eq|ne|gt|lt)$')):
     result = None
     try:
         pipe = rdbconn.pipeline()
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
-        nameid = f'record:{table}:{match}:{value}'; record_key = f'routing:{nameid}'
-        if not rdbconn.exists(record_key):
-            response.status_code, result = 403, {'error': 'notexistent routing record'}; return
 
-        _routes = listify(rdbconn.get(record_key))
+        nameid = f'record:{table}:{match}:{value}'
+        hashfield = None
+        if match in _COMPARESET:
+            record_key = f'routing:record:{table}:compare:'
+            hashfield = f'{match}:{value}'
+            if not rdbconn.hexists(record_key, hashfield):
+                response.status_code, result = 403, {'error': 'non existent routing record'}; return
+        else:
+            record_key = f'routing:{nameid}'
+            if not rdbconn.exists(record_key):
+                response.status_code, result = 403, {'error': 'non existent routing record'}; return
+
+        if hashfield: _routes = listify(rdbconn.hget(record_key, hashfield))
+        else: _routes = listify(rdbconn.get(record_key))
         _action = _routes[0]
         if _action==_ROUTE:
             for _route in _routes[1:3]:
@@ -2529,7 +2579,9 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         if _action==_JUMPS:
             for _route in _routes[1:3]:
                 pipe.srem(f'engagement:routing:table:{_route}', nameid)
-        pipe.delete(record_key)
+        
+        if hashfield: pipe.hdel(record_key, hashfield)
+        else:  pipe.delete(record_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
