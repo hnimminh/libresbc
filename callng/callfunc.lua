@@ -317,18 +317,19 @@ function routing_query(tablename, routingdata)
                     else end
                 end
             end
-
-
-            routevalue = rdbconn:get('routing:record:'..tablename..':em:'..value)
-            if routevalue then
-                arrayinsert(routingrules, 'em'..value)
-            else
-                for i=0, #value do
-                    local prefix = value:sub(1,#value-i)
-                    routevalue = rdbconn:get('routing:record:'..tablename..':lpm:'..prefix)
-                    if routevalue then
-                        arrayinsert(routingrules, 'lpm'..prefix)
-                        break
+            --route lookup {em, lpm}
+            if not routevalue then 
+                routevalue = rdbconn:get('routing:record:'..tablename..':em:'..value)
+                if routevalue then
+                    arrayinsert(routingrules, 'em.'..value)
+                else
+                    for i=0, #value do
+                        local prefix = value:sub(1,#value-i)
+                        routevalue = rdbconn:get('routing:record:'..tablename..':lpm:'..prefix)
+                        if routevalue then
+                            arrayinsert(routingrules, 'lpm.'..prefix)
+                            break
+                        end
                     end
                 end
             end
@@ -355,104 +356,3 @@ function routing_query(tablename, routingdata)
     return primary, secondary, routingrules
 end
 
-
-
-
-
-
-function freeschema_routing_query(context, routingdata)
-    local primary, secondary, pseudo_routing_rules = nil, nil, {}
-    ---
-    local tablename = routingdata.table
-    repeat
-        -- routing table process
-        local routevalue = nil
-        local schema = rdbconn:hgetall('routing:'..context..':table:'..tablename)
-        -- return immediately if invalid schema
-        if (not next(schema)) then return nil, nil, pseudo_routing_rules end
-        table.insert(pseudo_routing_rules, tablename)
-        local schema_action = schema.action
-        if schema_action == 'block' then
-            return _BLOCKING, _BLOCKING, pseudo_routing_rules
-        elseif schema_action == 'route' then
-            local routes = split(schema.routes, ':')
-            primary, secondary = weighted_choice(routes[1], routes[2], tonumber(routes[3]))
-            return primary, secondary, pseudo_routing_rules
-        elseif schema_action == 'query' then
-            local variable = schema.variable
-            local value = routingdata[variable]
-            -- return immediately if invalid schema
-            if (not value) then return nil, nil, pseudo_routing_rules end
-            -- route lookup {eq, ne, gt, lt, ge, le}
-            local hashroute = rdbconn:hgetall('routing:'..context..':record:'..tablename..':compare:')
-            if next(hashroute) then
-                for hfield, hvalue in pairs(hashroute) do
-                    local compare, param = unpack(split(hfield, ':'))
-                    local paramvalue = routingdata[param]
-                    -- if not get dynamic value, use fixed value
-                    if not paramvalue then paramvalue = param end 
-                    if compare=='eq' then
-                        if value==paramvalue then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    elseif compare=='ne' then
-                        if value~=paramvalue then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    elseif compare=='gt' then
-                        if tonumber(paramvalue) and tonumber(value) and tonumber(value) > tonumber(paramvalue) then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    elseif compare=='lt' then
-                        if tonumber(paramvalue) and tonumber(value) and tonumber(value) < tonumber(paramvalue) then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    elseif compare=='ge' then
-                        if tonumber(paramvalue) and tonumber(value) and tonumber(value) >= tonumber(paramvalue) then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    elseif compare=='le' then
-                        if tonumber(paramvalue) and tonumber(value) and tonumber(value) <= tonumber(paramvalue) then
-                            table.insert(pseudo_routing_rules, compare..'.'..param); routevalue = hvalue; break
-                        end
-                    else end
-                end
-            end
-            --route lookup {em, lpm}
-            if not routevalue then
-                routevalue = rdbconn:get('routing:'..context..':record:'..tablename..':em:'..value)
-                if routevalue then
-                    table.insert(pseudo_routing_rules, 'em.'..value)
-                else
-                    for i=0, #value do
-                        local prefix = value:sub(1,#value-i)
-                        routevalue = rdbconn:get('routing:'..context..':record:'..tablename..':lpm:'..prefix)
-                        if routevalue then
-                            table.insert(pseudo_routing_rules, 'lpm.'..prefix)
-                            break
-                        end
-                    end
-                end
-            end
-        else
-            return nil, nil, pseudo_routing_rules
-        end
-        -- routing record process
-        if routevalue then
-            local action, p, s, l = unpack(split(routevalue, ':'))
-            if action == 'block' then
-                return _BLOCKING, _BLOCKING, pseudo_routing_rules
-            elseif action == 'refer'then
-                tablename, _ = weighted_choice(p, s, tonumber(l))
-                goto REQUERYROUTE
-            elseif action == 'route' then
-                primary, secondary = weighted_choice(p, s, tonumber(l))
-                return primary, secondary, pseudo_routing_rules
-            else
-                return nil, nil, pseudo_routing_rules
-            end
-        end
-        ::REQUERYROUTE::
-    until (ismeberof(pseudo_routing_rules, tablename) or (#pseudo_routing_rules >= 10) or (primary))
-    return primary, secondary, pseudo_routing_rules
-end
