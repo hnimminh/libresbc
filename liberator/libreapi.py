@@ -891,7 +891,7 @@ def list_preanswer_class(response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# CODEC CLASS 
+# MEDIA CLASS 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CodecEnum(str, Enum):
     PCMA = "PCMA"
@@ -899,38 +899,38 @@ class CodecEnum(str, Enum):
     OPUS = "OPUS"
     G729 = "G729"
 
-class CodecModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of codec class (identifier)')
+class MediaModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of Media class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
 
 
-@librerouter.post("/libreapi/class/codec", status_code=200)
-def create_codec_class(reqbody: CodecModel, response: Response):
+@librerouter.post("/libreapi/class/media", status_code=200)
+def create_media_class(reqbody: MediaModel, response: Response):
     result = None
     try:
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        name_key = f'class:codec:{name}'
+        name_key = f'class:media:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=create_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.put("/libreapi/class/codec/{identifier}", status_code=200)
-def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.put("/libreapi/class/media/{identifier}", status_code=200)
+def update_media_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
         data = jsonable_encoder(reqbody)
-        _name_key = f'class:codec:{identifier}'
-        name_key = f'class:codec:{name}'
+        _name_key = f'class:media:{identifier}'
+        name_key = f'class:media:{name}'
         if not rdbconn.exists(_name_key): 
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -941,7 +941,7 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
             engaged_key = f'engagement:{name_key}'
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
-                pipe.hset(f'intcon:{engagement}', 'codec_class', name)
+                pipe.hset(f'intcon:{engagement}', 'media_class', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -949,16 +949,16 @@ def update_codec_class(reqbody: CodecModel, response: Response, identifier: str=
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=update_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.delete("/libreapi/class/codec/{identifier}", status_code=200)
-def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.delete("/libreapi/class/media/{identifier}", status_code=200)
+def delete_media_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        _name_key = f'class:codec:{identifier}'
+        _name_key = f'class:media:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if rdbconn.scard(_engage_key): 
             response.status_code, result = 403, {'error': 'engaged class'}; return
@@ -970,15 +970,15 @@ def delete_codec_class(response: Response, identifier: str=Path(..., regex=_NAME
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=delete_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libreapi/class/codec/{identifier}", status_code=200)
-def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+@librerouter.get("/libreapi/class/media/{identifier}", status_code=200)
+def detail_media_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
-        _name_key = f'class:codec:{identifier}'
+        _name_key = f'class:media:{identifier}'
         _engage_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -988,16 +988,16 @@ def detail_codec_class(response: Response, identifier: str=Path(..., regex=_NAME
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=detail_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
-@librerouter.get("/libreapi/class/codec", status_code=200)
-def list_codec_class(response: Response):
+@librerouter.get("/libreapi/class/media", status_code=200)
+def list_media_class(response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        KEYPATTERN = f'class:codec:*'
+        KEYPATTERN = f'class:media:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
@@ -1015,7 +1015,7 @@ def list_codec_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_codec_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=list_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1480,10 +1480,10 @@ def list_gateway(response: Response):
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-def check_existent_codec(codec):
-    if not rdbconn.exists(f'class:codec:{codec}'):
+def check_existent_media(name):
+    if not rdbconn.exists(f'class:media:{name}'):
         raise ValueError('nonexistent class')
-    return codec
+    return name
 
 def check_existent_capacity(capacity):
     if not rdbconn.exists(f'class:capacity:{capacity}'):
@@ -1555,7 +1555,7 @@ class OutboundInterconnection(BaseModel):
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
     rtpaddrs: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
-    codec_class: str = Field(description='nameid of codec class')
+    media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
@@ -1564,7 +1564,7 @@ class OutboundInterconnection(BaseModel):
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
-    _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
+    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
     _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
@@ -1616,7 +1616,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
-        codec_class = data.get('codec_class')
+        media_class = data.get('media_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
@@ -1630,7 +1630,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:media:{media_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
@@ -1658,7 +1658,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
-        codec_class = data.get('codec_class')
+        media_class = data.get('media_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
         manipulation_classes = data.get('manipulation_classes')
@@ -1674,7 +1674,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
         _nodes = _data.get('nodes')
-        _codec_class = _data.get('codec_class')
+        _media_class = _data.get('media_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
@@ -1685,7 +1685,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:media:{_media_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
@@ -1702,7 +1702,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:media:{media_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
         for translation in translation_classes: pipe.sadd(f'engagement:class:translation:{translation}', nameid)
         for manipulation in manipulation_classes: pipe.sadd(f'engagement:class:manipulation:{manipulation}', nameid)
@@ -1762,7 +1762,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
         _nodes = _data.get('nodes')
-        _codec_class = _data.get('codec_class')
+        _media_class = _data.get('media_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
@@ -1771,7 +1771,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:media:{_media_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
@@ -1872,7 +1872,7 @@ class InboundInterconnection(BaseModel):
     sipaddrs: List[IPv4Network] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
     rtpaddrs: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     ringready: bool = Field(default=False, description='response 180 ring indication')
-    codec_class: str = Field(description='nameid of codec class')
+    media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
@@ -1883,7 +1883,7 @@ class InboundInterconnection(BaseModel):
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
     _existenpreanswer = validator('preanswer_class')(check_existent_preanswer)
-    _existentcodec = validator('codec_class', allow_reuse=True)(check_existent_codec)
+    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
     _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
@@ -1916,7 +1916,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         routing = data.get('routing')
         sipaddrs = set(data.get('sipaddrs'))
         rtpaddrs = set(data.get('rtpaddrs'))
-        codec_class = data.get('codec_class')
+        media_class = data.get('media_class')
         preanswer_class = data.get('preanswer_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1940,7 +1940,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:table:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:media:{media_class}', nameid)
         if preanswer_class:
             pipe.sadd(f'engagement:class:preanswer:{preanswer_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
@@ -1971,7 +1971,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         sipaddrs = set(data.get('sipaddrs'))
         rtpaddrs = set(data.get('rtpaddrs'))
         routing = data.get('routing')
-        codec_class = data.get('codec_class')
+        media_class = data.get('media_class')
         preanswer_class = data.get('preanswer_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1989,7 +1989,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         _sipprofile = _data.get('sipprofile')
         _routing = _data.get('routing')
         _nodes = set(_data.get('nodes'))
-        _codec_class = _data.get('codec_class')
+        _media_class = _data.get('media_class')
         _preanswer_class = _data.get('preanswer_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
@@ -2012,7 +2012,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         pipe.srem(f'engagement:routing:table:{_routing}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:media:{_media_class}', _nameid)
         if _preanswer_class:
             pipe.srem(f'engagement:class:preanswer:{_preanswer_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
@@ -2027,7 +2027,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         pipe.sadd(f'engagement:routing:table:{routing}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
-        pipe.sadd(f'engagement:class:codec:{codec_class}', nameid)
+        pipe.sadd(f'engagement:class:media:{media_class}', nameid)
         if preanswer_class:
             pipe.sadd(f'engagement:class:preanswer:{preanswer_class}', nameid)
         pipe.sadd(f'engagement:class:capacity:{capacity_class}', nameid)
@@ -2068,7 +2068,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
         _nodes = _data.get('nodes')
-        _codec_class = _data.get('codec_class')
+        _media_class = _data.get('media_class')
         _preanswer_class = _data.get('preanswer_class')
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
@@ -2077,7 +2077,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
 
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
-        pipe.srem(f'engagement:class:codec:{_codec_class}', _nameid)
+        pipe.srem(f'engagement:class:media:{_media_class}', _nameid)
         if _preanswer_class:
             pipe.srem(f'engagement:class:preanswer:{_preanswer_class}', _nameid)
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
