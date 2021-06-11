@@ -2413,7 +2413,7 @@ class RoutingRecordActionEnum(str, Enum):
 
 class RoutingRecordModel(BaseModel):
     table: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
-    match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match')
+    match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match, eq: equal, ne: not equal, gt: greater than, lt: less than',)
     value: str = Field(min_length=1, max_length=128, regex=_DIAL_, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
     routes: Optional[RouteModel] = Field(description='route model data')
