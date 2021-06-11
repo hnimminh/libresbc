@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
 Very simple HTTP server in python for logging requests
-Usage::
-    ./httpcdr-server.py [<ipaddr> <port>]
+Usage:: httpcdr-server.py [<ipaddr> <port>]
 """
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
