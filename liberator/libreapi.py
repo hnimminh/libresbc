@@ -2402,7 +2402,7 @@ class MatchingEnum(str, Enum):
     eq = 'eq'
     ne = 'ne'
     gt = 'gt'
-    lt = 'le'
+    lt = 'lt'
 
 _COMPARESET = {'eq', 'ne', 'gt', 'lt'}
 
