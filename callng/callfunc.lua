@@ -105,7 +105,7 @@ function verify_cps(name, direction, uuid)
         -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
         -- eg: 10cps mean 10 call as last 1000ms and not 10 call at 999ms and next 10 calls more at 1001
         local tokenbucket = rdbconn:transaction(function(txn)
-            txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)          -- rotare the the set by remove the member that older
+            txn:zremrangebyscore(bucket, '-inf', timestamp - ROLLING_WINDOW_TIME)               -- rotare the the set by remove the member that older
             txn:zadd(bucket, timestamp, uuid)                                                   -- add this request to history
             txn:zcard(bucket)                                                                   -- can use ZCARD to get number of member in the set p:zrange(history_key, 0, -1, 'withscores')
             txn:pexpire(bucket, 2*ROLLING_WINDOW_TIME)                                          -- auto remove the key if no request in milisecond, can just be ROLLING_WINDOW_TIME
