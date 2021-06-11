@@ -923,7 +923,7 @@ def create_media_class(reqbody: MediaModel, response: Response):
         return result
 
 @librerouter.put("/libreapi/class/media/{identifier}", status_code=200)
-def update_media_class(reqbody: CodecModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+def update_media_class(reqbody: MediaModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     try:
         pipe = rdbconn.pipeline()
