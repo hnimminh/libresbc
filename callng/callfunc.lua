@@ -124,11 +124,11 @@ function verify_cps(name, direction, uuid)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- CODEC 
+-- MEDIA 
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_codec(name, direction)
-    local class = rdbconn:hget(intconkey(name, direction), 'codec_class')
-    return join(fieldjsonify(rdbconn:hget('class:codec:'..class, 'codecs')))
+    local class = rdbconn:hget(intconkey(name, direction), 'media_class')
+    return join(fieldjsonify(rdbconn:hget('class:media:'..class, 'codecs')))
 end
 
 -- get siprofile of interconnection name
