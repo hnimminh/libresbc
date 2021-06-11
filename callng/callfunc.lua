@@ -342,10 +342,10 @@ function routing_query(tablename, routingdata)
             if action == BLOCK then
                 return BLOCK, BLOCK, routingrules
             elseif action == QUERY then
-                tablename, _ = pchoice(p, l, tonumber(l))
+                tablename, _ = pchoice(p, s, tonumber(l))
                 goto REQUERYROUTE
             elseif action == ROUTE then
-                primary, secondary = pchoice(p, l, tonumber(l))
+                primary, secondary = pchoice(p, s, tonumber(l))
                 return primary, secondary, routingrules
             else
                 return nil, nil, routingrules
