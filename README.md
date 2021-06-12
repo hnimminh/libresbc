@@ -2,7 +2,9 @@
 
 
 # Libre Session Border Controller
-LibreSBC is a [Session Border Controller](https://en.wikipedia.org/wiki/Session_border_controller), a network function which secures voice over IP (VoIP) infrastructures while providing interworking between incompatible signaling messages and media flows (sessions) from end devices or application servers. LibreSBC designed to employed in Enterprise infrastructures or any carrier network delivering commercial residential, or typically deployed at both the network edge and at carrier interconnects, the demarcation points (borders) between private production environment and other service providers.
+LibreSBC is a [Session Border Controller](https://en.wikipedia.org/wiki/Session_border_controller), a network function which secures voice over IP (VoIP) infrastructures while providing interworking between incompatible signaling messages and media flows (sessions) from end devices or application servers. 
+
+LibreSBC designed to employed in Enterprise infrastructures or any carrier network delivering commercial residential, or typically deployed at both the network edge and at carrier interconnects, the demarcation points (borders) between private production environment and other service providers.
 
 ## Functions
 SBCs commonly maintain full session state and offer the following functions:
@@ -41,8 +43,11 @@ Offer border-based media control and services such as:
 * Media encoding/decoding ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol)/[RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol))
 * [DTMF](https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling) relay and interworking include In-Band Signaling (touch tones), Out-of-Band Signaling ([RFC2833](https://www.ietf.org/rfc/rfc2833.txt)) and SIP INFO Method
 * Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)).
-* Tones and announcements
+* Tones and announcements (Early Media)
 * Data and fax interworking
+* Support multiple Media mode: Proxy, Bypass Transcode
+* Voice Activity Detection [VAD](https://en.wikipedia.org/wiki/Voice_activity_detection)
+* Confort Noise Generation [CNG](https://en.wikipedia.org/wiki/Comfort_noise)
 
 ### Intergration
 Support to intergrate with 3rd-party system or customer function easily
