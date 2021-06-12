@@ -2,9 +2,8 @@
 
 
 # Libre Session Border Controller
-LibreSBC is a [Session Border Controller](https://en.wikipedia.org/wiki/Session_border_controller), a network function which secures voice over IP (VoIP) infrastructures while providing interworking between incompatible signaling messages and media flows (sessions) from end devices or application servers. 
-
-LibreSBC designed to employed in Enterprise infrastructures or any carrier network delivering commercial residential, or typically deployed at both the network edge and at carrier interconnects, the demarcation points (borders) between private production environment and other service providers.
+LibreSBC is a [Session Border Controller](https://en.wikipedia.org/wiki/Session_border_controller) provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures.
+LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks or environments.
 
 ## Functions
 SBCs commonly maintain full session state and offer the following functions:
