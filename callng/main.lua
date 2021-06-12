@@ -1,3 +1,12 @@
+--
+-- callng:main.lua
+-- 
+-- The Initial Developer of the Original Code is
+-- Minh Minh <hnimminh@outlook.com>
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer. All Rights Reserved.
+--
+--
+
 dofile("{{rundir}}/callng/callfunc.lua")
 ---------------------******************************---------------------
 ---------------------****|  INBOUND callng   |****---------------------

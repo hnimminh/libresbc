@@ -1,3 +1,12 @@
+#
+# liberator:libreapi.py
+# 
+# The Initial Developer of the Original Code is
+# Minh Minh <hnimminh@outlook.com>
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# All Rights Reserved.
+#
+
 import traceback
 import re
 import json
