@@ -1,6 +1,6 @@
-<p align="center">
-  <img width="996px" src="https://user-images.githubusercontent.com/58973699/121772641-ce394e00-cba0-11eb-8ec0-35b1350c7383.png" />
-</p>
+<a href="https://github.com/hnimminh/libresbc" target="_blank">
+  <img width="996px" src="https://user-images.githubusercontent.com/58973699/121782372-5b959600-cbd3-11eb-93e9-e961d402f293.png" alt="">
+</a>
 
 <p align="center">
   <a href="https://github.com/hnimminh/libresbc/stargazers" target="_blank">
@@ -19,11 +19,12 @@
 
 <h1 align="center">LIBRESBC</h1>
 <h2 align="center">Libre Session Border Controller</h2>
-<p align="center"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b></p>
+<p align="left"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b></p>
 
 
 ## Table of Contents
 - [Why](#why)
+- [Architecture](#architecture)
 - [Functions](#functions)
   - [Connectivity & Compatibility](#connectivity-&-compatibility)
   - [Security](#security)
@@ -33,11 +34,10 @@
   - [High Avaibility](#high-avaibility)
 - [Documents](#documents)
 - [Roadmap](#roadmap)
-- [Architecture](#architecture)
 - [Deployment](#deployment)
 - [Performance Test](#performance-test)
-- [Contributing](#contributing)
 - [License](#license)
+- [Contributing](#contributing)
 
 
 ## Why
@@ -45,10 +45,10 @@
 * Customisability
 * Capability
 * Community
-* ...
 
-## Roadmap
-[Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
+## Architecture
+![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
+
 ## Functions
 SBCs commonly maintain full session state and offer the following functions:
 
@@ -107,11 +107,10 @@ Support to intergrate with 3rd-party system or customer function easily
 ## Documents
 [Wiki](https://github.com/hnimminh/libresbc/wiki)
 
+## Roadmap
+[Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
 ## Deployment
 [Installation & Configuration](https://github.com/hnimminh/libresbc/wiki/Installation)
-
-## Architecture
-![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
 
 ## Performance Test
 * System Under Test
@@ -141,6 +140,6 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 
 <p align="center">
   <a href="https://www.paypal.com/paypalme/jamesemyn" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/121776592-f54f4a00-cbb7-11eb-96cd-2641c2c1c311.png" height="80" alt="Paypla">
+    <img src="https://user-images.githubusercontent.com/58973699/121781097-7238ee80-cbcd-11eb-8f48-1f473d61b6a5.png" height="80" alt="Paypla">
   </a>
 </p>
