@@ -1,9 +1,9 @@
-[![N|Solid](https://repository-images.githubusercontent.com/286777346/c7ff7f80-2215-11eb-963f-acb53c9acd8f)](https://github.com/hnimminh/libresbc)
+[![N|Solid](https://user-images.githubusercontent.com/58973699/121772867-6edc3d80-cba2-11eb-8e19-cb04b3f06b16.png)](https://github.com/hnimminh/libresbc)
 
 
 # Libre Session Border Controller
 LibreSBC is a [Session Border Controller](https://en.wikipedia.org/wiki/Session_border_controller) provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures.
-LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks or environments.
+LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.
 
 ## Functions
 SBCs commonly maintain full session state and offer the following functions:
@@ -15,7 +15,7 @@ Allow multiple networks to communicate through the use of a variety of technique
 * Call Party Translatation
 * [VPN](https://en.wikipedia.org/wiki/Virtual_private_network) connectivity
 * Protocol translations between [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol), [TCP](https://en.wikipedia.org/wiki/Transmission_Control_Protocol) & [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security)
-* Powerful built-in routing module.
+* Powerful built-in routing engine.
 * Allowing control routing by 3rd-party software via [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
 * Dynamic Load Balancing, Failover, Distribution
 
