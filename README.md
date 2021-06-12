@@ -1,4 +1,4 @@
-[![N|Solid](https://user-images.githubusercontent.com/58973699/121772867-6edc3d80-cba2-11eb-8e19-cb04b3f06b16.png)](https://github.com/hnimminh/libresbc)
+[![N|Solid](https://user-images.githubusercontent.com/58973699/121772641-ce394e00-cba0-11eb-8ec0-35b1350c7383.png)](https://github.com/hnimminh/libresbc)
 
 
 # Libre Session Border Controller
