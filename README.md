@@ -140,6 +140,9 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 
 <p align="center">
   <a href="https://www.paypal.com/paypalme/jamesemyn" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/121781097-7238ee80-cbcd-11eb-8f48-1f473d61b6a5.png" height="80" alt="Paypla">
+    <img src="https://user-images.githubusercontent.com/58973699/121781097-7238ee80-cbcd-11eb-8f48-1f473d61b6a5.png" height="60" alt="Paypla">
+  </a>
+  <a href="https://www.patreon.com/hnimminh" target="_blank">
+    <img src="https://user-images.githubusercontent.com/58973699/121804772-32781280-cc72-11eb-8707-29200197649d.png" height="56" alt="Paypla">
   </a>
 </p>
