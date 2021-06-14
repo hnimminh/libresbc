@@ -104,6 +104,7 @@
       <global_settings>
         <param name="log-level" value="0"/>
         <param name="debug-presence" value="0"/>
+        <param name="parse-all-invite-headers" value="true"/>
       </global_settings>
       <profiles>
         <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/sip-setting"/>
