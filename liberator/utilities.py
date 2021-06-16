@@ -77,7 +77,7 @@ def redishash(data: dict) -> dict:
                 else:
                     try: data.update({key: f':list:{_delimiter_.join(value)}'})
                     except: data.update({key: f':list:{_delimiter_.join([str(v) for v in value])}'})
-            elif isinstance(value, dict): data.update({key: f':json:{json.dumps(data)}'})
+            elif isinstance(value, dict): data.update({key: f':json:{json.dumps(value)}'})
             elif value is None: data.update({key: ':none:'})
             else: pass
     return data
