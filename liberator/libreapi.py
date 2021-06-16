@@ -1312,6 +1312,86 @@ def list_translation_class(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# MANIPULATION 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class ConditionLogic(str, Enum):
+    AND = 'AND'
+    OR = 'OR'
+
+class ConditionRule(BaseModel):
+    refervar: str = Field(description='variable name')
+    pattern: Optional[str] = Field(description='variable pattern with regex')
+
+class ManiCondition(BaseModel):
+    logic: ConditionLogic = Field(default='AND', description='logic operation')
+    rules: List[ConditionRule] = Field(min_items=1, max_items=8, description='list of condition expression')
+
+class ActionEnum(str, Enum):
+    set = 'set'
+    unset = 'unset'
+    log = 'log'
+    respond = 'respond'
+    hangup = 'hangup'
+    sleep = 'sleep'
+
+class ManiAction(BaseModel):
+    action: ActionEnum = Field(description='action')
+    refervar: Optional[str] = Field(description='name of reference variable')
+    pattern: Optional[str] = Field(description='reference variable pattern with regex')
+    targetvar: Optional[str] = Field(description='name of target variable')
+    values: Optional[List[str]] = Field(min_items=1, max_items=8, description='value of target variable')
+    # validation
+    @root_validator()
+    def maniaction_agreement(cls, actions):
+        _actions = jsonable_encoder(actions)
+        action = _actions.get('action')
+        if action in ['log', 'response', 'hangup', 'sleep']:
+            _actions.pop('targetvar', None)
+            values = _actions.get('values', [])
+            if not values:
+                raise ValueError(f'values is require for {action} action')
+        else:
+            targetvar = _actions.get('targetvar')
+            if not targetvar:
+                raise ValueError(f'targetvar is require for {action} action')
+            if action == 'unset':
+                _actions.pop('refervar', None)
+                _actions.pop('pattern', None)
+                _actions.pop('values', None)
+
+        return _actions
+
+
+class ManipulationModel(BaseModel):
+    name: str = Field(regex=_NAME_, max_length=32, description='name of manipulation class')
+    desc: Optional[str] = Field(default='', max_length=64, description='description')
+    condition: Optional[ManiCondition] = Field(min_items=1, max_items=8, description='condition')
+    actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when condition is true')
+    antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when condition is false')
+
+
+@librerouter.post("/libreapi/class/manipulation", status_code=200)
+def create_manipulation(reqbody: ManipulationModel, response: Response):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        name_key = f'class:manipulation:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent manipulation name'}; return
+        rdbconn.hmset(name_key, redishash(data))
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_manipulation, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # GATEWAY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class TransportEnum(str, Enum):
