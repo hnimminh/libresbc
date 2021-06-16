@@ -1459,7 +1459,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody); logify(f'data={data}')
+        data = jsonable_encoder(reqbody)
         name_key = f'base:gateway:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
