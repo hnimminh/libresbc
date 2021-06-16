@@ -1362,11 +1362,10 @@ class ManiAction(BaseModel):
 
         return _actions
 
-
 class ManipulationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of manipulation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    condition: Optional[ManiCondition] = Field(min_items=1, max_items=8, description='condition')
+    condition: Optional[ManiCondition] = Field(description='condition')
     actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when condition is true')
     antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when condition is false')
 
@@ -1387,6 +1386,111 @@ def create_manipulation(reqbody: ManipulationModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_manipulation, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.put("/libreapi/class/manipulation/{identifier}", status_code=200)
+def update_manipulation_class(reqbody: ManipulationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        name = reqbody.name
+        data = jsonable_encoder(reqbody)
+        _name_key = f'class:manipulation:{identifier}'
+        name_key = f'class:manipulation:{name}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        rdbconn.hmset(name_key, redishash(data))
+        # remove the unintended-field
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
+        if name != identifier:
+            _engaged_key = f'engagement:{_name_key}'
+            engaged_key = f'engagement:{name_key}'
+            engagements = rdbconn.smembers(_engaged_key)
+            for engagement in engagements:
+                _manipulation_rules = fieldjsonify(rdbconn.hget(f'intcon:{engagement}', 'manipulation_classes'))
+                manipulation_rules = [name if rule == identifier else rule for rule in _manipulation_rules]
+                pipe.hset(f'intcon:{engagement}', 'manipulation_classes', fieldredisify(manipulation_rules))
+            if rdbconn.exists(_engaged_key):
+                pipe.rename(_engaged_key, engaged_key)
+            pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.delete("/libreapi/class/manipulation/{identifier}", status_code=200)
+def delete_manipulation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        _name_key = f'class:manipulation:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if rdbconn.scard(_engaged_key): 
+            response.status_code, result = 403, {'error': 'engaged class'}; return
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        pipe.delete(_engaged_key)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/class/manipulation/{identifier}", status_code=200)
+def detail_manipulation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'class:manipulation:{identifier}'
+        _engaged_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key): 
+            response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+        engagements = rdbconn.smembers(_engaged_key)
+        result.update({'engagements': engagements})
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/class/manipulation", status_code=200)
+def list_manipulation_class(response: Response):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        KEYPATTERN = f'class:manipulation:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hmget(mainkey, 'desc')
+        details = pipe.execute()
+
+        data = list()
+        for mainkey, detail in zip(mainkeys, details):
+            if detail:
+                data.append({'name': getaname(mainkey), 'desc': detail[0]})
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
