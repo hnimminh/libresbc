@@ -139,7 +139,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 **You can also contribute money to help secure LibreSBC's future.**
 
 <p align="center">
-  <a href="https://www.paypal.com/paypalme/jamesemyn" target="_blank">
+  <a href="https://www.paypal.com/paypalme/hnimminh" target="_blank">
     <img src="https://user-images.githubusercontent.com/58973699/121781097-7238ee80-cbcd-11eb-8f48-1f473d61b6a5.png" height="60" alt="Paypla">
   </a>
   <a href="https://www.patreon.com/hnimminh" target="_blank">
