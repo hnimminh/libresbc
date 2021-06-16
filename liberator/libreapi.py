@@ -1588,11 +1588,10 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
+        _data = jsonhash(rdbconn.hgetall(_name_key))
         data = jsonable_encoder(reqbody)
-        logify(f'data={data}')
         rdbconn.hmset(name_key, redishash(data))
         # remove the unintended-field
-        _data = jsonhash(rdbconn.hgetall(_name_key))
         for _field in _data:
             if _field not in data:
                 pipe.hdel(_name_key, _field)
