@@ -109,6 +109,10 @@ Support to intergrate with 3rd-party system or customer function easily
 
 ## Roadmap
 [Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
+
+## Discussions
+[Discussions](https://github.com/hnimminh/libresbc/discussions)
+
 ## Deployment
 [Installation & Configuration](https://github.com/hnimminh/libresbc/wiki/Installation)
 
