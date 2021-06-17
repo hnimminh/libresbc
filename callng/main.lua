@@ -12,7 +12,7 @@ dofile("{{rundir}}/callng/callfunc.lua")
 ---------------------****|  INBOUND callng   |****---------------------
 ---------------------******************************---------------------
 local function main()
-    local _manitables = {}
+    local NgVars = {}
     local InLeg = session
     local OutLeg = nil
     local seshid = fsapi:execute('create_uuid')
@@ -72,7 +72,10 @@ local function main()
             InLeg:setVariable("sdp_secure_savp_only", "true")
         end
 
-        -- translation calling party number
+        -- inbound normalization
+        normalize(intconname, DxLeg, NgVars)
+
+        -- routing
         local tablename = InLeg:getVariable("x-routing-plan")
         routingdata = {tablename=tablename, intconname=intconname, caller_number=clidnum, destination_number=dnisnum}
         route1, route2, routingrules = routing_query(tablename, routingdata)
@@ -161,7 +164,7 @@ local function main()
                 InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..ENCRYPTION_SUITES)
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
             end
-            --
+            -- setting up vars
             InLeg:execute("export", "nolocal:origination_caller_id_name=".._clidname)
             InLeg:execute("export", "nolocal:origination_caller_id_number=".._clidnum)
             InLeg:execute("export", "nolocal:originate_timeout=90")
@@ -172,6 +175,10 @@ local function main()
             InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..route)
             InLeg:setVariable("X-LIBRE-NEXT-HOP", route)
 
+            -- outbound manipulation
+            manipulate(name, DxLeg, NgVars)
+
+            -- start outbound leg
             logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway' , 'seshid', seshid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/".._dnisnum, InLeg)
 
