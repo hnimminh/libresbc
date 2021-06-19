@@ -1368,6 +1368,14 @@ class ManipulationModel(BaseModel):
     condition: Optional[ManiCondition] = Field(description='condition')
     actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when condition is true')
     antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when condition is false')
+    # validation
+    @root_validator()
+    def mani_agreement(cls, manis):
+        _manis = jsonable_encoder(manis)
+        if 'condition' not in _manis:
+            _manis.pop('antiactions', None)
+
+        return _manis
 
 
 @librerouter.post("/libreapi/class/manipulation", status_code=200)
