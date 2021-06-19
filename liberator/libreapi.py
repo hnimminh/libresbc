@@ -1365,14 +1365,14 @@ class ManiAction(BaseModel):
 class ManipulationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of manipulation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    condition: Optional[ManiCondition] = Field(description='condition')
-    actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when condition is true')
-    antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when condition is false')
+    conditions: Optional[ManiCondition] = Field(description='combine the logic and list of checking rules')
+    actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when conditions is true')
+    antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when conditions is false')
     # validation
     @root_validator()
     def mani_agreement(cls, manis):
         _manis = jsonable_encoder(manis)
-        if 'condition' not in _manis:
+        if 'conditions' not in _manis:
             _manis.pop('antiactions', None)
 
         return _manis
