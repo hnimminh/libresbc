@@ -12,7 +12,7 @@ dofile("{{rundir}}/callng/utilities.lua")
 
 local function fire_startup_event()
     local key = 'event:callengine:startup:'..NODEID
-    local value = json.encode({action='restart', prewait=0, requestid='uuid-of-callengine-startup-event'})
+    local value = json.encode({action='restart', prewait=0, requestid='00000000-0000-0000-0000-000000000000'})
     rdbconn:lpush(key, value)
     logify('module', 'callng', 'space', 'event:startup', 'action', 'fire_startup_event', 'key', key, 'value', value)
 end
