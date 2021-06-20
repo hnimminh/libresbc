@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ### Changed
 - no remove verbose log input data
+- replace local var by NgVars
 ### Fixed
 - Fix unintended field for gateways update
 
