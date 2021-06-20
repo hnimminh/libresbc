@@ -78,14 +78,13 @@ local function main()
 
         -- routing
         local routingrules
-        local tablename = InLeg:getVariable("x-routing-plan")
-        local routingdata = {tablename=tablename, intconname=NgVars.intconname, caller_number=NgVars.cidnumber, destination_number=NgVars.dstnumber}
-        NgVars.route1, NgVars.route2, routingrules = routing_query(tablename, routingdata)
+        local routingtbl = InLeg:getVariable("x-routing-plan")
+        NgVars.route1, NgVars.route2, routingrules = routing_query(routingtbl, NgVars)
 
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
 
-        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'routing_query', 'uuid', uuid, 'NgVars', json.encode(NgVars), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
         if not (NgVars.route1 and NgVars.route2) then
             HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; NgVars.LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
@@ -143,20 +142,20 @@ local function main()
             logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'cidnumber', NgVars._cidnumber, 'cidname', NgVars._cidname, 'dstnumber', NgVars._dstnumber)
 
             -- distributes calls to gateways in a weighted base
-            local forceroute = false 
+            local forceroute = false
             local sipprofile = get_sipprofile(NgVars.route, OUTBOUND)
             local gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '..sipprofile..' gwlist down}')
             if gateway == '-err' then
                 gateway = fsapi:execute('distributor', NgVars.route)
                 forceroute = true
             end
-            -------------------------------------------------------------------- 
+            --------------------------------------------------------------------
             local gwproxy, gwport, gwtransport = getgw(gateway)
             -- callerid type and privacy process
             local cidtype, _ = callerIdPrivacyProcess(NgVars.route, InLeg)
             if cidtype~='none' then
                 InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
-                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(sipprofile..':advertising')..">" )
+                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(sipprofile..':advertising')..">")
                 InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
             end
             -- media negotiation
