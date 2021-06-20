@@ -63,8 +63,8 @@ local function main()
         end
         -- translation
         local tranrules
-        NgVars.clidnum, NgVars.clidname, NgVars.dnisnum, tranrules = translate(caller_number, caller_name, destination_number, NgVars.intconname, INBOUND)
-        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'clidnum', NgVars.clidnum, 'clidname', NgVars.clidname, 'dnisnum', NgVars.dnisnum)
+        NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber, tranrules = translate(caller_number, caller_name, destination_number, NgVars.intconname, INBOUND)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'cidnumber', NgVars.cidnumber, 'cidname', NgVars.cidname, 'dstnumber', NgVars.dstnumber)
         -- media negotiation
         local codecstr = get_codec(NgVars.intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
@@ -79,7 +79,7 @@ local function main()
         -- routing
         local routingrules
         local tablename = InLeg:getVariable("x-routing-plan")
-        local routingdata = {tablename=tablename, intconname=NgVars.intconname, caller_number=NgVars.clidnum, destination_number=NgVars.dnisnum}
+        local routingdata = {tablename=tablename, intconname=NgVars.intconname, caller_number=NgVars.cidnumber, destination_number=NgVars.dstnumber}
         NgVars.route1, NgVars.route2, routingrules = routing_query(tablename, routingdata)
 
         local routingrulestr = 'no.matching.route.found'
@@ -139,8 +139,8 @@ local function main()
             
             -- translation
             local _tranrules
-            NgVars._clidnum, NgVars._clidname, NgVars._dnisnum, _tranrules = translate(NgVars.clidnum, NgVars.clidname, NgVars.dnisnum, NgVars.route, OUTBOUND)
-            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'clidnum', NgVars._clidnum, 'clidname', NgVars._clidname, 'dnisnum', NgVars._dnisnum)
+            NgVars._cidnumber, NgVars._cidname, NgVars._dstnumber, _tranrules = translate(NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber, NgVars.route, OUTBOUND)
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'cidnumber', NgVars._cidnumber, 'cidname', NgVars._cidname, 'dstnumber', NgVars._dstnumber)
 
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
@@ -168,8 +168,8 @@ local function main()
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
             end
             -- setting up vars
-            InLeg:execute("export", "nolocal:origination_caller_id_name="..NgVars._clidname)
-            InLeg:execute("export", "nolocal:origination_caller_id_number="..NgVars._clidnum)
+            InLeg:execute("export", "nolocal:origination_caller_id_name="..NgVars._cidname)
+            InLeg:execute("export", "nolocal:origination_caller_id_number="..NgVars._cidnumber)
             InLeg:execute("export", "nolocal:originate_timeout=90")
             InLeg:execute("export", "nolocal:fax_enable_t38=true")
             InLeg:execute("export", "nolocal:hangup_after_bridge=true")
@@ -183,7 +183,7 @@ local function main()
 
             -- start outbound leg
             logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway' , 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
-            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dnisnum, InLeg)
+            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dstnumber, InLeg)
 
             -- check leg status
             local dialstatus = OutLeg:hangupCause()
