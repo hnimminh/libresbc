@@ -355,7 +355,7 @@ end
 -- INBOUND NORMALIZE
 -------------------------------------------------------------------------------
 function normalize(name, DxLeg, NgVars)
-    local classes = rdbconn:hget(intconkey(name, INBOUND), 'manipulation_class')
+    local classes = fieldjsonify(rdbconn:hget(intconkey(name, INBOUND), 'manipulation_classes'))
     for i=1,#classes do
         local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
