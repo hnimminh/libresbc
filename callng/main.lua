@@ -73,8 +73,10 @@ local function main()
             InLeg:setVariable("sdp_secure_savp_only", "true")
         end
 
+        --------------------------------------------------------------------
         -- inbound normalization
-        normalize(DxLeg, NgVars)
+        normalize(LegIn, NgVars)
+        --------------------------------------------------------------------
 
         -- routing
         local routingrules
@@ -178,8 +180,10 @@ local function main()
             InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..NgVars.route)
             InLeg:setVariable("X-LIBRE-NEXT-HOP", NgVars.route)
 
+            --------------------------------------------------------------------
             -- outbound manipulation
-            manipulate(DxLeg, NgVars)
+            manipulate(InLeg, NgVars)
+            --------------------------------------------------------------------
 
             -- start outbound leg
             logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', _sipprofile, 'gateway', gateway, 'forceroute', forceroute)
