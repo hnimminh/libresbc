@@ -429,7 +429,7 @@ function manipulate(DxLeg, NgVars)
                     if startswith(targetvar, 'ng') or NgVars[targetvar] then
                         NgVars[targetvar] = valuestr
                     else
-                        DxLeg:execute('export', 'nolocal:'..targetvar, valuestr)
+                        DxLeg:execute('export', 'nolocal:'..targetvar..'='..valuestr)
                     end
                 end
             elseif action == 'log' then
