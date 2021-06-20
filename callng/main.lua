@@ -26,7 +26,7 @@ local function main()
         local context = InLeg:getVariable("context")
         local profilename = InLeg:getVariable("sofia_profile_name")
         local network_ip = InLeg:getVariable("sip_network_ip")
-        local realm = InLeg:getVariable("domain_name")
+        NgVars.realm = InLeg:getVariable("domain_name")
         NgVars.intconname = InLeg:getVariable("user_name")
         local call_id = InLeg:getVariable("sip_call_id")
         local transport = InLeg:getVariable("sip_via_protocol")
@@ -35,7 +35,7 @@ local function main()
         local destination_number = InLeg:getVariable("destination_number")
         -- log the incoming call request
         logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'inbound_call' , 'uuid', uuid, 'context', context, 
-               'profilename', profilename, 'network_ip', network_ip, 'realm', realm, 'intconname', NgVars.intconname, 'call_id', call_id,
+               'profilename', profilename, 'network_ip', network_ip, 'realm', NgVars.realm, 'intconname', NgVars.intconname, 'call_id', call_id,
                'transport', transport, 'caller_name', caller_name, 'caller_number', caller_number, 'destination_number', destination_number)
         -----------------------------------------------------------
         ---- IN LEG: INTIAL VAR
@@ -78,13 +78,14 @@ local function main()
 
         -- routing
         local routingrules
-        local routingtbl = InLeg:getVariable("x-routing-plan")
-        NgVars.route1, NgVars.route2, routingrules = routing_query(routingtbl, NgVars)
+        local routingname = InLeg:getVariable("x-routing-plan")
+        local routingjson = {cidname=NgVars.cidname, cidnumber=NgVars.cidnumber, dstnumber=NgVars.dstnumber, intconname=NgVars.intconname, realm=NgVars.realm}
+        NgVars.route1, NgVars.route2, routingrules = routing_query(routingname, routingjson)
 
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
 
-        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'routing_query', 'uuid', uuid, 'NgVars', json.encode(NgVars), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'routing_query', 'uuid', uuid, 'routingname', routingname, 'routingjson', json.encode(routingjson), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
         if not (NgVars.route1 and NgVars.route2) then
             HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; NgVars.LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
