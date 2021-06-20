@@ -1315,13 +1315,16 @@ def list_translation_class(response: Response):
 # MANIPULATION 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+HANGUP_PATTERN = re.compile('^[A-Z][A-Z0-9_]+$')
+NUMBER_PATTERN = re.compile('^[0-9]+$')
+
 class ConditionLogic(str, Enum):
     AND = 'AND'
     OR = 'OR'
 
 class ConditionRule(BaseModel):
-    refervar: str = Field(description='variable name')
-    pattern: Optional[str] = Field(description='variable pattern with regex')
+    refervar: str = Field(min_length=2, max_length=128, description='variable name')
+    pattern: Optional[str] = Field(min_length=2, max_length=128, description='variable pattern with regex')
 
 class ManiCondition(BaseModel):
     logic: ConditionLogic = Field(default='AND', description='logic operation')
@@ -1329,38 +1332,46 @@ class ManiCondition(BaseModel):
 
 class ActionEnum(str, Enum):
     set = 'set'
-    unset = 'unset'
     log = 'log'
-    respond = 'respond'
     hangup = 'hangup'
     sleep = 'sleep'
 
 class ManiAction(BaseModel):
     action: ActionEnum = Field(description='action')
-    refervar: Optional[str] = Field(description='name of reference variable')
-    pattern: Optional[str] = Field(description='reference variable pattern with regex')
-    targetvar: Optional[str] = Field(description='name of target variable')
-    values: Optional[List[str]] = Field(min_items=1, max_items=8, description='value of target variable')
+    refervar: Optional[str] = Field(min_length=2, max_length=128, description='name of reference variable')
+    pattern: Optional[str] = Field(min_length=2, max_length=128, description='reference variable pattern with regex')
+    targetvar: Optional[str] = Field(min_length=2, max_length=128, description='name of target variable')
+    values: List[str] = Field(max_items=8, description='value of target variable')
     # validation
     @root_validator()
-    def maniaction_agreement(cls, actions):
-        _actions = jsonable_encoder(actions)
-        action = _actions.get('action')
-        if action in ['log', 'response', 'hangup', 'sleep']:
-            _actions.pop('targetvar', None)
-            values = _actions.get('values', [])
-            if not values:
-                raise ValueError(f'values is require for {action} action')
-        else:
-            targetvar = _actions.get('targetvar')
+    def maniaction_agreement(cls, maniacts):
+        _maniacts = jsonable_encoder(maniacts)
+        action = _maniacts.get('action')
+        values = _maniacts.get('values', [])
+        if action == 'set':
+            targetvar = _maniacts.get('targetvar')
             if not targetvar:
                 raise ValueError(f'targetvar is require for {action} action')
-            if action == 'unset':
-                _actions.pop('refervar', None)
-                _actions.pop('pattern', None)
-                _actions.pop('values', None)
+            if not values:
+                _maniacts.pop('refervar', None)
+                _maniacts.pop('pattern', None)
+        else: #{log,hangup,sleep}
+            _maniacts.pop('targetvar', None)
+            if not values:
+                raise ValueError(f'values must contain at least 1 item for {action} action')
+            else:
+                if action == 'hangup':
+                    if not HANGUP_PATTERN.match(values[0]):
+                        raise ValueError(f'hangup action require define hangup cause string with upper charaters')
+                    else:
+                        _maniacts['values'] = values[:1]
+                if action == 'sleep':
+                    if not NUMBER_PATTERN.match(values[0]):
+                        raise ValueError(f'sleep require value is a number')
+                    else:
+                        _maniacts['values'] = values[:1]
 
-        return _actions
+        return _maniacts
 
 class ManipulationModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of manipulation class')
