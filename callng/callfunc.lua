@@ -264,12 +264,144 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- MANIPULATION
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- INBOUND NORMALIZE
-function normalize(name, DxLeg, NgVars)
-
+function boolstr(str)
+    if str == 'true' then 
+        return false
+    else
+        return true
+    end
 end
 
+
+-- CHECK MANIPUALTION IF STATEMENTS OR CONDITIONS
+function ifverify(conditions)
+    local positive = true
+    if conditions then
+        local logic = conditions.logic
+        local rules = conditions.rules
+        for i=1,#rules do
+            -- get var
+            local sublogic
+            local pattern = rules[i].pattern
+            local refervar = rules[i].refervar
+            local refervalue = NgVars[refervar]
+            if not refervalue then 
+                refervalue = DxLeg:getVariable(refervar) 
+            end
+            -- condition check
+            if refervalue then
+                if pattern then
+                    sublogic = boolstr(fsapi:execute('regex', refervalue..'|'..pattern))
+                else
+                    sublogic = true
+                end
+            else
+                sublogic = false
+            end
+            -- logic break
+            if logic == 'AND' then
+                if sublogic == false then
+                    return false
+                end
+            else
+                if sublogic == true then
+                    return true
+                else
+                    positive = false
+                end
+            end
+        end
+    end
+    -- return if statement with bool value
+    return positive
+end
+
+
+-- BUILD THE VALUES: TURN abstract-array --> fixed-array --> fixed-string
+function turnvalues(values, refervar, pattern, DxLeg, NgVars)
+    local replacements = {}
+    for j=1,#values do
+        local value = values[j]
+        -- regex: backreferences and subexpressions
+        if value:match('%%') then
+            if refervar and pattern then 
+                local refervalue = NgVars[refervar]
+                if not refervalue then 
+                    refervalue = DxLeg:getVariable(refervar) 
+                end
+                if refervalue then
+                    arrayinsert(replacements, fsapi:execute('regex', refervalue..'|'..pattern..'|'..value))
+                end
+            else
+                arrayinsert(replacements, value)
+            end
+        -- get from ngvars / channel var / fixed str
+        else
+            local repl = NgVars[value]
+            if repl then
+                arrayinsert(replacements, repl)
+            else 
+                repl = DxLeg:getVariable(value)
+                if repl then
+                    arrayinsert(replacements, repl)
+                else
+                    arrayinsert(replacements, value)
+                end
+            end
+        end
+    end
+    -- concat
+    return table.concat(replacements)
+end
+
+-------------------------------------------------------------------------------
+-- INBOUND NORMALIZE
+-------------------------------------------------------------------------------
+function normalize(name, DxLeg, NgVars)
+    local class = rdbconn:hget(intconkey(name, INBOUND), 'manipulation_class')
+    local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..class))
+    local conditions = manipulations.conditions
+    -- check the condition
+    local positive = ifverify(conditions)
+    -- run action
+    local maniactions = manipulations.actions
+    if positive == false then
+        maniactions = manipulations.antiactions
+    end
+    for i=1,#maniactions do
+        local action = maniactions[i].action
+        local refervar = maniactions[i].refervar
+        local pattern = maniactions[i].pattern
+        local targetvar = maniactions[i].targetvar
+        local values = maniactions[i].values
+        -- action process
+        if action == 'set' then
+            local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+            if #valuestr then
+                NgVars[targetvar] = nil
+                DxLeg:execute("unset", targetvar)
+            else
+                if startswith(targetvar, 'ng') or NgVars[targetvar] then
+                    NgVars[targetvar] = valuestr
+                else
+                    DxLeg:setVariable(targetvar, valuestr)
+                end
+            end
+        elseif action == 'log' then
+            local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+            logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize' , 'seshid', NgVars.seshid, 'log', valuestr)
+        elseif action == 'hangup' then
+            NgVars.LIBRE_HANGUP_CAUSE = values[1]
+            DxLeg.hangup()
+        else
+            DxLeg:sleep(tonumber(values[1]))
+        end
+    end
+end
+
+-------------------------------------------------------------------------------
 -- OUTBOUND MANIPULATION
+-------------------------------------------------------------------------------
 function manipulate(name, DxLeg, NgVars)
 
 end
