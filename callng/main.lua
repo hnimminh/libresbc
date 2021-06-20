@@ -74,7 +74,7 @@ local function main()
         end
 
         -- inbound normalization
-        normalize(NgVars.intconname, DxLeg, NgVars)
+        normalize(DxLeg, NgVars)
 
         -- routing
         local routingrules
@@ -179,7 +179,7 @@ local function main()
             InLeg:setVariable("X-LIBRE-NEXT-HOP", NgVars.route)
 
             -- outbound manipulation
-            manipulate(name, DxLeg, NgVars)
+            manipulate(DxLeg, NgVars)
 
             -- start outbound leg
             logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', _sipprofile, 'gateway', gateway, 'forceroute', forceroute)
