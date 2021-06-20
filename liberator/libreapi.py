@@ -2385,15 +2385,16 @@ class RoutingTableActionEnum(str, Enum):
     block = _BLOCK
     # request: reseved routing with http api 
 class RoutingVariableEnum(str, Enum):
-    calling_number = 'calling_number'
-    called_number = 'called_number'
+    cidnumber = 'cidnumber'
+    cidname = 'cidname'
+    dstnumber = 'dstnumber'
     intconname = 'intconname'
-
+    realm = 'realm'
 
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    variables: Optional[List[str]] = Field(min_items=1, max_items=12, description='sip variable for routing base, eg: destination_number, auth_user, caller_id...')
+    variables: Optional[List[RoutingVariableEnum]] = Field(min_items=1, max_items=5, description='sip variable for routing base')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
     routes: Optional[RouteModel] = Field(description='route model data')
     # validation
