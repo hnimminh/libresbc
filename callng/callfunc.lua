@@ -271,7 +271,7 @@ end
 
 
 -- CHECK MANIPUALTION IF STATEMENTS OR CONDITIONS
-function ifverify(conditions)
+function ifverify(conditions, DxLeg)
     local positive = true
     if conditions then
         local logic = conditions.logic
@@ -357,10 +357,10 @@ end
 function normalize(DxLeg, NgVars)
     local classes = fieldjsonify(rdbconn:hget(intconkey(NgVars.intconname, INBOUND), 'manipulation_classes'))
     for i=1,#classes do
-        local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
+        local manipulations = jsonhash(rdbconn:hgetall('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
         -- check the condition
-        local positive = ifverify(conditions)
+        local positive = ifverify(conditions, DxLeg)
         -- run action
         local maniactions = manipulations.actions
         if positive == false then
@@ -404,7 +404,7 @@ end
 function manipulate(DxLeg, NgVars)
     local classes = fieldjsonify(rdbconn:hget(intconkey(NgVars.route, OUTBOUND), 'manipulation_classes'))
     for i=1,#classes do
-        local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
+        local manipulations = jsonhash(rdbconn:hgetall('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
         -- check the condition
         local positive = ifverify(conditions)
