@@ -387,7 +387,7 @@ function normalize(name, DxLeg, NgVars)
                 end
             elseif action == 'log' then
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-                logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize' , 'seshid', NgVars.seshid, 'log', valuestr)
+                logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize', 'seshid', NgVars.seshid, 'log', valuestr)
             elseif action == 'hangup' then
                 NgVars.LIBRE_HANGUP_CAUSE = values[1]
                 DxLeg.hangup()
