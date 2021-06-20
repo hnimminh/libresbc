@@ -12,6 +12,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 ### Added
 - maninpualation class api
 - inbound normalization and outbound manipulation
+- add realm for routing vars
 
 ### Changed
 - no remove verbose log input data
