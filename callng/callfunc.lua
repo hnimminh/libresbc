@@ -320,8 +320,8 @@ end
 -- BUILD THE VALUES: TURN abstract-array --> fixed-array --> fixed-string
 function turnvalues(values, refervar, pattern, DxLeg, NgVars)
     local replacements = {}
-    for j=1,#values do
-        local value = values[j]
+    for i=1,#values do
+        local value = values[i]
         -- regex: backreferences and subexpressions
         if value:match('%%') then
             if refervar and pattern then 
@@ -358,43 +358,45 @@ end
 -- INBOUND NORMALIZE
 -------------------------------------------------------------------------------
 function normalize(name, DxLeg, NgVars)
-    local class = rdbconn:hget(intconkey(name, INBOUND), 'manipulation_class')
-    local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..class))
-    local conditions = manipulations.conditions
-    -- check the condition
-    local positive = ifverify(conditions)
-    -- run action
-    local maniactions = manipulations.actions
-    if positive == false then
-        maniactions = manipulations.antiactions
-    end
-    for i=1,#maniactions do
-        local action = maniactions[i].action
-        local refervar = maniactions[i].refervar
-        local pattern = maniactions[i].pattern
-        local targetvar = maniactions[i].targetvar
-        local values = maniactions[i].values
-        -- action process
-        if action == 'set' then
-            local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-            if #valuestr then
-                NgVars[targetvar] = nil
-                DxLeg:execute("unset", targetvar)
-            else
-                if startswith(targetvar, 'ng') or NgVars[targetvar] then
-                    NgVars[targetvar] = valuestr
+    local classes = rdbconn:hget(intconkey(name, INBOUND), 'manipulation_class')
+    for i=1,#classes do
+        local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
+        local conditions = manipulations.conditions
+        -- check the condition
+        local positive = ifverify(conditions)
+        -- run action
+        local maniactions = manipulations.actions
+        if positive == false then
+            maniactions = manipulations.antiactions
+        end
+        for j=1,#maniactions do
+            local action = maniactions[j].action
+            local refervar = maniactions[j].refervar
+            local pattern = maniactions[j].pattern
+            local targetvar = maniactions[j].targetvar
+            local values = maniactions[j].values
+            -- action process
+            if action == 'set' then
+                local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+                if #valuestr then
+                    NgVars[targetvar] = nil
+                    DxLeg:execute("unset", targetvar)
                 else
-                    DxLeg:setVariable(targetvar, valuestr)
+                    if startswith(targetvar, 'ng') or NgVars[targetvar] then
+                        NgVars[targetvar] = valuestr
+                    else
+                        DxLeg:setVariable(targetvar, valuestr)
+                    end
                 end
+            elseif action == 'log' then
+                local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+                logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize' , 'seshid', NgVars.seshid, 'log', valuestr)
+            elseif action == 'hangup' then
+                NgVars.LIBRE_HANGUP_CAUSE = values[1]
+                DxLeg.hangup()
+            else
+                DxLeg:sleep(tonumber(values[1]))
             end
-        elseif action == 'log' then
-            local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-            logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize' , 'seshid', NgVars.seshid, 'log', valuestr)
-        elseif action == 'hangup' then
-            NgVars.LIBRE_HANGUP_CAUSE = values[1]
-            DxLeg.hangup()
-        else
-            DxLeg:sleep(tonumber(values[1]))
         end
     end
 end
