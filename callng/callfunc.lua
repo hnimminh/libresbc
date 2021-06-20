@@ -354,8 +354,8 @@ end
 -------------------------------------------------------------------------------
 -- INBOUND NORMALIZE
 -------------------------------------------------------------------------------
-function normalize(name, DxLeg, NgVars)
-    local classes = fieldjsonify(rdbconn:hget(intconkey(name, INBOUND), 'manipulation_classes'))
+function normalize(DxLeg, NgVars)
+    local classes = fieldjsonify(rdbconn:hget(intconkey(NgVars.intconname, INBOUND), 'manipulation_classes'))
     for i=1,#classes do
         local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
@@ -377,7 +377,7 @@ function normalize(name, DxLeg, NgVars)
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
                 if #valuestr then
                     NgVars[targetvar] = nil
-                    DxLeg:execute("unset", targetvar)
+                    DxLeg:execute('unset', targetvar)
                 else
                     if startswith(targetvar, 'ng') or NgVars[targetvar] then
                         NgVars[targetvar] = valuestr
@@ -401,8 +401,48 @@ end
 -------------------------------------------------------------------------------
 -- OUTBOUND MANIPULATION
 -------------------------------------------------------------------------------
-function manipulate(name, DxLeg, NgVars)
-
+function manipulate(DxLeg, NgVars)
+    local classes = fieldjsonify(rdbconn:hget(intconkey(NgVars.route, OUTBOUND), 'manipulation_classes'))
+    for i=1,#classes do
+        local manipulations = jsonhash(rdbconn:hget('class:manipulation:'..classes[i]))
+        local conditions = manipulations.conditions
+        -- check the condition
+        local positive = ifverify(conditions)
+        -- run action
+        local maniactions = manipulations.actions
+        if positive == false then
+            maniactions = manipulations.antiactions
+        end
+        for j=1,#maniactions do
+            local action = maniactions[j].action
+            local refervar = maniactions[j].refervar
+            local pattern = maniactions[j].pattern
+            local targetvar = maniactions[j].targetvar
+            local values = maniactions[j].values
+            -- action process
+            if action == 'set' then
+                local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+                if #valuestr then
+                    NgVars[targetvar] = nil
+                    DxLeg:execute('unset', targetvar)
+                else
+                    if startswith(targetvar, 'ng') or NgVars[targetvar] then
+                        NgVars[targetvar] = valuestr
+                    else
+                        DxLeg:execute('export', 'nolocal:'..targetvar, valuestr)
+                    end
+                end
+            elseif action == 'log' then
+                local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
+                logify('module', 'callng', 'space', 'callfunc', 'action', 'manipulate', 'seshid', NgVars.seshid, 'log', valuestr)
+            elseif action == 'hangup' then
+                NgVars.LIBRE_HANGUP_CAUSE = values[1]
+                DxLeg.hangup()
+            else
+                DxLeg:sleep(tonumber(values[1]))
+            end
+        end
+    end
 end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- ROUTING 
