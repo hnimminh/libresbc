@@ -150,19 +150,17 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function earlyMediaProcess(name, DxLeg)
     local class = rdbconn:hget(intconkey(name, INBOUND), 'preanswer_class')
-    local streams
+    local streams = {}
     if class then streams = fieldjsonify(rdbconn:hget('class:preanswer:'..class, 'streams')) end
-    if streams then
-        for i=1, #streams do
-            local streamtype = streams[i].type
-            if streamtype == 'tone' then
-                DxLeg:execute('gentones', streams[i].stream)
-            elseif streamtype == 'media' then
-                DxLeg:execute('playback', streams[i].stream)
-            elseif streamtype == 'speak' then
-                DxLeg:execute('speak', 'flite|slt|'..streams[i].stream)
-            else end
-        end
+    for i=1, #streams do
+        local streamtype = streams[i].type
+        if streamtype == 'tone' then
+            DxLeg:execute('gentones', streams[i].stream)
+        elseif streamtype == 'media' then
+            DxLeg:execute('playback', streams[i].stream)
+        elseif streamtype == 'speak' then
+            DxLeg:execute('speak', 'flite|slt|'..streams[i].stream)
+        else end
     end
 end
 
