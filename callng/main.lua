@@ -9,16 +9,16 @@
 
 dofile("{{rundir}}/callng/callfunc.lua")
 ---------------------******************************---------------------
----------------------****|  INBOUND callng   |****---------------------
+---------------------****|    CALLNG:MAIN     |****---------------------
 ---------------------******************************---------------------
 local function main()
     local NgVars = {}
     local InLeg = session
     local OutLeg = nil
-    local seshid = fsapi:execute('create_uuid')
-    local ENCRYPTION_SUITES = table.concat(SRPT_ENCRYPTION_SUITES, ':')
+    NgVars.seshid = fsapi:execute('create_uuid')
+    NgVars.ENCRYPTION_SUITES = table.concat(SRPT_ENCRYPTION_SUITES, ':')
+    NgVars.LIBRE_HANGUP_CAUSE = 'NONE'
     local HANGUP_CAUSE = 'NORMAL_CLEARING'
-    local LIBRE_HANGUP_CAUSE = 'NONE'
     --- CALL PROCESSING
     if ( InLeg:ready() ) then
         -- get InLeg variables
@@ -27,75 +27,77 @@ local function main()
         local profilename = InLeg:getVariable("sofia_profile_name")
         local network_ip = InLeg:getVariable("sip_network_ip")
         local realm = InLeg:getVariable("domain_name")
-        local intconname = InLeg:getVariable("user_name")
+        NgVars.intconname = InLeg:getVariable("user_name")
         local call_id = InLeg:getVariable("sip_call_id")
         local transport = InLeg:getVariable("sip_via_protocol")
         local caller_name = InLeg:getVariable("caller_id_name")
         local caller_number = InLeg:getVariable("caller_id_number")
         local destination_number = InLeg:getVariable("destination_number")
         -- log the incoming call request
-        logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'inbound_call' , 'uuid', uuid, 'context', context, 
-               'profilename', profilename, 'network_ip', network_ip, 'realm', realm, 'intconname', intconname, 'call_id', call_id,
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'inbound_call' , 'uuid', uuid, 'context', context, 
+               'profilename', profilename, 'network_ip', network_ip, 'realm', realm, 'intconname', NgVars.intconname, 'call_id', call_id,
                'transport', transport, 'caller_name', caller_name, 'caller_number', caller_number, 'destination_number', destination_number)
         -----------------------------------------------------------
         ---- IN LEG: INTIAL VAR
         -----------------------------------------------------------
-        InLeg:execute("export", "X-LIBRE-SESHID="..seshid)
-        InLeg:setVariable("X-LIBRE-INTCONNAME", intconname)
+        InLeg:execute("export", "X-LIBRE-SESHID="..NgVars.seshid)
+        InLeg:setVariable("X-LIBRE-INTCONNAME", NgVars.intconname)
         -- call will be reject if inbound interconnection is not enable
-        if not is_intcon_enable(intconname, INBOUND) then
-            logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'state_check' , 'uuid', uuid, 'intconname', intconname, 'state', 'disabled', 'donext', 'hangup_as_disabled')
-            HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION'; goto ENDSESSION
+        if not is_intcon_enable(NgVars.intconname, INBOUND) then
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'state_check' , 'uuid', uuid, 'intconname', NgVars.intconname, 'state', 'disabled', 'donext', 'hangup_as_disabled')
+            HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; NgVars.LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION'; goto ENDSESSION
         end
 
         -- call will be reject if inbound interconnection reach max capacity
-        local concurentcalls, max_concurentcalls =  verify_concurentcalls(intconname, INBOUND, uuid)
-        logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
+        local concurentcalls, max_concurentcalls =  verify_concurentcalls(NgVars.intconname, INBOUND, uuid)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'concurency_check' , 'uuid', uuid, 'intconname', NgVars.intconname, 'concurentcalls', concurentcalls, 'max_concurentcalls', max_concurentcalls)
         if concurentcalls > max_concurentcalls then
-            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL'; goto ENDSESSION
         end
 
         -- call will be blocked if inbound interconnection is violated the cps
-        local is_passed, current_cps, max_cps, block_ms = verify_cps(intconname, INBOUND, uuid)
-        logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
+        local is_passed, current_cps, max_cps, block_ms = verify_cps(NgVars.intconname, INBOUND, uuid)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'cps_check' ,'uuid', uuid, 'intconname', NgVars.intconname, 'result', is_passed, 'current_cps', current_cps, 'max_cps', max_cps, 'block_ms', block_ms)
         if not is_passed then
-            HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
+            HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'MAX_CPS'; goto ENDSESSION
         end
         -- translation
-        local clidnum, clidname, dnisnum, tranrules = translate(caller_number, caller_name, destination_number, intconname, INBOUND)
-        logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'clidnum', clidnum, 'clidname', clidname, 'dnisnum', dnisnum)
+        local tranrules
+        NgVars.clidnum, NgVars.clidname, NgVars.dnisnum, tranrules = translate(caller_number, caller_name, destination_number, NgVars.intconname, INBOUND)
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'clidnum', NgVars.clidnum, 'clidname', NgVars.clidname, 'dnisnum', NgVars.dnisnum)
         -- media negotiation
-        local codecstr = get_codec(intconname, INBOUND)
+        local codecstr = get_codec(NgVars.intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
         if transport:lower()=='tls' then
-            InLeg:setVariable("rtp_secure_media", "mandatory:"..ENCRYPTION_SUITES)
+            InLeg:setVariable("rtp_secure_media", "mandatory:"..NgVars.ENCRYPTION_SUITES)
             InLeg:setVariable("sdp_secure_savp_only", "true")
         end
 
         -- inbound normalization
-        normalize(intconname, DxLeg, NgVars)
+        normalize(NgVars.intconname, DxLeg, NgVars)
 
         -- routing
+        local routingrules
         local tablename = InLeg:getVariable("x-routing-plan")
-        routingdata = {tablename=tablename, intconname=intconname, caller_number=clidnum, destination_number=dnisnum}
-        route1, route2, routingrules = routing_query(tablename, routingdata)
+        local routingdata = {tablename=tablename, intconname=NgVars.intconname, caller_number=NgVars.clidnum, destination_number=NgVars.dnisnum}
+        NgVars.route1, NgVars.route2, routingrules = routing_query(tablename, routingdata)
 
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
-        
-        logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', route1, 'route2', route2, 'routingrules', routingrulestr)
-        if not (route1 and route2) then
-            HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
+
+        logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'routing_query', 'uuid', uuid, 'routingdata', json.encode(routingdata), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
+        if not (NgVars.route1 and NgVars.route2) then
+            HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; NgVars.LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
 
         -- blocking call checking
-        if (route1 == BLOCK) or (route2 == BLOCK) then
-            logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'hangup_as_block', 'uuid', uuid)
-            HANGUP_CAUSE = 'CALL_REJECTED'; CUSTOM_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
+        if (NgVars.route1 == BLOCK) or (NgVars.route2 == BLOCK) then
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'hangup_as_block', 'uuid', uuid)
+            HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
         --------------------------------------------------------------------
         if InLeg:getVariable("x-ringready") then InLeg:execute('ring_ready') end
-        earlyMediaProcess(intconname, InLeg)
+        earlyMediaProcess(NgVars.intconname, InLeg)
         --------------------------------------------------------------------
         ----- PRESETTING
         --------------------------------------------------------------------
@@ -110,47 +112,48 @@ local function main()
         ----- OUTLEG
         --------------------------------------------------------------------
         local _uuid
-        local routes = (route1==route2) and {route1} or {route1, route2}
+        local routes = (NgVars.route1==NgVars.route2) and {NgVars.route1} or {NgVars.route1, NgVars.route2}
         for attempt=1, #routes do
             _uuid = fsapi:execute('create_uuid')
-            local route = routes[attempt]
+            NgVars.route = routes[attempt]
 
             -- if state is disable then try next route or drop call
-            if not is_intcon_enable(route, OUTBOUND) then
-                logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'state_check' , 'uuid', _uuid, 'route', route, 'state', 'disabled', 'donext', 'hangup_as_disabled')
-                if attempt >= #routes then HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION' end; goto ENDFAILOVER
+            if not is_intcon_enable(NgVars.route, OUTBOUND) then
+                logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'state_check' , 'uuid', _uuid, 'route', NgVars.route, 'state', 'disabled', 'donext', 'hangup_as_disabled')
+                if attempt >= #routes then HANGUP_CAUSE = 'CHANNEL_UNACCEPTABLE'; NgVars.LIBRE_HANGUP_CAUSE = 'DISABLED_CONNECTION' end; goto ENDFAILOVER
             end
 
             -- call will be reject if outbound interconnection reach max capacity
-            local _concurentcalls, _max_concurentcalls =  verify_concurentcalls(route, OUTBOUND, _uuid)
-            logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'concurency_check' , 'uuid', _uuid, 'route', route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
+            local _concurentcalls, _max_concurentcalls =  verify_concurentcalls(NgVars.route, OUTBOUND, _uuid)
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'concurency_check' , 'uuid', _uuid, 'route', NgVars.route, 'concurentcalls', _concurentcalls, 'max_concurentcalls', _max_concurentcalls)
             if _concurentcalls >= _max_concurentcalls then
-                if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL' end; goto ENDFAILOVER
+                if attempt >= #routes then HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'MAX_CONCURENT_CALL' end; goto ENDFAILOVER
             end
 
             -- call will be reject if outbound interconnection reach max cps
-            local waitms, queue, max_cps = average_cps(route, OUTBOUND)
-            logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'average_cps' ,'uuid', _uuid, 'route', route, 'waitms', waitms, 'queue', queue, 'max_cps', max_cps)
+            local waitms, queue, max_cps = average_cps(NgVars.route, OUTBOUND)
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'average_cps' ,'uuid', _uuid, 'route', NgVars.route, 'waitms', waitms, 'queue', queue, 'max_cps', max_cps)
             if queue >  max_cps then
-                HANGUP_CAUSE = 'CALL_REJECTED'; LIBRE_HANGUP_CAUSE = 'MAX_QUEUE'; goto ENDFAILOVER
+                HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'MAX_QUEUE'; goto ENDFAILOVER
             else InLeg:sleep(waitms) end
             
             -- translation
-            local _clidnum, _clidname, _dnisnum, _tranrules = translate(clidnum, clidname, dnisnum, route, OUTBOUND)
-            logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'clidnum', _clidnum, 'clidname', _clidname, 'dnisnum', _dnisnum)
+            local _tranrules
+            NgVars._clidnum, NgVars._clidname, NgVars._dnisnum, _tranrules = translate(NgVars.clidnum, NgVars.clidname, NgVars.dnisnum, NgVars.route, OUTBOUND)
+            logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'translate', 'direction', OUTBOUND, 'uuid', _uuid, 'tranrules', rulejoin(_tranrules), 'clidnum', NgVars._clidnum, 'clidname', NgVars._clidname, 'dnisnum', NgVars._dnisnum)
 
             -- distributes calls to gateways in a weighted base
             local forceroute = false 
-            local sipprofile = get_sipprofile(route, OUTBOUND)
-            local gateway = fsapi:execute('expand', 'distributor '..route..' ${sofia profile '..sipprofile..' gwlist down}')
+            local sipprofile = get_sipprofile(NgVars.route, OUTBOUND)
+            local gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '..sipprofile..' gwlist down}')
             if gateway == '-err' then
-                gateway = fsapi:execute('distributor', route)
+                gateway = fsapi:execute('distributor', NgVars.route)
                 forceroute = true
             end
             -------------------------------------------------------------------- 
             local gwproxy, gwport, gwtransport = getgw(gateway)
             -- callerid type and privacy process
-            local cidtype, _ = callerIdPrivacyProcess(route, InLeg)
+            local cidtype, _ = callerIdPrivacyProcess(NgVars.route, InLeg)
             if cidtype~='none' then
                 InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
                 InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(sipprofile..':advertising')..">" )
@@ -158,33 +161,33 @@ local function main()
             end
             -- media negotiation
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
-            local outcodecstr = get_codec(route, OUTBOUND)
+            local outcodecstr = get_codec(NgVars.route, OUTBOUND)
             InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
             if gwtransport:lower() == 'tls' then
-                InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..ENCRYPTION_SUITES)
+                InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..NgVars.ENCRYPTION_SUITES)
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
             end
             -- setting up vars
-            InLeg:execute("export", "nolocal:origination_caller_id_name=".._clidname)
-            InLeg:execute("export", "nolocal:origination_caller_id_number=".._clidnum)
+            InLeg:execute("export", "nolocal:origination_caller_id_name="..NgVars._clidname)
+            InLeg:execute("export", "nolocal:origination_caller_id_number="..NgVars._clidnum)
             InLeg:execute("export", "nolocal:originate_timeout=90")
             InLeg:execute("export", "nolocal:fax_enable_t38=true")
             InLeg:execute("export", "nolocal:hangup_after_bridge=true")
             InLeg:execute("export", "nolocal:origination_uuid=".._uuid)
-            InLeg:execute("export", "nolocal:X-LIBRE-ORIGIN-HOP="..intconname)
-            InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..route)
-            InLeg:setVariable("X-LIBRE-NEXT-HOP", route)
+            InLeg:execute("export", "nolocal:X-LIBRE-ORIGIN-HOP="..NgVars.intconname)
+            InLeg:execute("export", "nolocal:X-LIBRE-INTCONNAME="..NgVars.route)
+            InLeg:setVariable("X-LIBRE-NEXT-HOP", NgVars.route)
 
             -- outbound manipulation
             manipulate(name, DxLeg, NgVars)
 
             -- start outbound leg
-            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway' , 'seshid', seshid, 'uuid', _uuid, 'route', route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
-            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/".._dnisnum, InLeg)
+            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway' , 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
+            OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dnisnum, InLeg)
 
             -- check leg status
             local dialstatus = OutLeg:hangupCause()
-            logify('module', 'callng', 'space', 'main', 'action', 'verify_state' , 'seshid', seshid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
+            logify('module', 'callng', 'space', 'main', 'action', 'verify_state' , 'seshid', NgVars.seshid, 'uuid', _uuid, 'attempt', attempt, 'status', dialstatus)
 
             if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then break end
             ::ENDFAILOVER::
@@ -198,7 +201,7 @@ local function main()
                 -- log information for leg B
                 local _real_uuid = OutLeg:get_uuid()
                 if _uuid ~= _real_uuid then
-                    logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'report', 'pseudo_uuid', _uuid, 'native_uuid', _real_uuid)
+                    logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'report', 'pseudo_uuid', _uuid, 'native_uuid', _real_uuid)
                 end
                 local _context = OutLeg:getVariable("context")
                 local _direction = OutLeg:getVariable("direction")
@@ -210,12 +213,12 @@ local function main()
                 local _sofia_profile_name = OutLeg:getVariable("sofia_profile_name")
                 local _sip_call_id = OutLeg:getVariable("sip_call_id")
 
-                logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'report', 'uuid', _real_uuid,
+                logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'report', 'uuid', _real_uuid,
                        'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user, 
                        'to_user', _sip_to_user, 'destination_number', _destination_number, 'remote_ip', _sip_network_ip, 'callid', _sip_call_id)
 
                 --- BRIDGE 2 LEGs
-                logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
+                logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'bridge' , 'inbound_uuid', uuid, 'outbound_uuid', _real_uuid)
                 freeswitch.bridge(InLeg, OutLeg)
 
                 -- HANGUP WHEN DONE FOR OUTLEG
@@ -223,15 +226,15 @@ local function main()
                     OutLeg:hangup(); 
                 end
             else
-                logify('module', 'callng', 'space', 'main', 'seshid', seshid, 'action', 'report', 'info', 'outbound.leg.not.connected')
+                logify('module', 'callng', 'space', 'main', 'seshid', NgVars.seshid, 'action', 'report', 'info', 'outbound.leg.not.connected')
             end
         end
         -----------------------------------------------------------
         --- HANGUP ONCE DONE
         -----------------------------------------------------------
         if (InLeg:ready()) then 
-            logify('module', 'callng', 'space', 'main', 'action', 'endcall', 'seshid', seshid, 'traffic', 'ingress')
-            InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
+            logify('module', 'callng', 'space', 'main', 'action', 'endcall', 'seshid', NgVars.seshid, 'traffic', 'ingress')
+            InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
             InLeg:hangup(HANGUP_CAUSE); 
         end
     end
@@ -243,13 +246,13 @@ local function main()
     -----------------------------------------------------------
     if InLeg then 
         if (InLeg:ready()) then 
-            InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
+            InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
             InLeg:hangup(HANGUP_CAUSE) 
         end 
     end
     if OutLeg then 
         if (OutLeg:ready()) then
-            OutLeg:setVariable("X-LIBRE-HANGUP-CAUSE", LIBRE_HANGUP_CAUSE)
+            OutLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
             OutLeg:hangup() 
         end
     end
