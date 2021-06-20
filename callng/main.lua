@@ -24,7 +24,7 @@ local function main()
         -- get InLeg variables
         local uuid = InLeg:get_uuid()
         local context = InLeg:getVariable("context")
-        local profilename = InLeg:getVariable("sofia_profile_name")
+        local sipprofile = InLeg:getVariable("sofia_profile_name")
         local network_ip = InLeg:getVariable("sip_network_ip")
         NgVars.realm = InLeg:getVariable("domain_name")
         NgVars.intconname = InLeg:getVariable("user_name")
@@ -35,7 +35,7 @@ local function main()
         local destination_number = InLeg:getVariable("destination_number")
         -- log the incoming call request
         logify('module', 'callng', 'space', 'main', 'action', 'inbound_call', 'seshid', NgVars.seshid, 'uuid', uuid, 'context', context, 
-               'profilename', profilename, 'network_ip', network_ip, 'realm', NgVars.realm, 'intconname', NgVars.intconname, 'call_id', call_id,
+               'sipprofile', sipprofile, 'network_ip', network_ip, 'realm', NgVars.realm, 'intconname', NgVars.intconname, 'call_id', call_id,
                'transport', transport, 'caller_name', caller_name, 'caller_number', caller_number, 'destination_number', destination_number)
         -----------------------------------------------------------
         ---- IN LEG: INTIAL VAR
@@ -144,8 +144,8 @@ local function main()
 
             -- distributes calls to gateways in a weighted base
             local forceroute = false
-            local sipprofile = get_sipprofile(NgVars.route, OUTBOUND)
-            local gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '..sipprofile..' gwlist down}')
+            local _sipprofile = get_sipprofile(NgVars.route, OUTBOUND)
+            local gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '.._sipprofile..' gwlist down}')
             if gateway == '-err' then
                 gateway = fsapi:execute('distributor', NgVars.route)
                 forceroute = true
@@ -156,7 +156,7 @@ local function main()
             local cidtype, _ = callerIdPrivacyProcess(NgVars.route, InLeg)
             if cidtype~='none' then
                 InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
-                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(sipprofile..':advertising')..">")
+                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(_sipprofile..':advertising')..">")
                 InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
             end
             -- media negotiation
@@ -182,7 +182,7 @@ local function main()
             manipulate(name, DxLeg, NgVars)
 
             -- start outbound leg
-            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', sipprofile, 'gateway', gateway, 'forceroute', forceroute)
+            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', _sipprofile, 'gateway', gateway, 'forceroute', forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dstnumber, InLeg)
 
             -- check leg status
