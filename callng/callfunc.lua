@@ -271,7 +271,7 @@ end
 
 
 -- CHECK MANIPUALTION IF STATEMENTS OR CONDITIONS
-function ifverify(conditions, DxLeg)
+function ifverify(conditions, DxLeg, NgVars)
     local positive = true
     if conditions then
         local logic = conditions.logic
@@ -375,7 +375,7 @@ function normalize(DxLeg, NgVars)
             -- action process
             if action == 'set' then
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-                if #valuestr then
+                if #valuestr==0 then
                     NgVars[targetvar] = nil
                     DxLeg:execute('unset', targetvar)
                 else
@@ -422,7 +422,7 @@ function manipulate(DxLeg, NgVars)
             -- action process
             if action == 'set' then
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-                if #valuestr then
+                if #valuestr==0 then
                     NgVars[targetvar] = nil
                     DxLeg:execute('unset', targetvar)
                 else
