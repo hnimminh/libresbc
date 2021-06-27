@@ -82,7 +82,7 @@ chmod 750 /var/log/freeswitch
 #      pkgconfigdir:    /usr/local/lib/pkgconfig
 #      recordingsdir:   /usr/local/var/lib/freeswitch/recordings
 #      imagesdir:       /usr/local/var/lib/freeswitch/images
-#      runtimedir:      /var/run/
+#      runtimedir:      /var/run/freeswitch
 #      scriptdir:       /usr/local/share/freeswitch/scripts
 #      soundsdir:       /usr/local/share/freeswitch/sounds
 #      storagedir:      /usr/local/var/lib/freeswitch/storage
