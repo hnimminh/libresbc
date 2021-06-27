@@ -53,7 +53,7 @@ codecs/mod_opus
 asr_tts/mod_flite
 EOF
 
-./configure -C --prefix=/usr/local --with-rundir=/var/run/ --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl
+./configure -C --prefix=/usr/local --with-rundir=/var/run/freeswitch --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl
 make
 make install
 mv /usr/local/etc/freeswitch /usr/local/etc/freeswitch.origin
