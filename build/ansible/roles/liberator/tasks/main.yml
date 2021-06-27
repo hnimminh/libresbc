@@ -9,13 +9,13 @@
     mode: 0754
 
 # shell file
-- name: Update a liberator.sh template to /usr/local/bin/
-  template:
-    src: liberator.sh
-    dest: /usr/local/bin/liberator.sh
-    owner: root
-    group: root
-    mode: u+rx,g+x,o-w
+#- name: Update a liberator.sh template to /usr/local/bin/
+#  template:
+#    src: liberator.sh
+#    dest: /usr/local/bin/liberator.sh
+#    owner: root
+#    group: root
+#    mode: u+rx,g+x,o-w
 
 # systemd control
 - name: Update a liberator.service template to systemd
