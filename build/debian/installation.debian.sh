@@ -123,6 +123,27 @@ mv /etc/nginx /etc/nginx.origin
 sudo mkdir /etc/systemd/system/nginx.service.d
 printf "[Service]\nExecStartPost=/bin/sleep 0.1\n" | sudo tee /etc/systemd/system/nginx.service.d/override.conf
 #------------------------------------------------------------------------------------------------------------
+#                   KAMAILIO
+#       code: https://github.com/kamailio/kamailio
+#       wiki: https://www.kamailio.org/wiki/
+#       doc: https://www.kamailio.org/w/documentation/
+#------------------------------------------------------------------------------------------------------------
+cd /usr/local/src
+wget https://www.kamailio.org/pub/kamailio/latest-5.5.x/src/kamailio-5.5.1_src.tar.gz
+tar -xvzf kamailio-5.5.1_src.tar.gz
+cd kamailio-5.5.1
+apt-get install git gcc g++ flex bison make autoconf libssl-dev libcurl4-openssl-dev libxml2-dev libpcre3-dev libhiredis-dev
+make include_modules="jsonrpcs outbound ndb_redis regex utils tls"
+
+make all
+make install
+mkdir /var/run/kamailio
+# chmod 775 /var/run/kamailio
+mv /usr/local/etc/kamailio /usr/local/etc/kamailio.origin
+### binaries and executable /usr/local/sbin/kam*
+### configuration /usr/local/etc/kamailio
+### modules /usr/local/lib64/kamailio/modules/
+#------------------------------------------------------------------------------------------------------------
 #                   CAPTAGENT: 
 #       https://github.com/sipcapture/captagent
 #------------------------------------------------------------------------------------------------------------
