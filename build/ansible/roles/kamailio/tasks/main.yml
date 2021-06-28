@@ -1,0 +1,24 @@
+---
+# Kamailio
+- name: update a symbolic link for kamailio config directory
+  file:
+    src: "{{rundir}}/platform/kamailio"
+    dest: /usr/local/etc/kamailio
+    force: true
+    state: link
+
+- name: Copy a kamailio.service to systemd
+  copy:
+    src: kamailio.service
+    dest: /etc/systemd/system/kamailio.service
+    owner: root
+    group: root
+    mode: 0755
+
+- name: handle kamailio daemon 
+  debug: 
+    msg: "kamailio will be {{fire_daemon}}"
+  changed_when: fire_daemon != "idempotent"
+  notify: 
+    - restart kamailio
+  when: fire_daemon is defined

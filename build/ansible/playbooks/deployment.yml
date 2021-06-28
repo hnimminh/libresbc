@@ -12,6 +12,7 @@
     - rsyslog
     - logrotate
     - nginx
+    - kamailio
     - liberator
     - callng
     - freeswitch

@@ -1,0 +1,19 @@
+[Unit]
+Description=Kamailio SIP Proxy Server
+After=network.target
+
+[Service]
+Type=forking
+# ExecStart requires a full absolute path
+ExecStart=/usr/local/sbin/kamctl start
+ExecStop=/usr/local/sbin/kamctl stop
+ExecReload=/usr/local/sbin/kamctl restart
+RemainAfterExit=no
+Restart=always
+RestartSec=5s
+
+LimitSTACK=infinity
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
