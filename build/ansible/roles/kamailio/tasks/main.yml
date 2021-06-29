@@ -1,5 +1,15 @@
 ---
 # Kamailio
+- name: Update Kamailio configuration
+  template:
+    src: "{{sourcedir}}/platform/kamailio/{{item}}"
+    dest: "{{destinationdir}}/platform/kamailio/{{item}}"
+    owner: root
+    group: root
+    mode: 0754
+  with_items:
+    - kamailio.cfg
+
 - name: update a symbolic link for kamailio config directory
   file:
     src: "{{rundir}}/platform/kamailio"
