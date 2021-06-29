@@ -54,11 +54,7 @@ ksr_exec_level=0
 ]]--
 
 -- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
-FLT_ACC=1
-FLT_ACCMISSED=2
-FLT_ACCFAILED=3
 FLT_NATS=5
-
 FLB_NATB=6
 FLB_NATSIPPING=7
 
@@ -101,11 +97,6 @@ function ksr_request_route()
 	-- if INVITE or SUBSCRIBE
 	if KSR.is_method_in("IS") then
 		KSR.rr.record_route();
-	end
-
-	-- account only INVITEs
-	if KSR.is_INVITE() then
-		KSR.setflag(FLT_ACC); -- do accounting
 	end
 
 	-- dispatch requests to foreign domains
@@ -211,10 +202,7 @@ function ksr_route_withindlg()
 	-- take the path determined by record-routing
 	if KSR.rr.loose_route()>0 then
 		ksr_route_dlguri();
-		if KSR.is_BYE() then
-			KSR.setflag(FLT_ACC); -- do accounting ...
-			KSR.setflag(FLT_ACCFAILED); -- ... even if the transaction fails
-		elseif KSR.is_ACK() then
+		if KSR.is_ACK() then
 			-- ACK is forwarded statelessly
 			ksr_route_natmanage();
 		elseif KSR.is_NOTIFY() then
@@ -266,11 +254,6 @@ function ksr_route_location()
 			KSR.sl.send_reply(405, "Method Not Allowed");
 			KSR.x.exit();
 		end
-	end
-
-	-- when routing via usrloc, log the missed calls also
-	if KSR.is_INVITE() then
-		KSR.setflag(FLT_ACCMISSED);
 	end
 
 	ksr_route_relay();
