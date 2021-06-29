@@ -23,7 +23,7 @@
     dest: /etc/systemd/system/kamailio.service
     owner: root
     group: root
-    mode: 0755
+    mode: 0754
 
 - name: handle kamailio daemon 
   debug: 
