@@ -17,15 +17,15 @@
 
 - name: Update Kamailio templateing-configuration
   template:
-    src: "{{sourcedir}}/platform/kamailio/cfg/{{item}}"
-    dest: "{{destinationdir}}/platform/kamailio/cfg/{{item}}"
+    src: "{{sourcedir}}/platform/kamailio/self/{{item}}"
+    dest: "{{destinationdir}}/platform/kamailio/self/{{item}}"
     owner: root
     group: root
     mode: 0644
   with_items:
     - kamailio.cfg
 
-- name: Symbolic link for log and kamailio
+- name: Symbolic link for kamailio service
   file:
     src: "{{item.src}}"
     dest: "{{item.dest}}"
@@ -34,20 +34,14 @@
   with_items:
     - src: "{{destinationdir}}/platform/kamailio"
       dest: "{{rundir}}/platform/kamailio"
-    - src: "{{rundir}}/platform/kamailio/cfg"
+    - src: "{{rundir}}/platform/kamailio/self"
       dest: /usr/local/etc/kamailio
-    - src: "{{rundir}}/platform/kamailio/rsyslog.d/kamailio.rsyslog.conf"
+    - src: "{{rundir}}/platform/kamailio/system/rsyslog.d/kamailio.rsyslog.conf"
       dest: /etc/rsyslog.d/kamailio
-    - src: "{{rundir}}/platform/kamailio/logrotate.d/kamailio.logrotate.conf"
+    - src: "{{rundir}}/platform/kamailio/system/logrotate.d/kamailio.logrotate.conf"
       dest: /etc/logrotate.d/kamailio
-
-- name: Copy kamailio.service to systemd
-  copy:
-    src: "{{sourcedir}}/platform/kamailio/systemd/kamailio.service"
-    dest: /etc/systemd/system/kamailio.service
-    owner: root
-    group: root
-    mode: 0664
+    - src: "{{rundir}}/platform/kamailio/system/systemd/kamailio.service"
+      dest: /etc/systemd/system/kamailio.service
 
 - name: handle kamailio daemon 
   debug: 
