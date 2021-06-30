@@ -1,29 +1,49 @@
 ---
-# Kamailio
-- name: Update Kamailio configuration
-  template:
-    src: "{{sourcedir}}/platform/kamailio/{{item}}"
-    dest: "{{destinationdir}}/platform/kamailio/{{item}}"
+- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/kamailio in target host
+  file:
+    path: "{{item}}"
     owner: root
     group: root
-    mode: 0754
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/platform/kamailio"
+    - "{{rundir}}/platform/kamailio"
+
+- name: Copy kamailio role source to target host
+  synchronize:
+    src: "{{sourcedir}}/platform/kamailio/"
+    dest: "{{destinationdir}}/platform/kamailio/"
+
+- name: Update Kamailio templateing-configuration
+  template:
+    src: "{{sourcedir}}/platform/kamailio/cfg/{{item}}"
+    dest: "{{destinationdir}}/platform/kamailio/cfg/{{item}}"
+    owner: root
+    group: root
+    mode: 0644
   with_items:
     - kamailio.cfg
 
-- name: update a symbolic link for kamailio config directory
+- name: Symbolic link for kamailio native config
   file:
-    src: "{{rundir}}/platform/kamailio"
-    dest: /usr/local/etc/kamailio
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
     force: true
     state: link
-
-- name: Copy a kamailio.service to systemd
+  with_items:
+    - src: "{{destinationdir}}/platform/kamailio"
+      dest: "{{rundir}}/platform/kamailio"
+    - src: "{{rundir}}/platform/kamailio/cfg"
+      dest: /usr/local/etc/kamailio
+    
+- name: Copy kamailio.service to systemd
   copy:
-    src: kamailio.service
+    src: "{{sourcedir}}/platform/kamailio/systemd/kamailio.service"
     dest: /etc/systemd/system/kamailio.service
     owner: root
     group: root
-    mode: 0754
+    mode: 0664
 
 - name: handle kamailio daemon 
   debug: 
