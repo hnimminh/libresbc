@@ -1,28 +1,41 @@
 ---
-# tasks file for nftables
-- name: Update firewall rule for nftables
+- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/nftables in target host
+  file:
+    path: "{{item}}"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/platform/nftables"
+    - "{{rundir}}/platform/nftables"
+
+- name: Copy nftables role source to target host
+  synchronize:
+    src: "{{sourcedir}}/platform/nftables/"
+    dest: "{{destinationdir}}/platform/nftables/"
+
+- name: Update templating firewall rule for nftables
   template:
-    src: "{{sourcedir}}/platform/nftables/preset.libre.nft"
-    dest: "{{destinationdir}}/platform/nftables/preset.libre.nft"
+    src: "{{sourcedir}}/platform/nftables/self/preset.libre.nft"
+    dest: "{{destinationdir}}/platform/nftables/self/preset.libre.nft"
     owner: root
     group: root
     mode: u+rx,g+x,o-w
 
-- name: Update a symbolic link preset nftables
+- name: Symbolic link for kamailio service
   file:
-    src: "{{destinationdir}}/platform/nftables/preset.libre.nft"
-    dest: /etc/preset.libre.nft
-    state: link
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
     force: true
-
-#- name: Update a nftables.service to systemd
-#  copy:
-#    src: nftables.service
-#    # /usr/lib/systemd/system/nftables.service
-#    dest: /etc/systemd/system/nftables.service
-#    owner: root
-#    group: root
-#    mode: 0754
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/platform/nftables"
+      dest: "{{rundir}}/platform/nftables"
+    - src: "{{rundir}}/platform/nftables/self/preset.libre.nft"
+      dest: /etc/preset.libre.nft
+#   - src: "{{rundir}}/platform/nftables/system/systemd/nftables.service"
+#     dest: /etc/systemd/system/nftables.service # /usr/lib/systemd/system/nftables.service
 
 - name: handle nftables daemon 
   debug: 
