@@ -1,4 +1,0 @@
-# vars file for sample
-rsyslogvar:
-  udp: '@'
-  tcp: '@@'

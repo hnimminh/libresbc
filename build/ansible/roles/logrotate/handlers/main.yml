@@ -1,4 +1,0 @@
----
-# handlers file for logrotate
-- name: reload logrotate
-  command: "logrotate /etc/logrotate.conf"

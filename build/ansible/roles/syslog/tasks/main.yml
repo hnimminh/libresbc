@@ -1,0 +1,14 @@
+---
+- name: handle rsyslog daemon 
+  debug: 
+    msg: "rsyslog will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart rsyslog
+
+- name: handle logrotate daemon 
+  debug: 
+    msg: "logrotate will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - reload logrotate
