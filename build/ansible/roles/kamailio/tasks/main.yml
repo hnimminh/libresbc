@@ -25,7 +25,7 @@
   with_items:
     - kamailio.cfg
 
-- name: Symbolic link for kamailio native config
+- name: Symbolic link for log and kamailio
   file:
     src: "{{item.src}}"
     dest: "{{item.dest}}"
@@ -36,7 +36,10 @@
       dest: "{{rundir}}/platform/kamailio"
     - src: "{{rundir}}/platform/kamailio/cfg"
       dest: /usr/local/etc/kamailio
-    
+    - src: "{{rundir}}/platform/kamailio/rsyslog.d/kamailio.rsyslog.conf"
+      dest: /etc/rsyslog.d/kamailio
+    - src: "{{rundir}}/platform/kamailio/logrotate.d/kamailio.logrotate.conf"
+      dest: /etc/logrotate.d/kamailio
 - name: Copy kamailio.service to systemd
   copy:
     src: "{{sourcedir}}/platform/kamailio/systemd/kamailio.service"
