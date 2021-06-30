@@ -12,8 +12,8 @@
 
 - name: Copy libre role source to target host
   synchronize:
-    src: "{{sourcedir}}/platform/libre"
-    dest: "{{destinationdir}}/platform/libre"
+    src: "{{sourcedir}}/platform/libre/"
+    dest: "{{destinationdir}}/platform/libre/"
 
 - name: Symbolic link for libre log service
   file:

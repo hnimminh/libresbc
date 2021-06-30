@@ -8,14 +8,9 @@
     firedaemon: restarted
 
   roles:
-    - sourcing
-    - rsyslog
-    - logrotate
-    - nginx
-    - kamailio
-    - liberator
-    - callng
-    - freeswitch
-    - nftables
+    - libre
+    #- nginx
+    #- freeswitch
+    #- kamailio
+    #- nftables
     #- captagent
-    - linking
