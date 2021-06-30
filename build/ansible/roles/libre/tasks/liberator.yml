@@ -15,7 +15,7 @@
     src: "{{sourcedir}}/liberator/"
     dest: "{{destinationdir}}/liberator/"
     rsync_opts:
-      - "--exclude=*/__pycache__"
+      - "--exclude=*.pyc"
 
 - name: Update liberator templating-file
   template:
