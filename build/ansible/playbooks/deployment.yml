@@ -9,8 +9,9 @@
 
   roles:
     - libre
-    #- nginx
-    #- freeswitch
-    #- kamailio
-    #- nftables
-    #- captagent
+    - nginx
+    - freeswitch
+    - kamailio
+    - nftables
+    - captagent
+    - syslog
