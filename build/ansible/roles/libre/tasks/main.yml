@@ -15,6 +15,25 @@
     src: "{{sourcedir}}/platform/libre/"
     dest: "{{destinationdir}}/platform/libre/"
 
+- name: Update libre log templating-file
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    owner: root
+    group: root
+    mode: "{{item.mode}}"
+  with_items:
+    - src: "{{sourcedir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
+      dest: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
+      mode: "0644"
+    - src: "{{sourcedir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
+      dest: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
+      mode: "0644"
+  vars:
+    rsyslogvar:
+      udp: '@'
+      tcp: '@@'
+
 - name: Symbolic link for libre log service
   file:
     src: "{{item.src}}"
