@@ -15,7 +15,7 @@
     src: "{{sourcedir}}/platform/kamailio/"
     dest: "{{destinationdir}}/platform/kamailio/"
 
-- name: Update Kamailio templateing-configuration
+- name: Update Kamailio templating-configuration
   template:
     src: "{{sourcedir}}/platform/kamailio/self/{{item}}"
     dest: "{{destinationdir}}/platform/kamailio/self/{{item}}"
