@@ -1,16 +1,39 @@
 ---
-# nginx
-- name: Symbolic link for nginx
+- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/nginx in target host
   file:
-    src: "{{rundir}}/platform/nginx"
-    dest: /etc/nginx
-    state: link
-    force: true
+    path: "{{item}}"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/platform/nginx"
+    - "{{rundir}}/platform/nginx"
 
-- name: Update config service for nginx libresbc
+- name: Copy nginx role source to target host
+  synchronize:
+    src: "{{sourcedir}}/platform/nginx/"
+    dest: "{{destinationdir}}/platform/nginx/"
+
+- name: Update nginx templating-configuration
   template:
     src: "{{sourcedir}}/platform/nginx/libresbc.conf"
     dest: "{{destinationdir}}/platform/nginx/libresbc.conf"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Symbolic link for nginx service
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/platform/nginx"
+      dest: "{{rundir}}/platform/nginx"
+    - src: "{{rundir}}/platform/nginx"
+      dest: /etc/nginx
 
 - name: handle nginx daemon 
   debug: 
