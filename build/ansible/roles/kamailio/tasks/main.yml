@@ -40,6 +40,7 @@
       dest: /etc/rsyslog.d/kamailio
     - src: "{{rundir}}/platform/kamailio/logrotate.d/kamailio.logrotate.conf"
       dest: /etc/logrotate.d/kamailio
+
 - name: Copy kamailio.service to systemd
   copy:
     src: "{{sourcedir}}/platform/kamailio/systemd/kamailio.service"
