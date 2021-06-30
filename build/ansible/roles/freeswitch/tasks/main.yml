@@ -15,7 +15,7 @@
     src: "{{sourcedir}}/platform/freeswitch/"
     dest: "{{destinationdir}}/platform/freeswitch/"
 
-- name: Update freeswitch templateing-configuration
+- name: Update freeswitch templating-configuration
   template:
     src: "{{item.src}}"
     dest: "{{item.dest}}"
