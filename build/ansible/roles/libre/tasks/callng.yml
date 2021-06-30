@@ -1,0 +1,41 @@
+---
+- name: Create directory { {{destinationdir}} | {{rundir}} } /callng in target host
+  file:
+    path: "{{item}}"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/callng"
+    - "{{rundir}}/callng"
+
+- name: Copy libre role source to target host
+  synchronize:
+    src: "{{sourcedir}}/callng/"
+    dest: "{{destinationdir}}/callng/"
+
+- name: Gather callng lua file
+  find:
+    paths: "{{destinationdir}}/callng"
+    patterns: "*.lua"
+    file_type: file
+  register: nglua
+- name: Update callng templating-file
+  template:
+    src: "{{sourcedir}}/callng/{{ item.path | basename }}"
+    dest: "{{destinationdir}}/callng/{{ item.path | basename }}"
+    owner: root
+    group: root
+    mode: '0754'
+  with_items: "{{ nglua.files }}"
+
+- name: Symbolic link for callng
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/callng"
+      dest: "{{rundir}}/callng"

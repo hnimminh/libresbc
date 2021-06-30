@@ -1,0 +1,48 @@
+---
+- name: Create directory { {{destinationdir}} | {{rundir}} } /liberator in target host
+  file:
+    path: "{{item}}"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/liberator"
+    - "{{rundir}}/liberator"
+
+- name: Copy liberator role source to target host
+  synchronize:
+    src: "{{sourcedir}}/liberator/"
+    dest: "{{destinationdir}}/liberator/"
+
+- name: Update liberator templating-file
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    owner: root
+    group: root
+    mode: 0754
+  with_items:
+    - src: "{{sourcedir}}/liberator/configuration.py"
+      dest: "{{destinationdir}}/liberator/configuration.py"
+#   - src: "{{sourcedir}}/platform/libre/system/sbin/liberator.sh"
+#     dest: /usr/local/sbin/liberator.sh
+
+- name: Symbolic link for liberator service
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/liberator"
+      dest: "{{rundir}}/liberator"
+    - src: "{{rundir}}/platform/libre/system/systemd/liberator.service"
+      dest: /etc/systemd/system/liberator.service
+
+- name: handle liberator daemon 
+  debug: 
+    msg: "liberator will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify: 
+    - restart liberator

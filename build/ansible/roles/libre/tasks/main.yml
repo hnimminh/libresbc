@@ -1,0 +1,38 @@
+---
+- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/libre in target host
+  file:
+    path: "{{item}}"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/platform/libre"
+    - "{{rundir}}/platform/libre"
+
+- name: Copy libre role source to target host
+  synchronize:
+    src: "{{sourcedir}}/platform/libre"
+    dest: "{{destinationdir}}/platform/libre"
+
+- name: Symbolic link for libre log service
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/platform/libre"
+      dest: "{{rundir}}/platform/libre"
+    - src: "{{rundir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
+      dest: /etc/rsyslog.d/libre
+    - src: "{{rundir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
+      dest: /etc/logrotate.d/libre
+
+# liberator service
+- name: deploy liberator
+  include_tasks: "liberator.yml"
+
+# callng scripts
+- name: deploy callng
+  include_tasks: "callng.yml"
