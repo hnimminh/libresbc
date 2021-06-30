@@ -1,30 +1,42 @@
 ---
-# tasks file for captagent
-- name: Copy a captagent.service to systemd
-  copy:
-    src: captagent.service
-    dest: /etc/systemd/system/captagent.service
+- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/captagent in target host
+  file:
+    path: "{{item}}"
     owner: root
     group: root
-    mode: 0755
+    mode: 0644
+    state: directory
+  with_items:
+    - "{{destinationdir}}/platform/captagent"
+    - "{{rundir}}/platform/captagent"
 
-- name: Update config service for captagent
+- name: Copy captagent role source to target host
+  synchronize:
+    src: "{{sourcedir}}/platform/captagent/"
+    dest: "{{destinationdir}}/platform/captagent/"
+
+- name: Update captagent templating-configuration
   template:
-    src: "{{sourcedir}}/platform/captagent/transport_hep.xml"
-    dest: "{{destinationdir}}/platform/captagent/transport_hep.xml"
+    src: "{{sourcedir}}/platform/captagent/self/transport_hep.xml"
+    dest: "{{destinationdir}}/platform/captagent/self/transport_hep.xml"
     owner: root
     group: root
-    mode: 0754
+    mode: 0644
   when:
     - homer is defined
     - homer != None
 
-- name: Symbolic link for captagent
+- name: Symbolic link for captagent service
   file:
-    src: "{{rundir}}/platform/captagent"
-    dest: /usr/local/captagent/etc/captagent
-    state: link
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
     force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/platform/captagent"
+      dest: "{{rundir}}/platform/captagent"
+    - src: "{{rundir}}/platform/captagent/self"
+      dest: /usr/local/captagent/etc/captagent
 
 - name: handle restart captagent daemon 
   debug: 
@@ -35,13 +47,3 @@
   when: 
     - homer is defined
     - homer != None
-  
-- name: handle restart captagent daemon 
-  debug: 
-    msg: "captagent will be stoped"
-  changed_when: firedaemon != "idempotent"
-  notify: 
-    - stop captagent
-  when: 
-    - (homer is undefined) or (homer == None)
-  
