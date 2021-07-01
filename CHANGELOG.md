@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - add realm for routing vars
 
 ### Changed
+- ansible role convention
 - no remove verbose log input data
 - replace local var by NgVars
 ### Fixed
