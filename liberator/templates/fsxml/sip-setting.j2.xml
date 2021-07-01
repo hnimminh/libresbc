@@ -39,6 +39,7 @@
             <param name="sip-trace" value="yes"/>
             <param name="sip-capture" value="no"/>
             <param name="shutdown-on-fail" value="true"/>
+            <param name="parse-all-invite-headers" value="true"/>
             {#- <!-- UA IDENTITY--> #}
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             <param name="username" value="{{sipprofile.sdp_user}}"/> {# <!-- sdp username in o= and s= fields --> #}
