@@ -39,8 +39,8 @@
       dest: "{{rundir}}/platform/freeswitch"
     - src: "{{rundir}}/platform/freeswitch/self"
       dest: /usr/local/etc/freeswitch
-    - src: "{{rundir}}/platform/freeswitch/system/logrotate.d/freeswitch.logrotate.conf"
-      dest: /etc/logrotate.d/freeswitch
+    - src: "{{rundir}}/platform/freeswitch/system/logrotate.d/freeswitch.conf"
+      dest: /etc/logrotate.d/freeswitch.conf
     - src: "{{rundir}}/platform/freeswitch/system/systemd/freeswitch.service"
       dest: /etc/systemd/system/freeswitch.service
 

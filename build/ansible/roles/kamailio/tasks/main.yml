@@ -36,10 +36,10 @@
       dest: "{{rundir}}/platform/kamailio"
     - src: "{{rundir}}/platform/kamailio/self"
       dest: /usr/local/etc/kamailio
-    - src: "{{rundir}}/platform/kamailio/system/rsyslog.d/kamailio.rsyslog.conf"
-      dest: /etc/rsyslog.d/kamailio
-    - src: "{{rundir}}/platform/kamailio/system/logrotate.d/kamailio.logrotate.conf"
-      dest: /etc/logrotate.d/kamailio
+    - src: "{{rundir}}/platform/kamailio/system/rsyslog.d/kamailio.conf"
+      dest: /etc/rsyslog.d/kamailio.conf
+    - src: "{{rundir}}/platform/kamailio/system/logrotate.d/kamailio.conf"
+      dest: /etc/logrotate.d/kamailio.conf
     - src: "{{rundir}}/platform/kamailio/system/systemd/kamailio.service"
       dest: /etc/systemd/system/kamailio.service
 

@@ -23,11 +23,11 @@
     group: root
     mode: "{{item.mode}}"
   with_items:
-    - src: "{{sourcedir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
-      dest: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
+    - src: "{{sourcedir}}/platform/libre/system/rsyslog.d/libre.conf"
+      dest: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.conf"
       mode: "0644"
-    - src: "{{sourcedir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
-      dest: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
+    - src: "{{sourcedir}}/platform/libre/system/logrotate.d/libre.conf"
+      dest: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.conf"
       mode: "0644"
   vars:
     rsyslogvar:
@@ -43,10 +43,10 @@
   with_items:
     - src: "{{destinationdir}}/platform/libre"
       dest: "{{rundir}}/platform/libre"
-    - src: "{{rundir}}/platform/libre/system/rsyslog.d/libre.rsyslog.conf"
-      dest: /etc/rsyslog.d/libre
-    - src: "{{rundir}}/platform/libre/system/logrotate.d/libre.logrotate.conf"
-      dest: /etc/logrotate.d/libre
+    - src: "{{rundir}}/platform/libre/system/rsyslog.d/libre.conf"
+      dest: /etc/rsyslog.d/libre.conf
+    - src: "{{rundir}}/platform/libre/system/logrotate.d/libre.conf"
+      dest: /etc/logrotate.d/libre.conf
 
 # liberator service
 - name: deploy liberator
