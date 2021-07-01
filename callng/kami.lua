@@ -1,57 +1,21 @@
--- Kamailio - equivalent of routing blocks in Lua
+--
+-- callng:kami.lua
+-- 
+-- The Initial Developer of the Original Code is
+-- Minh Minh <hnimminh at[@] outlook dot[.] com>
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- All Rights Reserved.
+--
 --
 -- KSR - the object exporting Kamailio KEMI functions (app_lua module)
 -- sr - the old object exporting Kamailio functions (app_lua_sr module)
 --
-
--- Relevant remarks:
---  * do not execute Lua 'exit' - that will kill Lua interpreter which is
---  embedded in Kamailio, resulting in killing Kamailio
+-- Relevant Remarks:
+--  * do not execute Lua 'exit' - that will kill Lua interpreter which is embedded in Kamailio, resulting in killing Kamailio
 --  * use KSR.x.exit() to trigger the stop of executing the script
---  * KSR.drop() is only marking the SIP message for drop, but doesn't stop
---  the execution of the script. Use KSR.x.exit() after it or KSR.x.drop()
+--  * KSR.drop() is only marking the SIP message for drop, but doesn't stop the execution of the script. Use KSR.x.exit() after it or KSR.x.drop()
 --
--- Hints:
---  * Lua syntax check: luac -p /path/to/script.lua
 --
-
--- debug callback function to print details of execution trace
---[[
-local ksr_exec_level=0
-
-local function ksr_exec_hook(event)
-	local s = "";
-	local t = debug.getinfo(3)
-	s = s .. ksr_exec_level .. ">>> " .. string.rep(" ", ksr_exec_level);
-	if t~=nil and t.currentline>=0 then
-		s = s .. t.short_src .. ":" .. t.currentline .. " ";
-	end
-	t=debug.getinfo(2)
-	if event=="call" then
-		ksr_exec_level = ksr_exec_level + 1;
-	else
-		ksr_exec_level = ksr_exec_level - 1;
-		if ksr_exec_level < 0 then
-			ksr_exec_level = 0;
-		end
-	end
-	if t.what=="main" then
-		if event=="call" then
-			s = s .. "begin " .. t.short_src;
-		else
-			s = s .. "end " .. t.short_src;
-		end
-	elseif t.what=="Lua" then
-		s = s .. event .. " " .. t.name or "(Lua)" .. " <" .. t.linedefined .. ":" .. t.short_src .. ">";
-	else
-		s = s .. event .. " " .. t.name or "(C)" .. " [" .. t.what .. "] ";
-	end
-	KSR.info(s .. "\n");
-end
-
-debug.sethook(ksr_exec_hook, "cr")
-ksr_exec_level=0
-]]--
 
 -- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
 FLT_NATS=5
