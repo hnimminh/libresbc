@@ -49,7 +49,7 @@ function logify(...)
     logger(message)
 end
 
-function dlogify(...)
+function delogify(...)
     local arg = {...}
     local message = arg[1]..'='..tostring(arg[2])
     for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end 
