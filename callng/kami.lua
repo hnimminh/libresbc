@@ -5,7 +5,7 @@
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
 -- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
 -- All Rights Reserved.
---
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
 --
 -- KSR - the object exporting Kamailio KEMI functions (app_lua module)
 -- sr - the old object exporting Kamailio functions (app_lua_sr module)
@@ -15,7 +15,9 @@
 --  * use KSR.x.exit() to trigger the stop of executing the script
 --  * KSR.drop() is only marking the SIP message for drop, but doesn't stop the execution of the script. Use KSR.x.exit() after it or KSR.x.drop()
 --
---
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
+
+dofile("{{rundir}}/callng/utilities.lua")
 
 -- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
 FLT_NATS=5
@@ -25,19 +27,21 @@ FLB_NATSIPPING=7
 -- SIP request routing
 -- equivalent of request_route{}
 function ksr_request_route()
+	-- debug log test
+	delogify('module', 'callng', 'space', 'kami', 'action', 'report', 'ru', KSR.pv.get("$ru"))
 
 	-- per request initial checks
-	ksr_route_reqinit();
+	ksr_route_reqinit()
 
 	-- NAT detection
-	ksr_route_natdetect();
+	ksr_route_natdetect()
 
 	-- CANCEL processing
 	if KSR.is_CANCEL() then
 		if KSR.tm.t_check_trans()>0 then
-			ksr_route_relay();
+			ksr_route_relay()
 		end
-		return 1;
+		return 1
 	end
 
 	-- handle requests within SIP dialogs
@@ -47,10 +51,12 @@ function ksr_request_route()
 
 	-- handle retransmissions
 	if KSR.tmx.t_precheck_trans()>0 then
-		KSR.tm.t_check_trans();
-		return 1;
+		KSR.tm.t_check_trans()
+		return 1
 	end
-	if KSR.tm.t_check_trans()==0 then return 1 end
+	if KSR.tm.t_check_trans()==0 then 
+		return 1 
+	end
 
 	-- authentication
 	ksr_route_auth();
@@ -83,6 +89,76 @@ function ksr_request_route()
 	return 1;
 end
 
+
+-- Per SIP request initial checks
+function ksr_route_reqinit()
+	if not KSR.is_myself_srcip() then
+		local srcip = KSR.kx.get_srcip();
+		if KSR.htable.sht_match_name("ipban", "eq", srcip) > 0 then
+			-- ip is already blocked
+			KSR.dbg("request from blocked IP - " .. KSR.kx.get_method()
+					.. " from " .. KSR.kx.get_furi() .. " (IP:"
+					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
+			KSR.x.exit();
+		end
+		if KSR.pike.pike_check_req() < 0 then
+			KSR.err("ALERT: pike blocking " .. KSR.kx.get_method()
+					.. " from " .. KSR.kx.get_furi() .. " (IP:"
+					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
+			KSR.htable.sht_seti("ipban", srcip, 1);
+			KSR.x.exit();
+		end
+	end
+	local ua = KSR.kx.gete_ua();
+	if string.find(ua, "friendly") 
+		or string.find(ua, "sipsak")
+		or string.find(ua, "siparmyknife")
+		or string.find(ua, "VaxIPUserAgent")
+		or string.find(ua, "VaxSIPUserAgent")
+		or string.find(ua, "scanner")
+		or string.find(ua, "sipcli") 
+		or string.find(ua, "sipvicious") then
+		KSR.sl.sl_send_reply(200, "OK");
+		KSR.x.exit();
+	end
+
+	if KSR.maxfwd.process_maxfwd(10) < 0 then
+		KSR.sl.sl_send_reply(483,"Too Many Hops");
+		KSR.x.exit();
+	end
+
+	if KSR.sanity.sanity_check(1511, 7)<0 then
+		KSR.err("Malformed SIP message from "
+				.. KSR.kx.get_srcip() .. ":" .. KSR.kx.get_srcport() .."\n");
+		KSR.x.exit();
+	end
+
+	if KSR.is_OPTIONS()
+			and KSR.is_myself_ruri()
+			and KSR.corex.has_ruri_user() < 0 then
+		KSR.sl.sl_send_reply(200,"Keepalive");
+		KSR.x.exit();
+	end
+
+end
+
+-- Caller NAT detection
+function ksr_route_natdetect()
+	if not KSR.nathelper then
+		return 1;
+	end
+	KSR.force_rport();
+	if KSR.nathelper.nat_uac_test(19)>0 then
+		if KSR.is_REGISTER() then
+			KSR.nathelper.fix_nated_register();
+		elseif KSR.siputils.is_first_hop()>0 then
+			KSR.nathelper.set_contact_alias();
+		end
+		KSR.setflag(FLT_NATS);
+	end
+	return 1;
+end
+
 -- wrapper around tm relay function
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
@@ -110,52 +186,6 @@ function ksr_route_relay()
 	KSR.x.exit();
 end
 
-
--- Per SIP request initial checks
-function ksr_route_reqinit()
-	if not KSR.is_myself_srcip() then
-		local srcip = KSR.kx.get_srcip();
-		if KSR.htable.sht_match_name("ipban", "eq", srcip) > 0 then
-			-- ip is already blocked
-			KSR.dbg("request from blocked IP - " .. KSR.kx.get_method()
-					.. " from " .. KSR.kx.get_furi() .. " (IP:"
-					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
-			KSR.x.exit();
-		end
-		if KSR.pike.pike_check_req() < 0 then
-			KSR.err("ALERT: pike blocking " .. KSR.kx.get_method()
-					.. " from " .. KSR.kx.get_furi() .. " (IP:"
-					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
-			KSR.htable.sht_seti("ipban", srcip, 1);
-			KSR.x.exit();
-		end
-	end
-	local ua = KSR.kx.gete_ua();
-	if string.find(ua, "friendly") or string.find(ua, "scanner")
-			or string.find(ua, "sipcli") or string.find(ua, "sipvicious") then
-		KSR.sl.sl_send_reply(200, "OK");
-		KSR.x.exit();
-	end
-
-	if KSR.maxfwd.process_maxfwd(10) < 0 then
-		KSR.sl.sl_send_reply(483,"Too Many Hops");
-		KSR.x.exit();
-	end
-
-	if KSR.is_OPTIONS()
-			and KSR.is_myself_ruri()
-			and KSR.corex.has_ruri_user() < 0 then
-		KSR.sl.sl_send_reply(200,"Keepalive");
-		KSR.x.exit();
-	end
-
-	if KSR.sanity.sanity_check(1511, 7)<0 then
-		KSR.err("Malformed SIP message from "
-				.. KSR.kx.get_srcip() .. ":" .. KSR.kx.get_srcport() .."\n");
-		KSR.x.exit();
-	end
-
-end
 
 
 -- Handle requests within SIP dialogs
@@ -261,22 +291,6 @@ function ksr_route_auth()
 	return 1;
 end
 
--- Caller NAT detection
-function ksr_route_natdetect()
-	if not KSR.nathelper then
-		return 1;
-	end
-	KSR.force_rport();
-	if KSR.nathelper.nat_uac_test(19)>0 then
-		if KSR.is_REGISTER() then
-			KSR.nathelper.fix_nated_register();
-		elseif KSR.siputils.is_first_hop()>0 then
-			KSR.nathelper.set_contact_alias();
-		end
-		KSR.setflag(FLT_NATS);
-	end
-	return 1;
-end
 
 -- RTPProxy control
 function ksr_route_natmanage()
