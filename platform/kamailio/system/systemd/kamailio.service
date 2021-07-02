@@ -5,9 +5,10 @@ After=network.target
 [Service]
 Type=forking
 # ExecStart requires a full absolute path
-ExecStart=/usr/local/sbin/kamctl start
-ExecStop=/usr/local/sbin/kamctl stop
-ExecReload=/usr/local/sbin/kamctl restart
+ExecStart=/usr/local/sbin/kamailio -S -P /var/run/kamailio/kamailio.pid -f /usr/local/etc/kamailio/kamailio.cfg
+ExecStopPost=/bin/rm -f /var/run/kamailio/kamailio.pid
+#ExecReload=/usr/local/sbin/kamctl restart
+#ExecStop=/usr/local/sbin/kamctl stop
 RemainAfterExit=no
 Restart=always
 RestartSec=5s
