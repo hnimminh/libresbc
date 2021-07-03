@@ -127,13 +127,13 @@ function ksr_route_reqinit()
 		KSR.x.exit();
 	end
 
+	-- Keepalive Repsonse
 	if KSR.is_OPTIONS()
 			and KSR.is_myself_ruri()
 			and KSR.corex.has_ruri_user() < 0 then
-		KSR.sl.sl_send_reply(200,"Keepalive");
+		KSR.sl.sl_send_reply(200, "Keepalive");
 		KSR.x.exit();
 	end
-
 end
 
 -- Caller NAT detection
