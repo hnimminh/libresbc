@@ -28,7 +28,7 @@ FLB_NATSIPPING=7
 -- equivalent of request_route{}
 function ksr_request_route()
 	-- debug log test
-	delogify('module', 'callng', 'space', 'kami', 'action', 'report', 'ru', KSR.pv.get("$ru"))
+	delogify('module', 'callng', 'space', 'kami', 'action', 'new-request', 'ru', KSR.pv.get("$ru"))
 
 	-- per request initial checks
 	ksr_route_reqinit()
@@ -48,7 +48,6 @@ function ksr_request_route()
 	ksr_route_withindlg();
 
 	-- -- only initial requests (no To tag)
-
 	-- handle retransmissions
 	if KSR.tmx.t_precheck_trans()>0 then
 		KSR.tm.t_check_trans()
@@ -96,15 +95,11 @@ function ksr_route_reqinit()
 		local srcip = KSR.kx.get_srcip();
 		if KSR.htable.sht_match_name("ipban", "eq", srcip) > 0 then
 			-- ip is already blocked
-			KSR.dbg("request from blocked IP - " .. KSR.kx.get_method()
-					.. " from " .. KSR.kx.get_furi() .. " (IP:"
-					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
+			delogify('module', 'callng', 'space', 'kami', 'action', 'blocked', 'method', KSR.kx.get_method(), 'fromuri', KSR.kx.get_furi(), 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
 			KSR.x.exit();
 		end
 		if KSR.pike.pike_check_req() < 0 then
-			KSR.err("ALERT: pike blocking " .. KSR.kx.get_method()
-					.. " from " .. KSR.kx.get_furi() .. " (IP:"
-					.. srcip .. ":" .. KSR.kx.get_srcport() .. ")\n");
+			delogify('module', 'callng', 'space', 'kami', 'action', 'pike', 'method', KSR.kx.get_method(), 'fromuri', KSR.kx.get_furi(), 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
 			KSR.htable.sht_seti("ipban", srcip, 1);
 			KSR.x.exit();
 		end
@@ -128,8 +123,7 @@ function ksr_route_reqinit()
 	end
 
 	if KSR.sanity.sanity_check(1511, 7)<0 then
-		KSR.err("Malformed SIP message from "
-				.. KSR.kx.get_srcip() .. ":" .. KSR.kx.get_srcport() .."\n");
+		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
 		KSR.x.exit();
 	end
 
@@ -218,7 +212,7 @@ function ksr_route_withindlg()
 			KSR.x.exit();
 		end
 	end
-	KSR.sl.sl_send_reply(404, "Not here");
+	KSR.sl.sl_send_reply(404, "Not Here");
 	KSR.x.exit();
 end
 
@@ -348,8 +342,7 @@ end
 -- Manage outgoing branches
 -- equivalent of branch_route[...]{}
 function ksr_branch_manage()
-	KSR.dbg("new branch [".. KSR.pv.get("$T_branch_idx")
-				.. "] to " .. KSR.kx.get_ruri() .. "\n");
+	delogify('module', 'callng', 'space', 'kami', 'action', 'new-branch', 'branch', KSR.pv.get("$T_branch_idx"), 'ruri', KSR.kx.get_ruri())
 	ksr_route_natmanage();
 	return 1;
 end
@@ -357,7 +350,7 @@ end
 -- Manage incoming replies
 -- equivalent of onreply_route[...]{}
 function ksr_onreply_manage()
-	KSR.dbg("incoming reply\n");
+	delogify('module', 'callng', 'space', 'kami', 'action', 'incoming-reply')
 	local scode = KSR.kx.get_status();
 	if scode>100 and scode<299 then
 		ksr_route_natmanage();
@@ -379,6 +372,6 @@ end
 -- SIP response handling
 -- equivalent of reply_route{}
 function ksr_reply_route()
-	KSR.info("===== response - from kamailio lua script\n");
+	delogify('module', 'callng', 'space', 'kami', 'action', 'response')
 	return 1;
 end
