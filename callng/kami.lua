@@ -263,8 +263,12 @@ function ksr_route_auth()
 	end
 
 	if KSR.is_REGISTER() or KSR.is_myself_furi() then
+		delogify('module', 'callng', 'space', 'kami', 'action', 'auth1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
 		-- authenticate requests
-		if KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)<0 then
+		-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
+		local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
+		delogify('module', 'callng', 'space', 'kami', 'action', 'auth1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
+		if auth_check<0 then
 			KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0);
 			KSR.x.exit();
 		end
