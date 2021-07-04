@@ -2821,3 +2821,59 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         logify(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ACCESS SERVICE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class AccessService(BaseModel):
+    name: str = Field(default='default', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
+    desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
+    user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
+    sdp_user: str = Field(default='LibreSBC', max_length=64, description='username with the o= and s= fields in SDP body')
+    server_header = Field(default='Access Service', max_length=64, description='Server Header')
+    enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
+    ignore_183nosdp: bool = Field(default=True, description='Just ignore SIP 183 without SDP body')
+    disable_transfer: bool = Field(default=True, description='true mean disable call transfer')
+    manual_redirect: bool = Field(default=True, description='how call forward handled, true mean it be controlled under libresbc contraints, false mean it be work automatically')
+    enable_3pcc: bool = Field(default=False, description='determines if third party call control is allowed or not')
+    enable_timer: bool = Field(default=True, description='true to support for RFC4028 SIP Session Timers')
+    session_timeout: int = Field(default=1800, ge=1800, le=3600, description='call to expire after the specified seconds')
+    minimum_session_expires: int = Field(default=120, ge=90, le=3600, description='Value of SIP header Min-SE')
+    dtmf_type: DtmfType = Field(default='rfc2833', description='Dual-tone multi-frequency (DTMF) signal type')
+    media_timeout: int = Field(default=0, description='The number of seconds of RTP inactivity before SBC considers the call disconnected, and hangs up (recommend to use session timers instead), default value is 0 - disables the timeout.')
+    rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
+    context: ContextEnum = Field(default='access', description='predefined context for call control policy', hidden_field=True)
+    fs_local_port: int = Field(default=5050, ge=0, le=65535, description='local sip port for fs', hidden_field=True)
+    kam_local_port: int = Field(default=5060, ge=0, le=65535, description='local sip port for kam', hidden_field=True)
+    outbound_proxy: IPv4Address = Field(default='127.0.0.1', description='outbound proxy', hidden_field=True)
+    transports = List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], description='list of bind transport protocol')
+    sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
+    rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
+
+@librerouter.post("/libreapi/access/service", status_code=200)
+def create_access_service(reqbody: AccessService, response: Response):
+    return True
+
+class AccessPolicyModel(BaseModel):
+    ringready: bool = Field(default=False, description='response 180 ring indication')
+    media_class: str = Field(description='nameid of media class')
+    capacity_class: str = Field(description='nameid of capacity class')
+    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
+    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+    preanswer_class: str = Field(default=None, description='nameid of preanswer class')
+
+@librerouter.post("/libreapi/access/policy", status_code=200)
+def create_access_policy(reqbody: AccessPolicyModel, response: Response):
+    return True
+
+class AccessDirectory(BaseModel):
+    id: str = Field(description='user identifier')
+    secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound')
+    port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for outbond to an id if it is IP')
+    transport: TransportEnum = Field(default='udp', description='farend transport protocol for outbound to an id if it is IP')
+    domain: str =  Field(description='user domain')
+
+@librerouter.post("/libreapi/access/directory", status_code=200)
+def create_access_directory(reqbody: AccessDirectory, response: Response):
+    return True
