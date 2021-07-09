@@ -536,7 +536,6 @@ class SIPProfileModel(BaseModel):
     rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
     realm: Optional[str] = Field(regex=_REALM_, max_length=256, description='realm challenge key for digest auth, mainpoint to identify which directory domain that user belong to. This setting can be used with ALC (be careful to use & do at your own risk)', hidden_field=True)
     context: ContextEnum = Field(description='predefined context for call control policy')
-    challenge_realm: Optional[str] = Field(min_length=1, max_length=256, description='Digest Auth realm')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
