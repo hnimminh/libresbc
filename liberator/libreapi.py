@@ -2829,9 +2829,9 @@ class AccessService(BaseModel):
     name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
     desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
-    server_header = Field(default='AccessService', max_length=64, description='Server Header')
+    server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
     local_port: int = Field(default=5060, ge=0, le=65535, description='local sip port for kam', hidden_field=True)
-    transports = List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], description='list of bind transport protocol')
+    transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     domains: List[str] = Field(description='Domain List')
 
@@ -2839,13 +2839,17 @@ class AccessService(BaseModel):
 def create_access_service(reqbody: AccessService, response: Response):
     return True
 
-class AccessDirectory(BaseModel):
+class NetDirectory(BaseModel):
+    ip: IPv4Network = Field(description='IPv4 Address for IP auth')
+    port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for arriving call')
+    transport: TransportEnum = Field(default='udp', description='farend transport protocol for arriving call')
+    domain: str =  Field(description='user domain')
+
+class UserDirectory(BaseModel):
     id: str = Field(description='user identifier')
     secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound')
-    port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for outbond to an id if it is IP')
-    transport: TransportEnum = Field(default='udp', description='farend transport protocol for outbound to an id if it is IP')
     domain: str =  Field(description='user domain')
 
 @librerouter.post("/libreapi/access/directory", status_code=200)
-def create_access_directory(reqbody: AccessDirectory, response: Response):
+def create_access_directory(reqbody: Union[UserDirectory, NetDirectory], response: Response):
     return True
