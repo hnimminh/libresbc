@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/freeswitch in target host
+- name: Create directory { {{destinationdir}}/platform/freeswitch in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/freeswitch"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/freeswitch"
-    - "{{rundir}}/platform/freeswitch"
 
 - name: Copy freeswitch role source to target host
   synchronize:
@@ -35,13 +32,11 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/freeswitch"
-      dest: "{{rundir}}/platform/freeswitch"
-    - src: "{{rundir}}/platform/freeswitch/self"
+    - src: "{{destinationdir}}/platform/freeswitch/self"
       dest: /usr/local/etc/freeswitch
-    - src: "{{rundir}}/platform/freeswitch/system/logrotate.d/freeswitch.conf"
+    - src: "{{destinationdir}}/platform/freeswitch/system/logrotate.d/freeswitch.conf"
       dest: /etc/logrotate.d/freeswitch.conf
-    - src: "{{rundir}}/platform/freeswitch/system/systemd/freeswitch.service"
+    - src: "{{destinationdir}}/platform/freeswitch/system/systemd/freeswitch.service"
       dest: /etc/systemd/system/freeswitch.service
 
 - name: handle freeswitch daemon 

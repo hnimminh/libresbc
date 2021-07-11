@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/libre in target host
+- name: Create directory {{destinationdir}}/platform/libre in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/libre"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/libre"
-    - "{{rundir}}/platform/libre"
 
 - name: Copy libre role source to target host
   synchronize:
@@ -41,11 +38,9 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/libre"
-      dest: "{{rundir}}/platform/libre"
-    - src: "{{rundir}}/platform/libre/system/rsyslog.d/libre.conf"
+    - src: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.conf"
       dest: /etc/rsyslog.d/libre.conf
-    - src: "{{rundir}}/platform/libre/system/logrotate.d/libre.conf"
+    - src: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.conf"
       dest: /etc/logrotate.d/libre.conf
 
 # liberator service

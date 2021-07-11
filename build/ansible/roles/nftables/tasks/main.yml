@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/nftables in target host
+- name: Create directory {{destinationdir}}/platform/nftables in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/nftables"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/nftables"
-    - "{{rundir}}/platform/nftables"
 
 - name: Copy nftables role source to target host
   synchronize:
@@ -30,11 +27,9 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/nftables"
-      dest: "{{rundir}}/platform/nftables"
-    - src: "{{rundir}}/platform/nftables/self/preset.libre.nft"
+    - src: "{{destinationdir}}/platform/nftables/self/preset.libre.nft"
       dest: /etc/preset.libre.nft
-#   - src: "{{rundir}}/platform/nftables/system/systemd/nftables.service"
+#   - src: "{{destinationdir}}/platform/nftables/system/systemd/nftables.service"
 #     dest: /etc/systemd/system/nftables.service # /usr/lib/systemd/system/nftables.service
 
 - name: handle nftables daemon 

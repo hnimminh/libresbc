@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/kamailio in target host
+- name: Create directory {{destinationdir}}/platform/kamailio in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/kamailio"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/kamailio"
-    - "{{rundir}}/platform/kamailio"
 
 - name: Copy kamailio role source to target host
   synchronize:
@@ -32,15 +29,13 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/kamailio"
-      dest: "{{rundir}}/platform/kamailio"
-    - src: "{{rundir}}/platform/kamailio/self"
+    - src: "{{destinationdir}}/platform/kamailio/self"
       dest: /usr/local/etc/kamailio
-    - src: "{{rundir}}/platform/kamailio/system/rsyslog.d/kamailio.conf"
+    - src: "{{destinationdir}}/platform/kamailio/system/rsyslog.d/kamailio.conf"
       dest: /etc/rsyslog.d/kamailio.conf
-    - src: "{{rundir}}/platform/kamailio/system/logrotate.d/kamailio.conf"
+    - src: "{{destinationdir}}/platform/kamailio/system/logrotate.d/kamailio.conf"
       dest: /etc/logrotate.d/kamailio.conf
-    - src: "{{rundir}}/platform/kamailio/system/systemd/kamailio.service"
+    - src: "{{destinationdir}}/platform/kamailio/system/systemd/kamailio.service"
       dest: /etc/systemd/system/kamailio.service
 
 - name: handle kamailio daemon 

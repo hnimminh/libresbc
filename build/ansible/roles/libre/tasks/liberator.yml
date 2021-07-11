@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /liberator in target host
+- name: Create directory {{destinationdir}}/liberator in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/liberator"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/liberator"
-    - "{{rundir}}/liberator"
 
 - name: Copy liberator role source to target host
   synchronize:
@@ -42,9 +39,7 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/liberator"
-      dest: "{{rundir}}/liberator"
-    - src: "{{rundir}}/platform/libre/system/systemd/liberator.service"
+    - src: "{{destinationdir}}/platform/libre/system/systemd/liberator.service"
       dest: /etc/systemd/system/liberator.service
 
 - name: handle liberator daemon 

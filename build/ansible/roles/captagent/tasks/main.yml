@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/captagent in target host
+- name: Create directory {{destinationdir}}/platform/captagent in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/captagent"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/captagent"
-    - "{{rundir}}/platform/captagent"
 
 - name: Copy captagent role source to target host
   synchronize:
@@ -34,8 +31,6 @@
     state: link
   with_items:
     - src: "{{destinationdir}}/platform/captagent"
-      dest: "{{rundir}}/platform/captagent"
-    - src: "{{rundir}}/platform/captagent/self"
       dest: /usr/local/captagent/etc/captagent
 
 - name: handle restart captagent daemon 

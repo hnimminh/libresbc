@@ -1,14 +1,11 @@
 ---
-- name: Create directory { {{destinationdir}} | {{rundir}} } /platform/nginx in target host
+- name: Create directory {{destinationdir}}/platform/nginx in target host
   file:
-    path: "{{item}}"
+    path: "{{destinationdir}}/platform/nginx"
     owner: root
     group: root
     mode: 0644
     state: directory
-  with_items:
-    - "{{destinationdir}}/platform/nginx"
-    - "{{rundir}}/platform/nginx"
 
 - name: Copy nginx role source to target host
   synchronize:
@@ -31,8 +28,6 @@
     state: link
   with_items:
     - src: "{{destinationdir}}/platform/nginx"
-      dest: "{{rundir}}/platform/nginx"
-    - src: "{{rundir}}/platform/nginx"
       dest: /etc/nginx
 
 - name: handle nginx daemon 

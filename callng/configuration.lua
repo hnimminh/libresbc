@@ -8,7 +8,6 @@
 --
 
 -- configuration
-SWVERSION = '0.5.1'
 NODEID = '{{nodeid}}'
 
 --- REDIS ENDPOINT

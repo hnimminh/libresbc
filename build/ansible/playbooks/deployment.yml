@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    destinationdir: "{{versiondir}}/{{ version }}"
+    destinationdir: "{{libredir}}/{{version}}"
     firedaemon: restarted
 
   roles:
