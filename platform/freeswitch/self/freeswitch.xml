@@ -130,8 +130,8 @@
         </condition>
       </extension>
     </context>
-    <context name="interconnection">
-      <extension name="interconnection_to_any">
+    <context name="carrier">
+      <extension name="carrier_to_any">
         <condition regex="all">
           <action application="lua" data="$${callngd}/main.lua"/>
           <anti-action application="hangup" data="CALL_REJECTED"/>

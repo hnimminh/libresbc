@@ -507,7 +507,7 @@ def list_acl(response: Response):
 
 class ContextEnum(str, Enum):
     core = "core"
-    interconnection = "interconnection"
+    carrier = "carrier"
     access = "access"
 
 class DtmfType(str, Enum):
