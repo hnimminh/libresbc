@@ -2831,9 +2831,10 @@ class AccessService(BaseModel):
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
     server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
     local_port: int = Field(default=5060, ge=0, le=65535, description='local sip port for kam', hidden_field=True)
-    transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], description='list of bind transport protocol')
+    transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], min_items=1, max_items=3, description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     domains: List[str] = Field(description='Domain List')
+
 
 @librerouter.post("/libreapi/access/service", status_code=200)
 def create_access_service(reqbody: AccessService, response: Response):
