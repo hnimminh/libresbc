@@ -7,7 +7,7 @@
 -- All Rights Reserved.
 --
 
-dofile("{{rundir}}/callng/utilities.lua")
+require("callng.utilities")
 ---------------------------------------------------------------------------
 
 local function unauth()

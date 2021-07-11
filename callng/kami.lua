@@ -17,7 +17,7 @@
 --
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 
-dofile("{{rundir}}/callng/utilities.lua")
+require("callng.utilities")
 
 -- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
 FLT_NATS=5

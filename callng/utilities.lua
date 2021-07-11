@@ -7,7 +7,7 @@
 -- All Rights Reserved.
 --
 
-dofile("{{rundir}}/callng/configuration.lua")
+require("callng.configuration")
 
 -- REQUIRE
 socket = require("socket")
