@@ -1,5 +1,5 @@
 #
-# liberator:fsxmlapi.py
+# liberator:cfgapi.py
 # 
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
@@ -29,41 +29,41 @@ REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)                                                    
 
 # api router declaration
-fsxmlrouter = APIRouter()
+cfgrouter = APIRouter()
 
 # template location 
-templates = Jinja2Templates(directory="templates/fsxml")
+fstpl = Jinja2Templates(directory="templates/fsxml")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@fsxmlrouter.get("/fsxmlapi/switch", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
     try:
-        result = templates.TemplateResponse("switch.j2.xml",
+        result = fstpl.TemplateResponse("switch.j2.xml",
                                             {"request": request, "switchattributes": CLUSTERS},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/event-socket", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/event-socket", include_in_schema=False)
 def esl(request: Request, response: Response):
     try:
-        result = templates.TemplateResponse("event-socket.j2.xml",
+        result = fstpl.TemplateResponse("event-socket.j2.xml",
                                             {"request": request, "host": ESL_HOST, "port": ESL_PORT, "password": ESL_SECRET},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=event-socket, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=event-socket, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/acl", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/acl", include_in_schema=False)
 def acl(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
@@ -92,18 +92,18 @@ def acl(request: Request, response: Response):
                 rules = fieldjsonify(detail.get('rules'))
                 acls.append({'name': name, 'action': action, 'rules': rules})
 
-        result = templates.TemplateResponse("acl.j2.xml",
+        result = fstpl.TemplateResponse("acl.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, "acls": acls},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/distributor", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/distributor", include_in_schema=False)
 def distributor(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
@@ -121,18 +121,18 @@ def distributor(request: Request, response: Response):
             intconname = getaname(intconnameid)
             interconnections.update({intconname: jsonhash(detail)})
 
-        result = templates.TemplateResponse("distributor.j2.xml",
+        result = fstpl.TemplateResponse("distributor.j2.xml",
                                             {"request": request, "interconnections": interconnections},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/sip-setting", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/sip-setting", include_in_schema=False)
 def sip(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
@@ -197,18 +197,18 @@ def sip(request: Request, response: Response):
         # set var profile address by separated thread
         threaded(fssocket, {'commands': fscommands, 'requestid': get_request_uuid()})
         # template
-        result = templates.TemplateResponse("sip-setting.j2.xml",
+        result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
 
-@fsxmlrouter.get("/fsxmlapi/directory", include_in_schema=False)
+@cfgrouter.get("/cfgapi/fsxml/directory", include_in_schema=False)
 def directory(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
@@ -258,12 +258,12 @@ def directory(request: Request, response: Response):
                     if _realm in directories: directories[_realm].append(directory)
                     else: directories[_realm] = [directory]
 
-        result = templates.TemplateResponse("directory.j2.xml",
+        result = fstpl.TemplateResponse("directory.j2.xml",
                                             {"request": request, "directories": directories},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=fsxmlapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=cfgapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result

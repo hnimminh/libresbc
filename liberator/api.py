@@ -17,7 +17,7 @@ from fastapi import FastAPI, Request, Response, Depends, status
 from configuration import _APPLICATION, _SWVERSION, _DESCRIPTION
 from utilities import logify, debugy, _request_uuid_ctx_var, get_request_uuid
 from libreapi import librerouter
-from fsxmlapi import fsxmlrouter
+from cfgapi import fsxmlrouter
 
 #---------------------------------------------------------------------------------------------------------------------------
 httpapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/apidocs')

@@ -12,5 +12,5 @@ from .utilities import *
 from .basemgr import *
 from .cdr import *
 from .libreapi import *
-from .fsxmlapi import *
+from .cfgapi import *
 from .api import *
