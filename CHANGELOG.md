@@ -13,6 +13,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - maninpualation class api
 - inbound normalization and outbound manipulation
 - add realm for routing vars
+- unlimited/bypass capacity check (lower-bound>=-1)
 
 ### Changed
 - ansible role convention

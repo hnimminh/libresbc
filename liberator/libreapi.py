@@ -508,7 +508,7 @@ def list_acl(response: Response):
 class ContextEnum(str, Enum):
     core = "core"
     interconnection = "interconnection"
-    # access = "access"
+    access = "access"
 
 class DtmfType(str, Enum):
     rfc2833 = "rfc2833"
@@ -536,7 +536,6 @@ class SIPProfileModel(BaseModel):
     rtp_rewrite_timestamps: bool = Field(default=False, description='set true to regenerate and rewrite the timestamps in all the RTP streams going to an endpoint using this SIP Profile, necessary to fix audio issues when sending calls to some paranoid and not RFC-compliant gateways')
     realm: Optional[str] = Field(regex=_REALM_, max_length=256, description='realm challenge key for digest auth, mainpoint to identify which directory domain that user belong to. This setting can be used with ALC (be careful to use & do at your own risk)', hidden_field=True)
     context: ContextEnum = Field(description='predefined context for call control policy')
-    challenge_realm: Optional[str] = Field(min_length=1, max_length=256, description='Digest Auth realm')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='Port to bind to for SIP traffic')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
@@ -1054,8 +1053,8 @@ def list_media_class(response: Response):
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    cps: int = Field(default=2, ge=1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
-    concurentcalls: int = Field(default=10, ge=1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
+    cps: int = Field(default=2, ge=-1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
+    concurentcalls: int = Field(default=10, ge=-1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
     # validator
     @root_validator()
     def capacity_agreement(cls, values):
@@ -2821,3 +2820,36 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         logify(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# ACCESS SERVICE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class AccessService(BaseModel):
+    name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
+    desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
+    user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
+    server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
+    local_port: int = Field(default=5060, ge=0, le=65535, description='local sip port for kam', hidden_field=True)
+    transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], description='list of bind transport protocol')
+    sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
+    domains: List[str] = Field(description='Domain List')
+
+@librerouter.post("/libreapi/access/service", status_code=200)
+def create_access_service(reqbody: AccessService, response: Response):
+    return True
+
+class NetDirectory(BaseModel):
+    ip: IPv4Network = Field(description='IPv4 Address for IP auth')
+    port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for arriving call')
+    transport: TransportEnum = Field(default='udp', description='farend transport protocol for arriving call')
+    domain: str =  Field(description='user domain')
+
+class UserDirectory(BaseModel):
+    id: str = Field(description='user identifier')
+    secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound')
+    domain: str =  Field(description='user domain')
+
+@librerouter.post("/libreapi/access/directory", status_code=200)
+def create_access_directory(reqbody: Union[UserDirectory, NetDirectory], response: Response):
+    return True

@@ -48,6 +48,10 @@ function verify_concurentcalls(name, direction, uuid)
     local clustermembers = freeswitch.getGlobalVariable('CLUSTERMEMBERS')
     local cckeys = concurentcallskeys(name)
     local max_concurentcalls = get_defined_concurentcalls(name, direction)
+    -- unlimited/bypass cps check
+    if max_concurentcalls < 0 then
+        return -math.huge, -1
+    end
     if direction == INBOUND then startpoint = 2 end
     local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
         txn:multi()
@@ -88,6 +92,10 @@ function average_cps(name, direction)
     local bucket = 'realtime:leaky:bucket:'..name
     local max_cps = get_defined_cps(name, direction)
     local leakyms = math.ceil(1000/max_cps)
+    -- unlimited/bypass cps check
+    if max_cps < 0 then
+        return 0, -math.huge, -1, leakyms, 0, 0
+    end
     local timers = rdbconn:eval(leakybucket, 1, bucket, leakyms)
     local nextcall, current = timers[1], timers[2]
     local waitms = nextcall - current
@@ -111,6 +119,11 @@ function verify_cps(name, direction, uuid)
         end
         return false, nil, nil, current_blocking_time
     else
+        local max_cps = get_defined_cps(name, direction)
+        -- unlimited/bypass cps check
+        if max_cps < 0 then
+            return true, -math.huge, -1, 0
+        end
         -- TOKEN BUCKET: https://en.wikipedia.org/wiki/Token_bucket
         -- eg: 10cps mean 10 call as last 1000ms and not 10 call at 999ms and next 10 calls more at 1001
         local tokenbucket = rdbconn:transaction(function(txn)
@@ -121,7 +134,6 @@ function verify_cps(name, direction, uuid)
         end)
         -- verification process
         local current_cps = tonumber(tokenbucket[3])
-        local max_cps = get_defined_cps(name, direction)
         -- rise up the blocking key
         if current_cps > max_cps then
             rdbconn:psetex(violate_key, VIOLATED_BLOCK_TIME, timestamp)
