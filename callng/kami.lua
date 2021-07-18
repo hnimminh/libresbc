@@ -24,6 +24,9 @@ FLT_NATS=5
 FLB_NATB=6
 FLB_NATSIPPING=7
 
+B2BUA_IP = '10.104.0.2'
+PROXY_IP = '10.104.0.2'
+
 -- SIP request routing
 -- equivalent of request_route{}
 function ksr_request_route()
@@ -31,10 +34,15 @@ function ksr_request_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'new-request', 'ru', KSR.pv.get("$ru"))
 
 	-- per request initial checks
-	ksr_route_reqinit()
+	sanitize()
 
-	-- NAT Detection and Fix
-	ksr_route_natdetect()
+	-- connection keepalive response
+	if KSR.is_OPTIONS() then
+		keepalive()
+	end
+
+	-- NAT detection and fix
+	nathandle()
 
 	-- CANCEL processing
 	if KSR.is_CANCEL() then
@@ -45,7 +53,7 @@ function ksr_request_route()
 	end
 
 	-- handle requests within SIP dialogs
-	ksr_route_withindlg()
+	withindlg()
 
 	-- only initial requests (no To tag)
 	-- handle retransmissions
@@ -57,24 +65,27 @@ function ksr_request_route()
 		return 1 
 	end
 
-	-- authentication
-	ksr_route_auth()
-
 	-- record routing for dialog forming requests (in case they are routed)
-	-- - remove preloaded route headers
+	-- remove preloaded route headers
 	KSR.hdr.remove("Route")
-	-- if INVITE or SUBSCRIBE
 	if KSR.is_method_in("IS") then
 		KSR.rr.record_route()
 	end
 
-	-- dispatch requests to foreign domains
-	ksr_route_sipout()
+	-- registrar service with user authentication
+	if KSR.is_REGISTER() then
+		registrar()
+	end
 
-	-- requests for my local domains
-
-	-- handle registrations
-	ksr_route_registrar()
+	-- incoming call
+	if KSR.is_INVITE() then
+		local srcip = KSR.pv.get('$si')
+		if srcip == B2BUA_IP then 
+			call_from_switch()
+		else
+			call_from_public()
+		end
+	end
 
 	if KSR.corex.has_ruri_user() < 0 then
 		-- request with no Username in RURI
@@ -82,14 +93,14 @@ function ksr_request_route()
 		return 1
 	end
 
-	-- user location service
-	ksr_route_location()
 	return 1
 end
 
 
--- Per SIP request initial checks
-function ksr_route_reqinit()
+-- ---------------------------------------------------------------------------------------------------------------------------------
+--  initial security checks and policy
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function sanitize()
 	-- rate limiting anti-flooding attached, optimize them later
 	if not KSR.is_myself_srcip() then
 		local srcip = KSR.kx.get_srcip()
@@ -141,17 +152,22 @@ function ksr_route_reqinit()
 		KSR.x.exit()
 	end
 
-	-- Keepalive Repsonse
-	if KSR.is_OPTIONS()
-			and KSR.is_myself_ruri()
-			and KSR.corex.has_ruri_user()<0 then
+end
+
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- Keepalive Repsonse for OPTION
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function keepalive()
+	if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
 		KSR.sl.sl_send_reply(200, "Keepalive")
 		KSR.x.exit()
 	end
 end
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
 -- Originator NAT Detection and Fix
-function ksr_route_natdetect()
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function nathandle()
 	KSR.force_rport()
 	if KSR.nathelper.nat_uac_test(23)>0 then
 		if KSR.is_REGISTER() then
@@ -164,7 +180,9 @@ function ksr_route_natdetect()
 	return 1
 end
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
 -- wrapper around tm relay function
+-- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
 	-- - serial forking, RTP relaying handling, a.s.o.
@@ -192,8 +210,10 @@ function ksr_route_relay()
 end
 
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
 -- Handle requests within SIP dialogs
-function ksr_route_withindlg()
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function withindlg()
 	if KSR.siputils.has_totag()<0 then 
 		return 1
 	end
@@ -228,61 +248,66 @@ function ksr_route_withindlg()
 	KSR.x.exit()
 end
 
-
--- IP authorization and user authentication
-function ksr_route_auth()
-	if KSR.permissions and not KSR.is_REGISTER() then
-		if KSR.permissions.allow_source_address(1)>0 then
-			-- source IP allowed
-			return 1
-		end
-	end
-
-	if KSR.is_REGISTER() or KSR.is_myself_furi() then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'auth1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
-		-- authenticate requests
-		-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
-		local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
-		delogify('module', 'callng', 'space', 'kami', 'action', 'auth1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
-		if auth_check<0 then
-			KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0)
-			KSR.x.exit()
-		end
-		-- user authenticated - remove auth header
-		if not KSR.is_method_in("RP") then
-			KSR.auth.consume_credentials()
-		end
-	end
-
-	-- if caller is not local subscriber, then check if it calls
-	-- a local destination, otherwise deny, not an open relay here
-	if (not KSR.is_myself_furi())
-			and (not KSR.is_myself_ruri()) then
-		KSR.sl.sl_send_reply(403,"Not relaying")
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- registrar service with user authentication
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function registrar()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'register', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
+	-- authenticate requests
+	-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
+	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'register', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
+	if auth_check<0 then
+		KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0)
+		delogify('module', 'callng', 'space', 'kami', 'action', 'register3')
 		KSR.x.exit()
 	end
 
-	return 1
-end
+	delogify('module', 'callng', 'space', 'kami', 'action', 'register4', 'status', 'authenticated')
 
-
--- Handle SIP registrations
-function ksr_route_registrar()
-	if not KSR.is_REGISTER() then return 1; end
 	if KSR.isflagset(FLT_NATS) then
 		KSR.setbflag(FLB_NATB)
 		-- do SIP NAT pinging
 		KSR.setbflag(FLB_NATSIPPING)
 	end
-	if KSR.registrar.save("location", 0)<0 then
+	
+	local aorsaved = KSR.registrar.save("libreusrloc", "5", "sip:minh@libre.sbc")
+	delogify('module', 'callng', 'space', 'kami', 'action', 'register5', 'aorsaved', aorsaved)
+	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
 	end
+
+	-- user authenticated - remove auth header
+	KSR.auth.consume_credentials()
+	-- done process
 	KSR.x.exit()
 end
 
--- User location service
-function ksr_route_location()
-	local rc = KSR.registrar.lookup("location")
+
+function call_from_public()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
+	-- authenticate requests
+	-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
+	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-2', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
+	if auth_check<0 then
+		KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0)
+		delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-3')
+		KSR.x.exit()
+	end
+
+	KSR.auth.consume_credentials()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-4', 'status', 'authenticated')
+
+	KSR.pv.sets('$du', 'sip:'..B2BUA_IP..':5080;transport=udp')
+	KSR.pv.sets('$fs', 'udp:'..PROXY_IP..':5060')
+	ksr_route_relay()
+end
+
+function call_from_switch()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
+	local rc = KSR.registrar.lookup("libreusrloc")
+	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-2', 'localtion', rc)
 	if rc<0 then
 		KSR.tm.t_newtran()
 		if rc==-1 or rc==-3 then
@@ -293,15 +318,14 @@ function ksr_route_location()
 			KSR.x.exit()
 		end
 	end
-
 	ksr_route_relay()
 	KSR.x.exit()
 end
 
-
 -- RTPProxy control
 function ksr_route_natmanage()
 	if not KSR.rtpproxy then
+		delogify('module', 'callng', 'space', 'kami', 'action', 'natmanage', 'return', 'do-nothing')
 		return 1
 	end
 	if KSR.siputils.is_request()>0 then
