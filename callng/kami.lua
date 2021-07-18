@@ -24,7 +24,8 @@ FLT_NATS=5
 FLB_NATB=6
 FLB_NATSIPPING=7
 
-B2BUA_IP = '10.104.0.2'
+SWTRFFLAG = 9
+B2BUA_IP = '10.15.0.5'
 PROXY_IP = '10.104.0.2'
 
 -- SIP request routing
@@ -41,6 +42,8 @@ function ksr_request_route()
 		keepalive()
 	end
 
+	-- traffic classify
+	srctraffic()
 	-- NAT detection and fix
 	nathandle()
 
@@ -79,8 +82,7 @@ function ksr_request_route()
 
 	-- incoming call
 	if KSR.is_INVITE() then
-		local srcip = KSR.pv.get('$si')
-		if srcip == B2BUA_IP then 
+		if KSR.isflagset(SWTRFFLAG) then 
 			call_from_switch()
 		else
 			call_from_public()
@@ -155,6 +157,15 @@ function sanitize()
 end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
+--  DISTINCT AND TAG TRAFFIC 
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function srctraffic()
+	local srcip = KSR.pv.get('$si')
+	if srcip == B2BUA_IP then
+		KSR.setflag(SWTRFFLAG)
+	end
+end
+-- ---------------------------------------------------------------------------------------------------------------------------------
 -- Keepalive Repsonse for OPTION
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function keepalive()
@@ -168,6 +179,9 @@ end
 -- Originator NAT Detection and Fix
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function nathandle()
+	if KSR.isflagset(SWTRFFLAG) then 
+		return 1
+	end
 	KSR.force_rport()
 	if KSR.nathelper.nat_uac_test(23)>0 then
 		if KSR.is_REGISTER() then
@@ -186,26 +200,14 @@ end
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
 	-- - serial forking, RTP relaying handling, a.s.o.
-	if KSR.is_method_in("IBSU") then
-		if KSR.tm.t_is_set("branch_route")<0 then
-			KSR.tm.t_on_branch("ksr_branch_manage")
-		end
-	end
-	if KSR.is_method_in("ISU") then
-		if KSR.tm.t_is_set("onreply_route")<0 then
-			KSR.tm.t_on_reply("ksr_onreply_manage")
-		end
-	end
+	delogify('module', 'callng', 'space', 'kami', 'action', 'route-relay')
 
-	if KSR.is_INVITE() then
-		if KSR.tm.t_is_set("failure_route")<0 then
-			KSR.tm.t_on_failure("ksr_failure_manage")
-		end
-	end
-
-	if KSR.tm.t_relay()<0 then
+	local rrc = KSR.tm.t_relay()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'do-relay', 'state', rrc)
+	if rrc<0 then
 		KSR.sl.sl_reply_error()
 	end
+	delogify('module', 'callng', 'space', 'kami', 'action', 'exit-relay')
 	KSR.x.exit()
 end
 
@@ -221,14 +223,7 @@ function withindlg()
 	-- sequential request withing a dialog should
 	-- take the path determined by record-routing
 	if KSR.rr.loose_route()>0 then
-		ksr_route_dlguri()
-		if KSR.is_ACK() then
-			-- ACK is forwarded statelessly
-			ksr_route_natmanage()
-		elseif KSR.is_NOTIFY() then
-			-- Add Record-Route for in-dialog NOTIFY as per RFC 6665.
-			KSR.rr.record_route()
-		end
+		delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-lr-go-relay')
 		ksr_route_relay()
 		KSR.x.exit()
 	end
@@ -271,7 +266,7 @@ function registrar()
 		KSR.setbflag(FLB_NATSIPPING)
 	end
 	
-	local aorsaved = KSR.registrar.save("libreusrloc", "5", "sip:minh@libre.sbc")
+	local aorsaved = KSR.registrar.save_uri("libreul", "5", "sip:minh@libre.sbc")
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register5', 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
@@ -299,15 +294,15 @@ function call_from_public()
 	KSR.auth.consume_credentials()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-4', 'status', 'authenticated')
 
-	KSR.pv.sets('$du', 'sip:'..B2BUA_IP..':5080;transport=udp')
+	KSR.pv.sets('$du', 'sip:'..B2BUA_IP..':5060;transport=udp')
 	KSR.pv.sets('$fs', 'udp:'..PROXY_IP..':5060')
 	ksr_route_relay()
 end
 
 function call_from_switch()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
-	local rc = KSR.registrar.lookup("libreusrloc")
-	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-2', 'localtion', rc)
+	local rc = KSR.registrar.lookup_uri("libreul", "sip:minh@libre.sbc")
+	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-2', 'localtion', rc)
 	if rc<0 then
 		KSR.tm.t_newtran()
 		if rc==-1 or rc==-3 then
@@ -318,94 +313,14 @@ function call_from_switch()
 			KSR.x.exit()
 		end
 	end
+
 	ksr_route_relay()
 	KSR.x.exit()
-end
-
--- RTPProxy control
-function ksr_route_natmanage()
-	if not KSR.rtpproxy then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'natmanage', 'return', 'do-nothing')
-		return 1
-	end
-	if KSR.siputils.is_request()>0 then
-		if KSR.siputils.has_totag()>0 then
-			if KSR.rr.check_route_param("nat=yes")>0 then
-				KSR.setbflag(FLB_NATB)
-			end
-		end
-	end
-	if (not (KSR.isflagset(FLT_NATS) or KSR.isbflagset(FLB_NATB))) then
-		return 1
-	end
-
-	KSR.rtpproxy.rtpproxy_manage("co")
-
-	if KSR.siputils.is_request()>0 then
-		if KSR.siputils.has_totag()<0 then
-			if KSR.tmx.t_is_branch_route()>0 then
-				KSR.rr.add_rr_param(";nat=yes")
-			end
-		end
-	end
-	if KSR.siputils.is_reply()>0 then
-		if KSR.isbflagset(FLB_NATB) then
-			KSR.nathelper.set_contact_alias()
-		end
-	end
-	return 1
-end
-
--- URI update for dialog requests
-function ksr_route_dlguri()
-	if not KSR.isdsturiset() then
-		KSR.nathelper.handle_ruri_alias()
-	end
-	return 1
-end
-
--- Routing to foreign domains
-function ksr_route_sipout()
-	if KSR.is_myself_ruri() then return 1; end
-
-	KSR.hdr.append("P-Hint: outbound\r\n")
-	ksr_route_relay()
-	KSR.x.exit()
-end
-
--- Manage outgoing branches
--- equivalent of branch_route[...]{}
-function ksr_branch_manage()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'new-branch', 'branch', KSR.pv.get("$T_branch_idx"), 'ruri', KSR.kx.get_ruri())
-	ksr_route_natmanage()
-	return 1
-end
-
--- Manage incoming replies
--- equivalent of onreply_route[...]{}
-function ksr_onreply_manage()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'incoming-reply')
-	local scode = KSR.kx.get_status()
-	if scode>100 and scode<299 then
-		ksr_route_natmanage()
-	end
-	return 1
-end
-
--- Manage failure routing cases
--- equivalent of failure_route[...]{}
-function ksr_failure_manage()
-	ksr_route_natmanage()
-
-	if KSR.tm.t_is_canceled()>0 then
-		return 1
-	end
-	return 1
 end
 
 -- SIP response handling
 -- equivalent of reply_route{}
 function ksr_reply_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'response')
+	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
 	return 1
 end
