@@ -1,2 +1,0 @@
-# setid(int)    destination(sip uri)    flags(int,opt)  priority(int,opt)   attrs(str,opt)
-1 sip:127.0.0.1:5050;transport=udp 4
