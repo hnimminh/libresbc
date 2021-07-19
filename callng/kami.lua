@@ -55,9 +55,11 @@ function ksr_request_route()
 		return 1
 	end
 
+	delogify('module', 'callng', 'space', 'kami', 'action', 'before-withindlg', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 	-- handle requests within SIP dialogs
 	withindlg()
 
+	delogify('module', 'callng', 'space', 'kami', 'action', 'after-withindlg', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 	-- only initial requests (no To tag)
 	-- handle retransmissions
 	if KSR.tmx.t_precheck_trans()>0 then
@@ -201,6 +203,7 @@ function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
 	-- - serial forking, RTP relaying handling, a.s.o.
 	delogify('module', 'callng', 'space', 'kami', 'action', 'route-relay')
+	KSR.xlog.xdbg('ROUTE RELAY BEGIN:-----------------------------------------------------------')
 
 	local rrc = KSR.tm.t_relay()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'do-relay', 'state', rrc)
@@ -208,6 +211,7 @@ function ksr_route_relay()
 		KSR.sl.sl_reply_error()
 	end
 	delogify('module', 'callng', 'space', 'kami', 'action', 'exit-relay')
+	KSR.xlog.xdbg('ROUTE RELAY END:-----------------------------------------------------------')
 	KSR.x.exit()
 end
 
@@ -220,21 +224,39 @@ function withindlg()
 		return 1
 	end
 
+	--[[
+	if KSR.dialog.is_known_dlg()<0 then
+		delogify('module', 'callng', 'space', 'kami', 'action', 'unknown-dialog')
+		if KSR.is_ACK() and KSR.tm.t_check_trans()>0 then
+			delogify('module', 'callng', 'space', 'kami', 'action', 'ack-t-check-trans')
+			ksr_route_relay()
+			KSR.x.exit()
+		end
+		KSR.x.exit()
+	end
+
+	delogify('module', 'callng', 'space', 'kami', 'action', 'known-dialog', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
+	]]--
 	-- sequential request withing a dialog should
 	-- take the path determined by record-routing
 	if KSR.rr.loose_route()>0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-lr-go-relay')
+		delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-lr-go-relay', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 		ksr_route_relay()
 		KSR.x.exit()
 	end
+
+	delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-not-lr', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
+
 	if KSR.is_ACK() then
 		if KSR.tm.t_check_trans() >0 then
 			-- no loose-route, but stateful ACK
 			-- must be an ACK after a 487
 			-- or e.g. 404 from upstream server
+			delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-trans', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 			ksr_route_relay()
 			KSR.x.exit()
 		else
+			delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-no-trans', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 			-- ACK without matching transaction ... ignore and discard
 			KSR.x.exit()
 		end
@@ -292,7 +314,10 @@ function call_from_public()
 	end
 
 	KSR.auth.consume_credentials()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-4', 'status', 'authenticated')
+	--[[
+	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-4', 'status', 'authenticated-dialog')
+	KSR.dialog.dlg_manage()
+	]]
 
 	KSR.pv.sets('$du', 'sip:'..B2BUA_IP..':5060;transport=udp')
 	KSR.pv.sets('$fs', 'udp:'..PROXY_IP..':5060')
@@ -314,6 +339,7 @@ function call_from_switch()
 		end
 	end
 
+	-- KSR.dialog.dlg_manage()
 	ksr_route_relay()
 	KSR.x.exit()
 end
