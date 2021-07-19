@@ -2933,7 +2933,7 @@ def detail_access_directory_user(response: Response, domain: str=Path(..., regex
         return result
 
 @librerouter.get("/libreapi/access/directory/user/{domain}", status_code=200)
-def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z][a-z0-9_\-\.*]+$')):
+def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z][a-z0-9_\-\.]+$|^\*$')):
     result = None
     try:
         pipe = rdbconn.pipeline()
