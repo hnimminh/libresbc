@@ -2924,7 +2924,7 @@ def detail_access_directory_user(response: Response, domain: str=Path(..., regex
         _name_key = f'access:dir:usr:{domain}:{id}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent user'}; return
-        result = rdbconn.hgetall('_name_key')
+        result = rdbconn.hgetall(_name_key)
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
