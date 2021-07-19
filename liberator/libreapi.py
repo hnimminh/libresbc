@@ -10,6 +10,7 @@
 import traceback
 import re
 import json
+import hashlib
 
 import redis
 import validators
@@ -2825,6 +2826,12 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ACCESS SERVICE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+def check_domain(value):
+    if not validators.domain(value): 
+        raise ValueError('Invalid domain name, please refer rfc1035')
+    return value
+
 class AccessService(BaseModel):
     name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
     desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
@@ -2841,16 +2848,110 @@ def create_access_service(reqbody: AccessService, response: Response):
     return True
 
 class NetDirectory(BaseModel):
+    domain: str = Field(description='user domain')
     ip: IPv4Network = Field(description='IPv4 Address for IP auth')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for arriving call')
     transport: TransportEnum = Field(default='udp', description='farend transport protocol for arriving call')
-    domain: str =  Field(description='user domain')
+    # validate
+    _checkdomain = validator('domain', allow_reuse=True)(check_domain)
 
 class UserDirectory(BaseModel):
-    id: str = Field(description='user identifier')
-    secret: Optional[str] = Field(min_length=8, max_length=64, description='password of digest auth for inbound')
-    domain: str =  Field(description='user domain')
+    domain: str = Field(description='user domain')
+    id: str = Field(regex=_NAME_, max_length=16, description='user identifier')
+    secret: str = Field(min_length=8, max_length=32, description='password of digest auth for inbound')
+    # validate
+    _checkdomain = validator('domain', allow_reuse=True)(check_domain)
 
-@librerouter.post("/libreapi/access/directory", status_code=200)
-def create_access_directory(reqbody: Union[UserDirectory, NetDirectory], response: Response):
-    return True
+
+@librerouter.post("/libreapi/access/directory/user", status_code=200)
+def create_access_directory_user(reqbody: UserDirectory, response: Response):
+    result = None
+    try:
+        data = jsonable_encoder(reqbody)
+        domain = data.get('domain')
+        id = data.get('id')
+        name_key = f'access:dir:usr:{domain}:{id}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent user'}; return
+        secret = data.get('secret')
+        rdbconn.hmset(name_key, {'secret': secret, 'a1hash': hashlib.md5(f'{id}:{domain}:{secret}'.encode()).hexdigest()})
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.patch("/libreapi/access/directory/user", status_code=200)
+def update_access_directory_user(reqbody: UserDirectory, response: Response):
+    result = None
+    try:
+        data = jsonable_encoder(reqbody)
+        domain = data.get('domain')
+        id = data.get('id')
+        name_key = f'access:dir:usr:{domain}:{id}'
+        if not rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'nonexistent user'}; return
+        secret = data.get('secret')
+        rdbconn.hmset(name_key, {'secret': secret, 'a1hash': hashlib.md5(f'{id}:{domain}:{secret}'.encode()).hexdigest()})
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.delete("/libreapi/access/directory/user/{domain}/{id}", status_code=200)
+def delete_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id:str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'access:dir:usr:{domain}:{id}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent user'}; return
+        rdbconn.delete(_name_key)
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/access/directory/user/{domain}/{id}", status_code=200)
+def detail_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id:str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'access:dir:usr:{domain}:{id}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent user'}; return
+        result = rdbconn.hgetall('_name_key')
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/access/directory/user/{domain}", status_code=200)
+def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z][a-z0-9_\-\.*]+$')):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        KEYPATTERN = f'access:dir:usr:{domain}:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        data = {}
+        for mainkey in mainkeys:
+            _, _, _, domain, id = listify(mainkey)
+            if domain in data: data[domain].append(id)
+            else: data[domain] = [id]
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
