@@ -43,4 +43,6 @@
     state: link
   with_items:
     - src: "{{destinationdir}}/callng"
-      dest: "/usr/local/share/lua/5.2/callng"
+      dest: /usr/local/share/lua/5.2/callng
+    - src: "{{destinationdir}}/callng"
+      dest: /usr/local/share/freeswitch/scripts/callng
