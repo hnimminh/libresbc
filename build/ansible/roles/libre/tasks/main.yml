@@ -23,8 +23,8 @@
     - src: "{{sourcedir}}/platform/libre/system/rsyslog.d/libre.conf"
       dest: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.conf"
       mode: "0644"
-    - src: "{{sourcedir}}/platform/libre/system/logrotate.d/libre.conf"
-      dest: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.conf"
+    - src: "{{sourcedir}}/platform/libre/system/logrotate.d/libre"
+      dest: "{{destinationdir}}/platform/libre/system/logrotate.d/libre"
       mode: "0644"
   vars:
     rsyslogvar:
@@ -40,8 +40,8 @@
   with_items:
     - src: "{{destinationdir}}/platform/libre/system/rsyslog.d/libre.conf"
       dest: /etc/rsyslog.d/libre.conf
-    - src: "{{destinationdir}}/platform/libre/system/logrotate.d/libre.conf"
-      dest: /etc/logrotate.d/libre.conf
+    - src: "{{destinationdir}}/platform/libre/system/logrotate.d/libre"
+      dest: /etc/logrotate.d/libre
 
 # liberator service
 - name: deploy liberator

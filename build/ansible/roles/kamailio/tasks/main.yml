@@ -33,8 +33,8 @@
       dest: /usr/local/etc/kamailio
     - src: "{{destinationdir}}/platform/kamailio/system/rsyslog.d/kamailio.conf"
       dest: /etc/rsyslog.d/kamailio.conf
-    - src: "{{destinationdir}}/platform/kamailio/system/logrotate.d/kamailio.conf"
-      dest: /etc/logrotate.d/kamailio.conf
+    - src: "{{destinationdir}}/platform/kamailio/system/logrotate.d/kamailio"
+      dest: /etc/logrotate.d/kamailio
     - src: "{{destinationdir}}/platform/kamailio/system/systemd/kamailio.service"
       dest: /etc/systemd/system/kamailio.service
 

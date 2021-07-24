@@ -1,5 +1,5 @@
 {{logdir}}/*.log {
-	rotate 365
+	rotate 60
 	daily
 	missingok
 	compress

@@ -34,8 +34,8 @@
   with_items:
     - src: "{{destinationdir}}/platform/freeswitch/self"
       dest: /usr/local/etc/freeswitch
-    - src: "{{destinationdir}}/platform/freeswitch/system/logrotate.d/freeswitch.conf"
-      dest: /etc/logrotate.d/freeswitch.conf
+    - src: "{{destinationdir}}/platform/freeswitch/system/logrotate.d/freeswitch"
+      dest: /etc/logrotate.d/freeswitch
     - src: "{{destinationdir}}/platform/freeswitch/system/systemd/freeswitch.service"
       dest: /etc/systemd/system/freeswitch.service
 

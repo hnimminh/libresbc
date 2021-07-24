@@ -4,7 +4,7 @@
     nodateext
     missingok
     notifempty
-    rotate 31
+    rotate 60
     maxage 5
     create
     compress
