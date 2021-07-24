@@ -1,5 +1,5 @@
 <a href="https://github.com/hnimminh/libresbc" target="_blank">
-  <p align="center"> <img width="256px" src="https://user-images.githubusercontent.com/58973699/126868304-47d6439a-5c1a-49d9-be9a-fd43da77b1aa.png" alt=""> </p>
+  <p align="center"> <img width="256px" src="https://user-images.githubusercontent.com/58973699/126869145-9c15755b-426b-40dd-a478-56b28c98f6e9.png" alt=""> </p>
 </a>
 
 <p align="center">
@@ -17,8 +17,8 @@
   </a>
 </p>
 
-<h1 align="center">LIBRESBC</h1>
-<h2 align="center">Libre Session Border Controller</h2>
+<h1 align="center">LibreSBC</h1>
+<h2 align="center">The Open Source Session Border Controller</h2>
 <p align="left"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b></p>
 
 
