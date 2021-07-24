@@ -1,5 +1,5 @@
 <a href="https://github.com/hnimminh/libresbc" target="_blank">
-  <p align="center"> <img width="256px" src="https://user-images.githubusercontent.com/58973699/126869145-9c15755b-426b-40dd-a478-56b28c98f6e9.png" alt=""> </p>
+  <p align="center"> <img width="200px" src="https://user-images.githubusercontent.com/58973699/126869145-9c15755b-426b-40dd-a478-56b28c98f6e9.png" alt=""> </p>
 </a>
 
 <p align="center">
