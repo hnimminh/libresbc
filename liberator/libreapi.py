@@ -2901,7 +2901,6 @@ def update_access_directory_user(reqbody: UserDirectory, response: Response):
     finally:
         return result
 
-
 @librerouter.delete("/libreapi/access/directory/user/{domain}/{id}", status_code=200)
 def delete_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id:str=Path(..., regex=_NAME_)):
     result = None
