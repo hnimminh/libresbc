@@ -17,7 +17,7 @@
 --
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 
-require("callng.utilities")
+require("callng.sigfunc")
 
 -- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
 FLT_NATS=5
