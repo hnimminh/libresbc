@@ -1,0 +1,97 @@
+- name: Disable SELinux
+  selinux:
+    state: disabled
+  ignore_errors: true
+
+- name: Update apt-cache
+  apt: update_cache=yes 
+
+- name: Update all packages to their latest version
+  apt:
+    name: "*"
+    state: latest
+
+- name: Upgrade the OS (apt-get dist-upgrade)
+  apt:
+    upgrade: dist
+
+# set timezone
+- name: Set timezone to {{timezone}}
+  timezone:
+    name: "{{timezone}}"
+
+# change hostname
+- name: Change hostname {{ansible_hostname}} to {{nodename|lower}}
+  hostname:
+    name: "{{nodename | lower}}"
+  
+# https://github.com/ansible/ansible/issues/19176
+- name: set hostname - workaround
+  replace:
+    path: /etc/hosts
+    regexp: ^127.0.1.1(.*){{ansible_hostname}}(.*)$
+    replace: 127.0.1.1\1{{nodename|lower}}\2
+    backup: yes
+
+
+- name: Install essential packages
+  apt: 
+    pkg: 
+      - lsb-release
+      - build-essential
+      - g++ 
+      - g++-8 
+      - gcc 
+      - gcc-8
+      - libtool
+      - autoconf
+      - make
+      - gnupg2
+      - git
+      - curl
+      - wget
+      - sngrep
+      - tcpdump
+      - net-tools
+      - rsyslog
+      - logrotate
+      - rsync
+      - lsof
+      - nftables
+      - rsync
+      - python3-pip 
+      - python3 
+      - python3-dev
+    state: latest
+
+- name: Remove useless packages from the cache
+  apt:
+    autoclean: yes
+
+- name: Remove dependencies that are no longer required
+  apt:
+    autoremove: yes
+
+- name: Disable and stop ntp
+  systemd:
+    name: ntp
+    enabled: false
+    state: stopped
+    masked: false
+    no_block: false
+  ignore_errors: true
+
+- name: Enable and start chronyd
+  systemd:
+    name: chronyd
+    enabled: true
+    state: started
+    masked: false
+    no_block: false
+  ignore_errors: true
+
+- name: make source directory writeable
+  file: 
+    path: /usr/local/src 
+    state: directory 
+    mode: 0764

@@ -1,0 +1,62 @@
+
+- name: Add an Apt signing key for freeswitch
+  apt_key:
+    url: https://files.freeswitch.org/repo/deb/debian-release/fsstretch-archive-keyring.asc
+    state: present
+
+- name: add freeswitch repo link
+  lineinfile:
+    path: /etc/apt/sources.list.d/freeswitch.list
+    line: "{{item}}"
+    create: yes
+  with_items:
+    - deb http://files.freeswitch.org/repo/deb/debian-release/ buster main
+    - deb-src http://files.freeswitch.org/repo/deb/debian-release/ buster main
+
+- name: Run the equivalent of "apt-get update" as a separate step
+  apt:
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Install the build dependencies for package freeswitch
+  apt:
+    pkg: freeswitch
+    state: build-dep
+
+- name: Download freeswith source code and checksum
+  get_url:
+    url: https://github.com/signalwire/freeswitch/archive/refs/tags/v1.10.6.tar.gz
+    dest: /usr/local/src/freeswitch-1.10.6.tar.gz
+    checksum: md5:371b3001bf0871bbf8666e1f1c2d5e1f
+
+- name: Unarchive tar the freeswitch release 
+  unarchive:
+    src: /usr/local/src/freeswitch-1.10.6.tar.gz
+    dest: /usr/local/src
+    remote_src: yes
+
+- name: copy freeswitch module file
+  copy:
+    src: modules.conf
+    dest: /usr/local/src/freeswitch-1.10.6/modules.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: build freeswitch
+  shell: ./bootstrap.sh -j && ./configure -C --prefix=/usr/local --with-rundir=/run/freeswitch --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl && make && make install
+  args:
+    executable: /bin/bash
+    chdir: /usr/local/src/freeswitch-1.10.6
+
+- name: Delete default configuration folder
+  file:
+    path: /usr/local/etc/freeswitch
+    state: absent
+
+- name: Symbolic cli tool
+  file:
+    src: "/usr/local/bin/fs_cli"
+    dest: "/usr/bin/fscli"
+    state: link
+    force: true

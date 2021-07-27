@@ -1,0 +1,8 @@
+- name: os update
+  include_tasks: debian.yml
+
+- name: performance tuning
+  include_tasks: tuning.yml
+
+- name: freeswitch installation
+  include_tasks: freeswitch.yml

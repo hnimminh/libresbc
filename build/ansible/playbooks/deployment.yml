@@ -8,10 +8,19 @@
     firedaemon: restarted
 
   roles:
-    - libre
-    - nginx
-    - freeswitch
-    - kamailio
-    - nftables
-    - captagent
-    - syslog
+    - role: platform
+      tags: [platform]
+    - role: libre
+      tags: [platform, application]
+    - role: nginx
+      tags: [platform, application]
+    - role: freeswitch
+      tags: [platform, application]
+    - role: kamailio
+      tags: [platform, application]
+    - role: nftables
+      tags: [platform, application]
+    - role: captagent
+      tags: [platform, application]
+    - role: syslog
+      tags: [platform, application]
