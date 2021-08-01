@@ -147,16 +147,12 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- MEDIA
 ---------------------------------------------------------------------------------------------------------------------------------------------
-function get_codec(name, direction)
-    local class = rdbconn:hget(intconkey(name, direction), 'media_class')
-    return join(fieldjsonify(rdbconn:hget('class:media:'..class, 'codecs')))
-end
 
 function inMediaProcess(name, DxLeg)
     local class = rdbconn:hget(intconkey(name, INBOUND), 'media_class')
     local medias = jsonhash(rdbconn:hgetall('class:media:'..class))
     DxLeg:setVariable("codec_string", join(medias.codecs))
-    DxLeg:setVariable("sip_codec_negotiation", medias.codec_negotiation)
+    DxLeg:setVariable("rtp_codec_negotiation", medias.codec_negotiation)
     DxLeg:setVariable("dtmf_type", medias.dtmf_mode)
 
     if medias.media_mode == 'bypass' then
@@ -181,7 +177,7 @@ function outMediaProcess(name, DxLeg)
     local medias = jsonhash(rdbconn:hgetall('class:media:'..class))
 
     DxLeg:execute("export", "nolocal:absolute_codec_string="..join(medias.codecs))
-    DxLeg:execute("export", "nolocal:sip_codec_negotiation="..medias.codec_negotiation)
+    DxLeg:execute("export", "nolocal:rtp_codec_negotiation="..medias.codec_negotiation)
     DxLeg:execute("export", "nolocal:dtmf_type="..medias.dtmf_mode)
 
     if medias.media_mode == 'bypass' then

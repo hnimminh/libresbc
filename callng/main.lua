@@ -65,12 +65,8 @@ local function main()
         local tranrules
         NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber, tranrules = translate(caller_number, caller_name, destination_number, NgVars.intconname, INBOUND)
         logify('module', 'callng', 'space', 'main', 'action', 'translate', 'seshid', NgVars.seshid, 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'cidnumber', NgVars.cidnumber, 'cidname', NgVars.cidname, 'dstnumber', NgVars.dstnumber)
-        -- media negotiation
+        -- media negotiation - secure
         inMediaProcess(NgVars.intconname, InLeg)
-        --[[
-        local codecstr = get_codec(NgVars.intconname, INBOUND)
-        InLeg:setVariable("codec_string", codecstr)
-        ]]
         if transport:lower()=='tls' then
             InLeg:setVariable("rtp_secure_media", "mandatory:"..NgVars.ENCRYPTION_SUITES)
             InLeg:setVariable("sdp_secure_savp_only", "true")
@@ -165,14 +161,9 @@ local function main()
                 InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..sipadip..">")
                 InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
             end
-            -- media negotiation
+            -- media negotiation - secure
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
             outMediaProcess(NgVars.route, InLeg)
-            --[[
-            local outcodecstr = get_codec(NgVars.route, OUTBOUND)
-            InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
-            ]]
-
             if gwtransport:lower() == 'tls' then
                 InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..NgVars.ENCRYPTION_SUITES)
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")

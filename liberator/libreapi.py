@@ -912,7 +912,8 @@ class MediaModeEnum(str, Enum):
 
 class DtmfModeEnum(str, Enum):
     rfc2833 = 'rfc2833'
-    sipinfo = 'sipinfo'
+    info = 'info'
+    none = 'none'
 
 class MediaModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of Media class (identifier)')
