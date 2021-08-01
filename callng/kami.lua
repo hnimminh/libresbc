@@ -25,8 +25,8 @@ FLB_NATB=6
 FLB_NATSIPPING=7
 
 SWTRFFLAG = 9
-B2BUA_IP = '10.15.0.5'
-PROXY_IP = '10.104.0.2'
+B2BUA_IP = '127.0.0.2'
+PROXY_IP = '127.0.0.3'
 
 -- SIP request routing
 -- equivalent of request_route{}
