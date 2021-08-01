@@ -17,16 +17,16 @@ from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_,
-                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD, 
+                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
 from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, threaded
 from basemgr import fssocket
 
 
-REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
+REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=5)
-rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)                                                    
+rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
 # api router declaration
 cfgrouter = APIRouter()
@@ -241,10 +241,10 @@ def directory(request: Request, response: Response):
             routing = detail[4]
             ringready = fieldjsonify(detail[5])
 
-            if authscheme=='IP': 
+            if authscheme=='IP':
                 password = DEFAULT_PASSWORD
                 cidrs = sipaddrs
-            elif authscheme=='DIGEST': 
+            elif authscheme=='DIGEST':
                 password = secret
                 cidrs = list()
             else:
