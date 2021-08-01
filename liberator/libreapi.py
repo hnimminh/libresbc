@@ -22,7 +22,7 @@ from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
-from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, 
+from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL,
                            NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
@@ -52,7 +52,6 @@ schema.field_schema = field_schema
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONSTANTS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_COEFFICIENT = 0
 # PATTERN
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
 _REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
@@ -263,8 +262,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         # fire-event netalias change, process reload only if there is some-one use it
         if engagements:
             sipprofiles = [getaname(engagement) for engagement in engagements]
-            for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:netalias:{node}', json.dumps({'sipprofiles': sipprofiles, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'netalias', 'sipprofiles': sipprofiles, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -386,9 +384,8 @@ def create_acl(reqbody: ACLModel, response: Response):
         data = jsonable_encoder(reqbody)
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        # fire-event acl change        
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -425,9 +422,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         # fire-event acl change, process reload only if there is some-one use it
         if engagements:
             sipprofiles = [getaname(engagement) for engagement in engagements]
-            for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:acl:{node}', json.dumps({'sipprofiles': sipprofiles, 'name': name, '_name': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}))
-                pipe.execute()
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'sipprofiles': sipprofiles, 'name': name, '_name': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -453,8 +448,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
         # delete action perform only no one use it so no-one use it, by right this should be clean on memory 
         # however best practice of optimization it will be luckily clear sometime later if acl change
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:acl:{node}', json.dumps({'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -608,8 +602,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:sipprofile:{node}', json.dumps({'action': 'create', 'sipprofile': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'create', 'sipprofile': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -670,10 +663,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
-        for index, node in enumerate(CLUSTERS.get('members')):
-            key = f'event:libreapi:sipprofile:{node}'
-            value = {'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value)); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -706,8 +696,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:sipprofile:{node}', json.dumps({'action': 'delete', '_sipprofile': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'delete', '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1633,8 +1622,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         if intconname:
             sipprofile = rdbconn.hget(f'intcon:out:{intconname}', 'sipprofile')
         if sipprofile:
-            for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:gateway:{node}', json.dumps({'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'gateway', 'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -1870,8 +1858,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect create
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:outbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'sipprofile': sipprofile, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'create', 'intcon': name, 'sipprofile': sipprofile, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -1967,10 +1954,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update only if gateway or sipprofile change
         if sipprofile != _sipprofile or set(gateways.keys()) == set(_gateways.keys()):
-            for index, node in enumerate(CLUSTERS.get('members')):
-                key = f'event:libreapi:outbound:intcon:{node}'
-                value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': list(gateways.keys()), '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
-                pipe.rpush(key, json.dumps(value)); pipe.execute()
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': list(gateways.keys()), '_gateways': _gws, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -2019,8 +2003,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         response.status_code, result = 200, {'passed': True}
         # fire-event outbound interconnect update
         if _gws:
-            for index, node in enumerate(CLUSTERS.get('members')):
-                pipe.rpush(f'event:libreapi:outbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, '_sipprofile': _sipprofile, '_gateways': _gws, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'delete', '_intcon': identifier, '_sipprofile': _sipprofile, '_gateways': _gws, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -2181,8 +2164,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:inbound:intcon:{node}', json.dumps({'action': 'create', 'intcon': name, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'create', 'intcon': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -2275,10 +2257,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect update
-        for index, node in enumerate(CLUSTERS.get('members')):
-            key = f'event:libreapi:inbound:intcon:{node}'
-            value = {'action': 'update', 'intcon': name, '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid}
-            pipe.rpush(key, json.dumps(value)); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'update', 'intcon': name, '_intcon': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -2319,8 +2298,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect delete
-        for index, node in enumerate(CLUSTERS.get('members')):
-            pipe.rpush(f'event:libreapi:inbound:intcon:{node}', json.dumps({'action': 'delete', '_intcon': identifier, 'prewait': _COEFFICIENT*index, 'requestid': requestid})); pipe.execute()
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'delete', '_intcon': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")

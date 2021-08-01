@@ -19,7 +19,7 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 
-from configuration import (NODEID, ESL_HOST, ESL_PORT, ESL_SECRET, 
+from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET, 
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode
 
@@ -153,106 +153,104 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=start_base_event_handler_thread")
-        libreapi_netalias_event = f'event:libreapi:netalias:{NODEID}' # need reload sipprofile that use this netalias
-        libreapi_acl_event = f'event:libreapi:acl:{NODEID}'
-        libreapi_sipprofile_event = f'event:libreapi:sipprofile:{NODEID}'
-        libreapi_gateway_event = f'event:libreapi:gateway:{NODEID}'
-        libreapi_outcon_event = f'event:libreapi:outbound:intcon:{NODEID}'
-        libreapi_incon_event = f'event:libreapi:inbound:intcon:{NODEID}'
-        callengine_startup_event = f'event:callengine:startup:{NODEID}'
-        while not self.stop:
-            events = None
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=start")
+        # portions
+        _netalias       = 'netalias'
+        _acl            = 'acl'
+        _inboundcnx     = 'inbound:intcon'
+        _outboundcnx    = 'inbound:intcon'
+        _sipprofile     = 'sipprofile'
+        _gateway        = 'gateways'
+        _ngstartup      = 'ngstartup'
+        # listen events
+        while True:
             try:
-                events = rdbconn.blpop([libreapi_netalias_event,
-                                        libreapi_acl_event, 
-                                        libreapi_sipprofile_event,
-                                        libreapi_gateway_event,
-                                        libreapi_outcon_event,
-                                        libreapi_incon_event,
-                                        callengine_startup_event], REDIS_TIMEOUT)
-                if events:
-                    eventkey, eventvalue = events[0], json.loads(events[1])
-                    logify(f"module=liberator, space=basemgr, action=catch_event, eventkey={eventkey}, eventvalue={eventvalue}")
-                    prewait = eventvalue.get('prewait')
-                    # make the node run this task in different timestamp
-                    time.sleep(int(prewait))
-                    # specify event
-                    commands = list()
-                    if eventkey == libreapi_netalias_event:
-                        sipprofiles = eventvalue.get('sipprofiles')
-                        for sipprofile in sipprofiles: 
-                            commands.append(f'sofia profile {sipprofile} restart')
-                        commands.append('reloadxml')
-                    elif eventkey == libreapi_acl_event:
-                        name = eventvalue.get('name')
-                        _name = eventvalue.get('_name')
-                        if name != _name: 
-                            sipprofiles = eventvalue.get('sipprofiles')
-                            for sipprofile in sipprofiles:
-                                commands.append(f'sofia profile {sipprofile} rescan')
-                        commands.append('reloadacl')
-                    elif eventkey == libreapi_incon_event:
-                        commands = ['reloadacl']
-                    elif eventkey == libreapi_sipprofile_event:
-                        action = eventvalue.get('action')
-                        sipprofile = eventvalue.get('sipprofile')
-                        _sipprofile = eventvalue.get('_sipprofile')
-                        if action=='create':
-                            commands = [f'sofia profile {sipprofile} start']
-                        elif action=='delete':
-                            commands = [f'sofia profile {_sipprofile} stop', 'reloadxml']
-                        elif action=='update':
-                            if sipprofile == _sipprofile: 
-                                commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
-                            else: 
-                                commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
-                    elif eventkey == libreapi_gateway_event:
-                        sipprofile = eventvalue.get('sipprofile')
-                        _gateway = eventvalue.get('_gateway')
-                        commands = [f'sofia profile {sipprofile} killgw {_gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']
-                    elif eventkey == libreapi_outcon_event:
-                        action = eventvalue.get('action')
-                        sipprofile = eventvalue.get('sipprofile')
-                        _sipprofile = eventvalue.get('_sipprofile')
-                        gateways = eventvalue.get('gateways', [])
-                        _gateways = eventvalue.get('_gateways', [])
-                        if action=='create':
-                            commands = [f'sofia profile {sipprofile} rescan']
-                        elif action=='delete':
-                            for _gateway, inuse in _gateways.items():
-                                # the gateway that used by only this intcon, freely to remove
-                                if inuse <= 1:
-                                    commands.append(f'sofia profile {_sipprofile} killgw {_gateway}')
-                        elif action=='update':
-                            # change profile is executable only if only-profile-one use these gws or only one intcon use
-                            if sipprofile != _sipprofile:
-                                for _gateway in _gateways:
-                                    commands.append(f'sofia profile {_sipprofile} killgw {_gateway}')
-                            else:
+                pubsub = rdbconn.pubsub()
+                pubsub.subscribe([CHANGE_CFG_CHANNEL, f'NG:STARTUP:{NODEID}'])
+                for message in pubsub.listen():
+                    logify(f'module=liberator, space=basemgr, action=report, message={message}')
+                    msgtype = message.get("type")
+                    if msgtype == "message":
+                        data = json.loads(message.get("data"))
+                        portion = data.get('portion')
+                        # specify event
+                        commands = list()
+                        if portion == _netalias:
+                            sipprofiles = data.get('sipprofiles')
+                            for sipprofile in sipprofiles: 
+                                commands.append(f'sofia profile {sipprofile} restart')
+                            commands.append('reloadxml')
+                        elif portion == _acl:
+                            name = data.get('name')
+                            _name = data.get('_name')
+                            if name != _name: 
+                                sipprofiles = data.get('sipprofiles')
+                                for sipprofile in sipprofiles:
+                                    commands.append(f'sofia profile {sipprofile} rescan')
+                            commands.append('reloadacl')
+                        elif portion == _inboundcnx:
+                            commands = ['reloadacl']
+                        elif portion == _sipprofile:
+                            action = data.get('action')
+                            sipprofile = data.get('sipprofile')
+                            _sipprofile = data.get('_sipprofile')
+                            if action=='create':
+                                commands = [f'sofia profile {sipprofile} start']
+                            elif action=='delete':
+                                commands = [f'sofia profile {_sipprofile} stop', 'reloadxml']
+                            elif action=='update':
+                                if sipprofile == _sipprofile: 
+                                    commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
+                                else: 
+                                    commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
+                        elif portion == _gateway:
+                            sipprofile = data.get('sipprofile')
+                            _gateway = data.get('_gateway')
+                            commands = [f'sofia profile {sipprofile} killgw {_gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']
+                        elif portion == _outboundcnx:
+                            action = data.get('action')
+                            sipprofile = data.get('sipprofile')
+                            _sipprofile = data.get('_sipprofile')
+                            gateways = data.get('gateways', [])
+                            _gateways = data.get('_gateways', [])
+                            if action=='create':
+                                commands = [f'sofia profile {sipprofile} rescan']
+                            elif action=='delete':
                                 for _gateway, inuse in _gateways.items():
-                                    # remove gw if only-profile-one use these gws and not used by new intcon
-                                    if inuse <= 1 and _gateway not in gateways:
+                                    # the gateway that used by only this intcon, freely to remove
+                                    if inuse <= 1:
                                         commands.append(f'sofia profile {_sipprofile} killgw {_gateway}')
-                            # reload profile
-                            commands.append(f'sofia profile {sipprofile} rescan')
-                        # reload xml & distributor
-                        commands += ['reloadxml', 'distributor_ctl reload']
-                    elif eventkey == callengine_startup_event:
-                        # pre-setup environment: voice/firewall/service
-                        #commands = ['global_setvar LIBRESBC_FS_STARTUP=COMPLETED']
-                        #eventvalue.update({'delay': commands})
-                        pass
-                    else:
-                        pass
-                    # execute esl commands
-                    eventvalue.update({'commands': commands})
-                    threaded(fssocket, eventvalue)
-                    # firewall update
-                    if eventkey in [libreapi_netalias_event, libreapi_acl_event, libreapi_incon_event, libreapi_outcon_event, libreapi_sipprofile_event, callengine_startup_event]:
-                        threaded(nftupdate)
-            except Exception as e:
-                logify(f"module=liberator, space=basemgr, class=BaseEventHandler, action=run, events={events}, exception={e}, tracings={traceback.format_exc()}")
+                            elif action=='update':
+                                # change profile is executable only if only-profile-one use these gws or only one intcon use
+                                if sipprofile != _sipprofile:
+                                    for _gateway in _gateways:
+                                        commands.append(f'sofia profile {_sipprofile} killgw {_gateway}')
+                                else:
+                                    for _gateway, inuse in _gateways.items():
+                                        # remove gw if only-profile-one use these gws and not used by new intcon
+                                        if inuse <= 1 and _gateway not in gateways:
+                                            commands.append(f'sofia profile {_sipprofile} killgw {_gateway}')
+                                # reload profile
+                                commands.append(f'sofia profile {sipprofile} rescan')
+                            # reload xml & distributor
+                            commands += ['reloadxml', 'distributor_ctl reload']
+                        elif portion == _ngstartup:
+                            # pre-setup environment: voice/firewall/service
+                            #commands = ['global_setvar LIBRESBC_FS_STARTUP=COMPLETED']
+                            #eventvalue.update({'delay': commands})
+                            pass
+                        else:
+                            pass
+                        # execute esl commands
+                        data.update({'commands': commands})
+                        threaded(fssocket, data)
+                        # firewall update
+                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _ngstartup]:
+                            threaded(nftupdate)
+            except redis.RedisError as e:
                 time.sleep(5)
+            except Exception as e:
+                logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+                time.sleep(2)
             finally:
-                pass
+                pubsub.close()

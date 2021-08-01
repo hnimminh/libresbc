@@ -11,10 +11,10 @@ require("callng.utilities")
 ---------------------------------------------------------------------------
 
 local function fire_startup_event()
-    local key = 'event:callengine:startup:'..NODEID
-    local value = json.encode({action='restart', prewait=0, requestid='00000000-0000-0000-0000-000000000000'})
-    rdbconn:lpush(key, value)
-    logify('module', 'callng', 'space', 'event:startup', 'action', 'fire_startup_event', 'key', key, 'value', value)
+    local channel = 'NG:STARTUP:'..NODEID
+    local data = json.encode({portion='ngstartup', requestid='00000000-0000-0000-0000-000000000000'})
+    rdbconn:publish(channel, data)
+    logify('module', 'callng', 'space', 'event:startup', 'action', 'fire_startup_event', 'channel', channel, 'data', data)
 end
 
 local function clean_node_capacity()
