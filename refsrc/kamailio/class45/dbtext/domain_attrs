@@ -1,0 +1,1 @@
+id(int) did(string) domain(string) name(string) type(int) value(string) last_modified(int)

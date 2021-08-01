@@ -28,7 +28,9 @@
       * sofia.c [here](./freeswitch/mod/endpoints/mod_sofia/sofia.c) [freesswitch](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/sofia.c)
 
 ### Kamailio
-*(will be added later for access layer)*
+* [present](./kamailio/present.cfg)
+* [simple](./kamailio/proxy.cfg)
+* [class4-5](./kamailio/class45/kamailio.cfg)
 
 ### References
 * [RFC3261](https://tools.ietf.org/html/rfc3261)
