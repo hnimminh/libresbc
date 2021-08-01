@@ -1,9 +1,9 @@
 --
 -- callng:main.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 --
 
@@ -34,7 +34,7 @@ local function main()
         local caller_number = InLeg:getVariable("caller_id_number")
         local destination_number = InLeg:getVariable("destination_number")
         -- log the incoming call request
-        logify('module', 'callng', 'space', 'main', 'action', 'inbound_call', 'seshid', NgVars.seshid, 'uuid', uuid, 'context', context, 
+        logify('module', 'callng', 'space', 'main', 'action', 'inbound_call', 'seshid', NgVars.seshid, 'uuid', uuid, 'context', context,
                'sipprofile', sipprofile, 'network_ip', network_ip, 'realm', NgVars.realm, 'intconname', NgVars.intconname, 'call_id', call_id,
                'transport', transport, 'caller_name', caller_name, 'caller_number', caller_number, 'destination_number', destination_number)
         -----------------------------------------------------------
@@ -66,13 +66,15 @@ local function main()
         NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber, tranrules = translate(caller_number, caller_name, destination_number, NgVars.intconname, INBOUND)
         logify('module', 'callng', 'space', 'main', 'action', 'translate', 'seshid', NgVars.seshid, 'direction', INBOUND, 'uuid', uuid, 'tranrules', rulejoin(tranrules), 'cidnumber', NgVars.cidnumber, 'cidname', NgVars.cidname, 'dstnumber', NgVars.dstnumber)
         -- media negotiation
+        inMediaProcess(NgVars.intconname, InLeg)
+        --[[
         local codecstr = get_codec(NgVars.intconname, INBOUND)
         InLeg:setVariable("codec_string", codecstr)
+        ]]
         if transport:lower()=='tls' then
             InLeg:setVariable("rtp_secure_media", "mandatory:"..NgVars.ENCRYPTION_SUITES)
             InLeg:setVariable("sdp_secure_savp_only", "true")
         end
-
         --------------------------------------------------------------------
         -- inbound normalization
         normalize(LegIn, NgVars)
@@ -138,7 +140,7 @@ local function main()
             if queue >  max_cps then
                 HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'MAX_QUEUE'; goto ENDFAILOVER
             else InLeg:sleep(waitms) end
-            
+
             -- translation
             local _tranrules
             NgVars._cidnumber, NgVars._cidname, NgVars._dstnumber, _tranrules = translate(NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber, NgVars.route, OUTBOUND)
@@ -165,12 +167,17 @@ local function main()
             end
             -- media negotiation
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
+            outMediaProcess(NgVars.route, InLeg)
+            --[[
             local outcodecstr = get_codec(NgVars.route, OUTBOUND)
             InLeg:execute("export", "nolocal:absolute_codec_string="..outcodecstr)
+            ]]
+
             if gwtransport:lower() == 'tls' then
                 InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..NgVars.ENCRYPTION_SUITES)
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
             end
+
             -- setting up vars
             InLeg:execute("export", "nolocal:origination_caller_id_name="..NgVars._cidname)
             InLeg:execute("export", "nolocal:origination_caller_id_number="..NgVars._cidnumber)
@@ -202,7 +209,7 @@ local function main()
         -- sleep to make sure channel available
         InLeg:sleep(500)
 
-        if OutLeg then 
+        if OutLeg then
             if( OutLeg:ready() ) then
                 -- log information for leg B
                 local _real_uuid = OutLeg:get_uuid()
@@ -220,7 +227,7 @@ local function main()
                 local _sip_call_id = OutLeg:getVariable("sip_call_id")
 
                 logify('module', 'callng', 'space', 'main', 'action', 'report', 'seshid', NgVars.seshid, 'uuid', _real_uuid,
-                       'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user, 
+                       'context', _context, 'direction', _direction, 'sipprofile', _sofia_profile_name, 'ruri', _sip_req_uri, 'from_user', _sip_from_user,
                        'to_user', _sip_to_user, 'destination_number', _destination_number, 'remote_ip', _sip_network_ip, 'callid', _sip_call_id)
 
                 --- BRIDGE 2 LEGs
@@ -228,8 +235,8 @@ local function main()
                 freeswitch.bridge(InLeg, OutLeg)
 
                 -- HANGUP WHEN DONE FOR OUTLEG
-                if (OutLeg:ready()) then 
-                    OutLeg:hangup(); 
+                if (OutLeg:ready()) then
+                    OutLeg:hangup()
                 end
             else
                 logify('module', 'callng', 'space', 'main', 'action', 'seshid', NgVars.seshid, 'report', 'info', 'outbound.leg.not.connected')
@@ -238,10 +245,10 @@ local function main()
         -----------------------------------------------------------
         --- HANGUP ONCE DONE
         -----------------------------------------------------------
-        if (InLeg:ready()) then 
+        if (InLeg:ready()) then
             logify('module', 'callng', 'space', 'main', 'action', 'endcall', 'seshid', NgVars.seshid, 'traffic', 'ingress')
             InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
-            InLeg:hangup(HANGUP_CAUSE); 
+            InLeg:hangup(HANGUP_CAUSE);
         end
     end
 
@@ -250,16 +257,16 @@ local function main()
     -----------------------------------------------------------
     --- MAKE SURE CALL IS RELAESED
     -----------------------------------------------------------
-    if InLeg then 
-        if (InLeg:ready()) then 
+    if InLeg then
+        if (InLeg:ready()) then
             InLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
-            InLeg:hangup(HANGUP_CAUSE) 
-        end 
+            InLeg:hangup(HANGUP_CAUSE)
+        end
     end
-    if OutLeg then 
+    if OutLeg then
         if (OutLeg:ready()) then
             OutLeg:setVariable("X-LIBRE-HANGUP-CAUSE", NgVars.LIBRE_HANGUP_CAUSE)
-            OutLeg:hangup() 
+            OutLeg:hangup()
         end
     end
     -----------------------------------------------------------

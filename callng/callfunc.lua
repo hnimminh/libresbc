@@ -1,9 +1,9 @@
 --
 -- callng:callfunc.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 --
 
@@ -26,7 +26,7 @@ function is_intcon_enable(name, direction)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- CONCURENT CALL 
+-- CONCURENT CALL
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function concurentcallskeys(name)
     local xvars = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
@@ -63,7 +63,7 @@ function verify_concurentcalls(name, direction, uuid)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- CALL PER SECOND 
+-- CALL PER SECOND
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 function get_defined_cps(name, direction)
@@ -108,7 +108,7 @@ function verify_cps(name, direction, uuid)
     local violate_key = 'realtime:cps:violation:'..name
     local bucket = 'realtime:token:bucket:'..name
     local timestamp = math.floor(1000 * socket.gettime())                                       -- time stamp in ms; same as unit of ROLLING_WINDOW_TIME
-    -- check if interconnection is blocked, use PTTL O(1) instead of EXISTS O(1): 
+    -- check if interconnection is blocked, use PTTL O(1) instead of EXISTS O(1):
     -- -2 if the key does not exist, -1 if the key exists but has no associated expire, +n milisecond if any
     local current_blocking_time = rdbconn:pttl(violate_key)
     -- mean this traffic is blocked
@@ -145,13 +145,63 @@ function verify_cps(name, direction, uuid)
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- MEDIA 
+-- MEDIA
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_codec(name, direction)
     local class = rdbconn:hget(intconkey(name, direction), 'media_class')
     return join(fieldjsonify(rdbconn:hget('class:media:'..class, 'codecs')))
 end
 
+function inMediaProcess(name, DxLeg)
+    local class = rdbconn:hget(intconkey(name, INBOUND), 'media_class')
+    local medias = jsonhash(rdbconn:hgetall('class:media:'..class))
+    DxLeg:setVariable("codec_string", join(medias.codecs))
+    DxLeg:setVariable("sip_codec_negotiation", medias.codec_negotiation)
+    DxLeg:setVariable("dtmf_type", medias.dtmf_mode)
+
+    if medias.media_mode == 'bypass' then
+        DxLeg:setVariable("bypass_media", "true")
+    elseif medias.media_mode == 'proxy' then
+        DxLeg:setVariable("proxy_media", "true")
+    else end
+
+    if medias.cng then
+        DxLeg:setVariable("send_silence_when_idle", "true")
+    else DxLeg:setVariable("suppress_cng", "true") end
+
+    if medias.vad then
+        DxLeg:setVariable("rtp_enable_vad_in", "true")
+    else
+        DxLeg:setVariable("rtp_disable_vad_in", "true")
+    end
+end
+
+function outMediaProcess(name, DxLeg)
+    local class = rdbconn:hget(intconkey(name, OUTBOUND), 'media_class')
+    local medias = jsonhash(rdbconn:hgetall('class:media:'..class))
+
+    DxLeg:execute("export", "nolocal:absolute_codec_string="..join(medias.codecs))
+    DxLeg:execute("export", "nolocal:sip_codec_negotiation="..medias.codec_negotiation)
+    DxLeg:execute("export", "nolocal:dtmf_type="..medias.dtmf_mode)
+
+    if medias.media_mode == 'bypass' then
+        DxLeg:execute("export", "nolocal:bypass_media=true")
+    elseif medias.media_mode == 'proxy' then
+        DxLeg:execute("export", "nolocal:proxy_media=true")
+    else end
+
+    if medias.cng then
+        DxLeg:execute("export", "nolocal:bridge_generate_comfort_noise=true")
+    else DxLeg:execute("export", "nolocal:suppress_cng=true") end
+
+    if medias.vad then
+        DxLeg:execute("export", "nolocal:rtp_enable_vad_out=true")
+    else
+        DxLeg:execute("export", "nolocal:rtp_disable_vad_out=true")
+    end
+end
+
+---------------------------------------------------------------------------------------------------------------------------------------------
 -- get siprofile of interconnection name
 function get_sipprofile(name, direction)
     return rdbconn:hget(intconkey(name, direction), 'sipprofile')
@@ -192,11 +242,11 @@ function callerIdPrivacyProcess(name, DxLeg)
         if dbprivacy[i] == 'none' then
             arrayinsert(privacys, '')
         elseif dbprivacy[i] == 'auto' then
-            if DxLeg:getVariable("privacy_hide_name") == 'true' then arrayinsert(privacys, 'hide_name') end 
+            if DxLeg:getVariable("privacy_hide_name") == 'true' then arrayinsert(privacys, 'hide_name') end
             if DxLeg:getVariable("privacy_hide_number") == 'true' then arrayinsert(privacys, 'hide_number') end
         elseif dbprivacy[i] == 'screen' then
             arrayinsert(privacys, 'screen')
-        elseif dbprivacy[i] == 'name' then 
+        elseif dbprivacy[i] == 'name' then
             arrayinsert(privacys, 'hide_name')
         elseif dbprivacy[i] == 'number' then
             arrayinsert(privacys, 'hide_number')
@@ -214,11 +264,11 @@ function getgw(name)
     return proxy, tonumber(_port:sub(6,#_port)), transport
 end
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- TRANSLATION 
+-- TRANSLATION
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function get_translation_rules(name, direction)
     local classes = fieldjsonify(rdbconn:hget(intconkey(name, direction), 'translation_classes'))
-    if #classes == 0 then 
+    if #classes == 0 then
         return {}
     else
         local replies = rdbconn:pipeline(function(pipe)
@@ -244,7 +294,7 @@ function translate(clidnum, clidname, destnum, name, direction)
         if (#caller_number_pattern > 0) then
             condition = toboolean(fsapi:execute('regex', translated_clidnum..'|'..caller_number_pattern..'|'))
         end
-        if (condition and (#destination_number_pattern > 0)) then 
+        if (condition and (#destination_number_pattern > 0)) then
             condition = toboolean(fsapi:execute('regex', translated_destnum..'|'..destination_number_pattern..'|'))
         end
         -- translate only both conditions are true
@@ -274,7 +324,7 @@ end
 -- MANIPULATION
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function boolstr(str)
-    if str == 'true' then 
+    if str == 'true' then
         return false
     else
         return true
@@ -294,8 +344,8 @@ function ifverify(conditions, DxLeg, NgVars)
             local pattern = rules[i].pattern
             local refervar = rules[i].refervar
             local refervalue = NgVars[refervar]
-            if not refervalue then 
-                refervalue = DxLeg:getVariable(refervar) 
+            if not refervalue then
+                refervalue = DxLeg:getVariable(refervar)
             end
             -- condition check
             if refervalue then
@@ -333,10 +383,10 @@ function turnvalues(values, refervar, pattern, DxLeg, NgVars)
         local value = values[i]
         -- regex: backreferences and subexpressions
         if value:match('%%') then
-            if refervar and pattern then 
+            if refervar and pattern then
                 local refervalue = NgVars[refervar]
-                if not refervalue then 
-                    refervalue = DxLeg:getVariable(refervar) 
+                if not refervalue then
+                    refervalue = DxLeg:getVariable(refervar)
                 end
                 if refervalue then
                     arrayinsert(replacements, fsapi:execute('regex', refervalue..'|'..pattern..'|'..value))
@@ -349,7 +399,7 @@ function turnvalues(values, refervar, pattern, DxLeg, NgVars)
             local repl = NgVars[value]
             if repl then
                 arrayinsert(replacements, repl)
-            else 
+            else
                 repl = DxLeg:getVariable(value)
                 if repl then
                     arrayinsert(replacements, repl)
@@ -457,7 +507,7 @@ function manipulate(DxLeg, NgVars)
     end
 end
 ---------------------------------------------------------------------------------------------------------------------------------------------
--- ROUTING 
+-- ROUTING
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function pchoice(a, b, p)
     local x = random(100)
@@ -496,7 +546,7 @@ function routing_query(tablename, routingdata)
                     local compare, param = unpack(split(hfield, ':'))
                     local paramvalue = routingdata[param]
                     -- if not get dynamic value, use fixed value
-                    if not paramvalue then paramvalue = param end 
+                    if not paramvalue then paramvalue = param end
                     if compare=='eq' then
                         if value==paramvalue then
                             arrayinsert(routingrules, compare..'.'..param); routevalue = hvalue; break
@@ -517,7 +567,7 @@ function routing_query(tablename, routingdata)
                 end
             end
             --route lookup {em, lpm}
-            if not routevalue then 
+            if not routevalue then
                 routevalue = rdbconn:get('routing:record:'..tablename..':em:'..value)
                 if routevalue then
                     arrayinsert(routingrules, 'em.'..value)

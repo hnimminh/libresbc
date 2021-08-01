@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - add realm for routing vars
 - unlimited/bypass capacity check (lower-bound>=-1)
 - codec AMR-NB, AMR-WB
+- media profile with dtmf mode, media mode(proxy,bypass,transcode), codec negotiation algo (generous, greedy, scrooge), VAD, CNG
 
 ### Changed
 - ansible role convention

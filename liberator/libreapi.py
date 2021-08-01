@@ -918,12 +918,11 @@ class MediaModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of Media class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
-    #codec_negotiation: NegotiationMode = Field(default='transcode', description='codec negotiation mode, generous: refer remote, greedy: refer local,  scrooge: enforce local')
-    #media_mode: MediaModeEnum = Field(default='transcode', description='media processing mode')
-    #dtmf_mode: DtmfModeEnum = Field(default='rfc2833', description='Dual-tone multi-frequency mode')
-    #comfort_noise: bool = Field(default=False, description='simulated background noise')
-    #silence_suppression: bool = Field(default=False, description='no transmit data when no party speaking')
-
+    codec_negotiation: NegotiationMode = Field(default='generous', description='codec negotiation mode, generous: refer remote, greedy: refer local,  scrooge: enforce local')
+    media_mode: MediaModeEnum = Field(default='transcode', description='media processing mode')
+    dtmf_mode: DtmfModeEnum = Field(default='rfc2833', description='Dual-tone multi-frequency mode')
+    cng: bool = Field(default=False, description='comfort noise generate')
+    vad: bool = Field(default=False, description='voice active detection, no transmit data when no party speaking')
 
 
 @librerouter.post("/libreapi/class/media", status_code=200)
