@@ -16,7 +16,7 @@ from subprocess import Popen, PIPE
 import os
 
 import redis
-import greenswitch
+import redfs
 from jinja2 import Environment, FileSystemLoader
 
 from configuration import (NODEID, ESL_HOST, ESL_PORT, ESL_SECRET, 
@@ -38,8 +38,8 @@ def fssocket(reqdata):
         defer = reqdata.get('defer')
         if defer: time.sleep(defer)
         # connecting
-        fs = greenswitch.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET)
-        for _ in range(0,9):
+        fs = redfs.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET, timeout=10)
+        for _ in range(0,3):
             try:
                 fs.connect()
                 if fs.connected: break
