@@ -39,7 +39,9 @@ end
 local function environment()
     local clustermebers = join(rdbconn:smembers('cluster:members'))
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
-    logify('module', 'callng', 'space', 'event:startup', 'action', 'environment', 'CLUSTERMEMBERS', clustermebers)
+    local clustername = rdbconn:get('cluster:name')
+    freeswitch.setGlobalVariable("CLUSTERNAME", clustername)
+    logify('module', 'callng', 'space', 'event:startup', 'action', 'environment', 'CLUSTERMEMBERS', clustermebers, 'CLUSTERNAME', clustername)
 end
 
 -----------------**********************************--------------------

@@ -157,8 +157,10 @@ local function main()
             -- callerid type and privacy process
             local cidtype, _ = callerIdPrivacyProcess(NgVars.route, InLeg)
             if cidtype~='none' then
+                local sipadip = freeswitch.getGlobalVariable(_sipprofile..':advertising')
+                if not sipadip then sipadip = freeswitch.getGlobalVariable('hostname') end
                 InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
-                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..freeswitch.getGlobalVariable(_sipprofile..':advertising')..">")
+                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..sipadip..">")
                 InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
             end
             -- media negotiation
