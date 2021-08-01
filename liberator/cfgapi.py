@@ -1,9 +1,9 @@
 #
 # liberator:cfgapi.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -31,7 +31,7 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 # api router declaration
 cfgrouter = APIRouter()
 
-# template location 
+# template location
 fstpl = Jinja2Templates(directory="templates/fsxml")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
