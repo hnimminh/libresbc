@@ -1,9 +1,9 @@
 #
 # liberator:configuration.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -25,7 +25,7 @@ REDIS_TIMEOUT = 5
 #-----------------------------------------------------------------------------------------------------
 # VOICE ATTRIBUTE
 #-----------------------------------------------------------------------------------------------------
-SWCODECS = ['ALAW', 'ULAW', 'OPUS', 'G729']
+SWCODECS = ['ALAW', 'ULAW', 'OPUS', 'G729', 'AMR', 'AMR-WB']
 _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto']
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES

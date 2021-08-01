@@ -1,9 +1,9 @@
 #
 # liberator:libreapi.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -29,7 +29,7 @@ from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redi
 from basemgr import fssocket
 
 
-REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
+REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
@@ -56,7 +56,7 @@ schema.field_schema = field_schema
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
 _REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9_\-+#*@]*$'
-# ROUTING 
+# ROUTING
 _QUERY = 'query'
 _BLOCK = 'block'
 _JUMPS = 'jumps'
@@ -76,7 +76,7 @@ try:
 
     _clustername = rdbconn.get('cluster:name')
     if _clustername: CLUSTERS['name'] = _clustername
-    _clustermembers = set(rdbconn.smembers('cluster:members')) 
+    _clustermembers = set(rdbconn.smembers('cluster:members'))
     if _clustermembers: CLUSTERS['members'] = list(_clustermembers)
 
     attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
@@ -123,7 +123,7 @@ class ClusterModel(BaseModel):
     rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
     max_concurrent_calls: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) call that one cluster member can handle')
     max_calls_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of calls attempt in one second that one cluster member can handle')
-    # validation    
+    # validation
     _validmember = validator('members')(check_member)
 
 
@@ -236,7 +236,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
         name = reqbody.name
         _name_key = f'base:netalias:{identifier}'
         name_key = f'base:netalias:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
@@ -251,7 +251,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
                 if rdbconn.hget(engagement, 'rtp_address') == identifier:
                     pipe.hset(engagement, 'rtp_address', name)
                 if rdbconn.hget(engagement, 'sip_address') == identifier:
-                    pipe.hset(engagement, 'sip_address', name)        
+                    pipe.hset(engagement, 'sip_address', name)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
@@ -277,7 +277,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         pipe = rdbconn.pipeline()
         _name_key = f'base:netalias:{identifier}'
         _engage_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engage_key): 
+        if rdbconn.scard(_engage_key):
             response.status_code, result = 403, {'error': 'engaged network alias'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
@@ -384,7 +384,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         data = jsonable_encoder(reqbody)
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
-        # fire-event acl change        
+        # fire-event acl change
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
@@ -401,7 +401,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
         name = reqbody.name
         _name_key = f'base:acl:{identifier}'
         name_key = f'base:acl:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -438,7 +438,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         #
         _name_key = f'base:acl:{identifier}'
         _engage_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engage_key): 
+        if rdbconn.scard(_engage_key):
             response.status_code, result = 403, {'error': 'engaged acl'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
@@ -446,7 +446,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
-        # delete action perform only no one use it so no-one use it, by right this should be clean on memory 
+        # delete action perform only no one use it so no-one use it, by right this should be clean on memory
         # however best practice of optimization it will be luckily clear sometime later if acl change
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
@@ -497,7 +497,7 @@ def list_acl(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# SIP PROFILES 
+# SIP PROFILES
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class ContextEnum(str, Enum):
@@ -564,7 +564,7 @@ class SIPProfileModel(BaseModel):
             if value is None:
                  values.pop(key, None)
 
-        # REALM 
+        # REALM
         name = values.get('name')
         realm = values.get('realm')
         if realm:
@@ -618,11 +618,11 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         name = reqbody.name
         _name_key = f'sipprofile:{identifier}'
         name_key = f'sipprofile:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sip profile identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
-        
+
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _local_network_acl = _data.get('local_network_acl')
         _sip_address = _data.get('sip_address')
@@ -678,7 +678,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         pipe = rdbconn.pipeline()
         _name_key = f'sipprofile:{identifier}'
         _engage_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engage_key): 
+        if rdbconn.scard(_engage_key):
             response.status_code, result = 403, {'error': 'engaged sipprofile'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent sipprofile'}; return
@@ -750,7 +750,7 @@ def list_sipprofile(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PREANSWER CLASS 
+# PREANSWER CLASS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -800,7 +800,7 @@ def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifi
         data = jsonable_encoder(reqbody)
         _name_key = f'class:preanswer:{identifier}'
         name_key = f'class:preanswer:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -829,7 +829,7 @@ def delete_preanswer_class(response: Response, identifier: str=Path(..., regex=_
         pipe = rdbconn.pipeline()
         _name_key = f'class:preanswer:{identifier}'
         _engage_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engage_key): 
+        if rdbconn.scard(_engage_key):
             response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -889,13 +889,16 @@ def list_preanswer_class(response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# MEDIA CLASS 
+# MEDIA CLASS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CodecEnum(str, Enum):
     PCMA = "PCMA"
     PCMU = "PCMU"
     OPUS = "OPUS"
     G729 = "G729"
+    AMR = "AMR"
+    AMRWB = "AMR-WB"
+
 
 class NegotiationMode(str, Enum):
     generous = 'generous'
@@ -949,7 +952,7 @@ def update_media_class(reqbody: MediaModel, response: Response, identifier: str=
         data = jsonable_encoder(reqbody)
         _name_key = f'class:media:{identifier}'
         name_key = f'class:media:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -978,7 +981,7 @@ def delete_media_class(response: Response, identifier: str=Path(..., regex=_NAME
         pipe = rdbconn.pipeline()
         _name_key = f'class:media:{identifier}'
         _engage_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engage_key): 
+        if rdbconn.scard(_engage_key):
             response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -1038,7 +1041,7 @@ def list_media_class(response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# CAPACITY 
+# CAPACITY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
@@ -1083,7 +1086,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
         data = jsonable_encoder(reqbody)
         _name_key = f'class:capacity:{identifier}'
         name_key = f'class:capacity:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1112,7 +1115,7 @@ def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_N
         pipe = rdbconn.pipeline()
         _name_key = f'class:capacity:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -1132,7 +1135,7 @@ def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_N
     try:
         _name_key = f'class:capacity:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         engagements = rdbconn.smembers(_engaged_key)
@@ -1172,7 +1175,7 @@ def list_capacity_class(response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# NUMBER TRANSLATION 
+# NUMBER TRANSLATION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class TranslationModel(BaseModel):
@@ -1182,7 +1185,7 @@ class TranslationModel(BaseModel):
     destination_number_pattern: str = Field(max_length=128, description='destination number pattern use pcre')
     caller_number_replacement: str = Field(max_length=128, description='replacement that refer to caller number pattern use pcre')
     destination_number_replacement: str = Field(max_length=128, description='replacement that refer to destination number pattern use pcre')
-    caller_name: Optional[str] = Field(default='_auto', max_length=128, description='set caller name, value can be any string or defined conventions: _auto, _caller_number(use caller id number as name)') 
+    caller_name: Optional[str] = Field(default='_auto', max_length=128, description='set caller name, value can be any string or defined conventions: _auto, _caller_number(use caller id number as name)')
 
 @librerouter.post("/libreapi/class/translation", status_code=200)
 def create_translation_class(reqbody: TranslationModel, response: Response):
@@ -1210,7 +1213,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
         data = jsonable_encoder(reqbody)
         _name_key = f'class:translation:{identifier}'
         name_key = f'class:translation:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1241,7 +1244,7 @@ def delete_translation_class(response: Response, identifier: str=Path(..., regex
         pipe = rdbconn.pipeline()
         _name_key = f'class:translation:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -1261,7 +1264,7 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
     try:
         _name_key = f'class:translation:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         engagements = rdbconn.smembers(_engaged_key)
@@ -1301,7 +1304,7 @@ def list_translation_class(response: Response):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# MANIPULATION 
+# MANIPULATION
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 HANGUP_PATTERN = re.compile('^[A-Z][A-Z0-9_]+$')
@@ -1407,7 +1410,7 @@ def update_manipulation_class(reqbody: ManipulationModel, response: Response, id
         data = jsonable_encoder(reqbody)
         _name_key = f'class:manipulation:{identifier}'
         name_key = f'class:manipulation:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1444,7 +1447,7 @@ def delete_manipulation_class(response: Response, identifier: str=Path(..., rege
         pipe = rdbconn.pipeline()
         _name_key = f'class:manipulation:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged class'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
@@ -1464,7 +1467,7 @@ def detail_manipulation_class(response: Response, identifier: str=Path(..., rege
     try:
         _name_key = f'class:manipulation:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent class identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         engagements = rdbconn.smembers(_engaged_key)
@@ -1592,7 +1595,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         name = reqbody.name
         _name_key = f'base:gateway:{identifier}'
         name_key = f'base:gateway:{name}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
@@ -1637,7 +1640,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         pipe = rdbconn.pipeline()
         _name_key = f'base:gateway:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged gateway'}; return
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
@@ -1657,7 +1660,7 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     try:
         _name_key = f'base:gateway:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent gateway identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         engagements = rdbconn.smembers(_engaged_key)
@@ -1748,7 +1751,7 @@ class Distribution(str, Enum):
     round_robin = ROUNDROBIN
     hash_callid = HASHCALLID
     hash_src_ip = HASHIPADDR
-    hash_destination_number = HASHDESTNO 
+    hash_destination_number = HASHDESTNO
 
 class PrivacyEnum(str, Enum):
     auto = 'auto'
@@ -1817,7 +1820,7 @@ class OutboundInterconnection(BaseModel):
         privacilen = len(privacy)
         if 'none' in privacy and privacilen > 1: raise ValueError('none can not configured with others')
         elif 'auto' in privacy:
-            if privacilen > 1 and ('number' in privacy or 'name' in privacy): 
+            if privacilen > 1 and ('number' in privacy or 'name' in privacy):
                 raise ValueError('auto can not configured with others except screen')
         else: pass
 
@@ -1971,7 +1974,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged outbound interconnection'}; return
         # get current data
         _data = jsonhash(rdbconn.hgetall(_name_key))
@@ -2017,7 +2020,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         _nameid = f'out:{identifier}'
         _name_key = f'intcon:{_nameid}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         gateways = [{'name': k, 'weigth': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways')).items()]
@@ -2082,7 +2085,7 @@ class InboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of inbound interconnection')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
-    routing: str = Field(description='routing table that will be used by this inbound interconnection') 
+    routing: str = Field(description='routing table that will be used by this inbound interconnection')
     sipaddrs: List[IPv4Network] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
     rtpaddrs: List[IPv4Network] = Field(min_items=1, max_item=20, description='a set of IPv4 Network that use for RTP')
     ringready: bool = Field(default=False, description='response 180 ring indication')
@@ -2231,7 +2234,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        if sipprofile == _sipprofile: 
+        if sipprofile == _sipprofile:
             oldaddrs = _sipaddrs - sipaddrs
             for oldaddr in oldaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', oldaddr)
         # processing: adding new-one
@@ -2293,7 +2296,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        for _sipaddr in _sipaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', _sipaddr)  
+        for _sipaddr in _sipaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', _sipaddr)
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
@@ -2311,7 +2314,7 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
     result = None
     try:
         _name_key = f'intcon:in:{identifier}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent inbound interconnection identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
         response.status_code = 200
@@ -2361,7 +2364,7 @@ class RoutingTableActionEnum(str, Enum):
     query = _QUERY
     route = _ROUTE
     block = _BLOCK
-    # request: reseved routing with http api 
+    # request: reseved routing with http api
 class RoutingVariableEnum(str, Enum):
     cidnumber = 'cidnumber'
     cidname = 'cidname'
@@ -2439,13 +2442,13 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         name = reqbody.name
         _nameid = f'table:{identifier}'; _name_key = f'routing:{_nameid}'
         nameid = f'table:{name}'; name_key = f'routing:{nameid}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
         if name != identifier:
             if rdbconn.exists(name_key):
                 response.status_code, result = 403, {'error': 'existent routing table name'}; return
             else:
-               response.status_code, result = 403, {'error': 'change name routing table is not allowed'}; return 
+               response.status_code, result = 403, {'error': 'change name routing table is not allowed'}; return
 
         # get current data
         _data = jsonhash(rdbconn.hgetall(_name_key))
@@ -2493,7 +2496,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         _engaged_key = f'engagement:{_name_key}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent routing table'}; return
-        if rdbconn.scard(_engaged_key): 
+        if rdbconn.scard(_engaged_key):
             response.status_code, result = 403, {'error': 'engaged routing table'}; return
         # check if routing records exists in table
         _ROUTING_KEY_PATTERN = f'routing:record:{identifier}:*'
@@ -2508,7 +2511,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         # get current data
         _routes = fieldjsonify(rdbconn.hget(_name_key, 'routes'))
         if _routes:
-            for _route in _routes[:2]: 
+            for _route in _routes[:2]:
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
@@ -2526,13 +2529,13 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
     try:
         _name_key = f'routing:table:{identifier}'
         _engaged_key = f'engagement:{_name_key}'
-        if not rdbconn.exists(_name_key): 
+        if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent routing table identifier'}; return
         data = jsonhash(rdbconn.hgetall(_name_key))
         _routes = data.get('routes')
         if _routes:
             data['routes'] = {'primary': _routes[0], 'secondary': _routes[1], 'load': int(_routes[2])}
-        
+
         # get records
         pipe = rdbconn.pipeline()
         KEYPATTERN = f'routing:record:{identifier}:*'
@@ -2541,9 +2544,9 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
             next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
             mainkeys += tmpkeys
 
-        for mainkey in mainkeys: 
+        for mainkey in mainkeys:
             if mainkey.endswith(':compare:'): pipe.hgetall(mainkey)
-            else: pipe.get(mainkey)           
+            else: pipe.get(mainkey)
         details = pipe.execute()
         records = list()
         for mainkey, detail in zip(mainkeys, details):
@@ -2616,7 +2619,7 @@ class MatchingEnum(str, Enum):
 
 _COMPARESET = {'eq', 'ne', 'gt', 'lt'}
 
-class RoutingRecordActionEnum(str, Enum): 
+class RoutingRecordActionEnum(str, Enum):
     route = _ROUTE
     block = _BLOCK
     jumps = _JUMPS
@@ -2637,10 +2640,10 @@ class RoutingRecordModel(BaseModel):
         if not rdbconn.exists(f'routing:table:{table}'):
             raise ValueError('nonexistent routing table')
 
-        if action==_BLOCK: 
+        if action==_BLOCK:
             values.pop('routes', None)
         if action in [_JUMPS, _ROUTE]:
-            routes = values.get('routes') 
+            routes = values.get('routes')
             if not routes:
                 raise ValueError(f'routes parameter is required for {action} action')
             else:
@@ -2714,7 +2717,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         match = data.get('match')
         value = data.get('value')
         if value == __DEFAULT_ENTRY__: value = __EMPTY_STRING__
-        
+
         nameid = f'record:{table}:{match}:{value}'
         hashfield = None
         if match in _COMPARESET:
@@ -2761,7 +2764,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
 
 
 @librerouter.delete("/libreapi/routing/record/{table}/{match}/{value}", status_code=200)
-def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_), table:str=Path(..., regex=_NAME_), 
+def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_), table:str=Path(..., regex=_NAME_),
                           match:str=Path(..., regex='^(em|lpm|eq|ne|gt|lt)$')):
     result = None
     try:
@@ -2789,7 +2792,7 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         if _action==_JUMPS:
             for _route in _routes[1:3]:
                 pipe.srem(f'engagement:routing:table:{_route}', nameid)
-        
+
         if hashfield: pipe.hdel(record_key, hashfield)
         else:  pipe.delete(record_key)
         pipe.execute()
@@ -2806,7 +2809,7 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 def check_domain(value):
-    if not validators.domain(value): 
+    if not validators.domain(value):
         raise ValueError('Invalid domain name, please refer rfc1035')
     return value
 

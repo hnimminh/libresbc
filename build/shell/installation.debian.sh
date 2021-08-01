@@ -12,7 +12,7 @@ app-get install -y luarocks
 /usr/bin/luarocks install luasocket 3.0rc1-2
 /usr/bin/luarocks install moonjson 0.1.2-1
 #------------------------------------------------------------------------------------------------------------
-#                   FREESWITCH: 
+#                   FREESWITCH:
 #       code: https://github.com/signalwire/freeswitch
 #       wiki: https://freeswitch.org/confluence/
 #------------------------------------------------------------------------------------------------------------
@@ -26,13 +26,25 @@ apt-get update
 # Install dependencies required for the build
 # apt-get install -y g++ g++-8 gcc gcc-8 autoconf automake libtool wget libncurses-dev zlib1g-dev libcurl3-gnutls libcurl4-openssl-dev libgnutls-openssl27 libpcre16-3 libpcre3-dev libpcre32-3 libpcrecpp0v5 libspeex-dev libspeex1 libspeexdsp-dev libspeexdsp1 libldns-dev libldns2 libedit-dev libspeex-dev libspeex1 libspeexdsp-dev libspeexdsp1 libsqlite3-dev libssl-dev yasm libsndfile1 libsndfile1-dev libvpx5 libopus-dev libopus0 libopusfile-dev libopusfile0
 apt-get build-dep freeswitch
-# wget https://files.freeswitch.org/freeswitch-releases/freeswitch-1.10.5.-release.tar.gz -O freeswitch-1.10.5.-release.tar.gz 
-wget https://github.com/signalwire/freeswitch/archive/refs/tags/v1.10.6.tar.gz -O freeswitch-1.10.6.tar.gz 
+# wget https://files.freeswitch.org/freeswitch-releases/freeswitch-1.10.5.-release.tar.gz -O freeswitch-1.10.5.-release.tar.gz
+wget https://github.com/signalwire/freeswitch/archive/refs/tags/v1.10.6.tar.gz -O freeswitch-1.10.6.tar.gz
 tar -xzvf freeswitch-1.10.6.tar.gz
 cd freeswitch-1.10.6
+
+# AMR CODE
+#------------------------------------------------------------------------------------------------------------
+apt-get install libopencore-amrwb-dev libopencore-amrwb0 libopencore-amrwb0-dbg libvo-amrwbenc-dev libvo-amrwbenc0 vo-amrwbenc-dbg
+cp /usr/include/opencore-amrwb/dec_if.h  ./src/mod/codecs/mod_amrwb/
+cp /usr/include/vo-amrwbenc/enc_if.h ./freeswitch/src/mod/codecs/mod_amrwb/
+
+apt-get install libopencore-amrnb-dev libopencore-amrnb0 libopencore-amrnb0-dbg
+cp /usr/include/opencore-amrnb/interf_enc.h ./freeswitch/src/mod/codecs/mod_amr/
+cp /usr/include/opencore-amrnb/interf_dec.h ./freeswitch/src/mod/codecs/mod_amr/
+#------------------------------------------------------------------------------------------------------------
+
 ./bootstrap.sh -j
 mv modules.conf modules.conf.origin
-cat >modules.conf<< EOF 
+cat >modules.conf<< EOF
 applications/mod_commands
 applications/mod_dptools
 applications/mod_distributor
@@ -49,6 +61,8 @@ formats/mod_sndfile
 xml_int/mod_xml_rpc
 xml_int/mod_xml_curl
 codecs/mod_opus
+codecs/mod_amrwb
+codecs/mod_amr
 asr_tts/mod_flite
 EOF
 
@@ -88,8 +102,8 @@ chmod 750 /var/log/freeswitch
 #      cachedir:        /usr/local/var/cache/freeswitch
 #
 #------------------------------------------------------------------------------------------------------------
-#                   G729 CODEC: 
-#       https://github.com/xadhoom/mod_bcg729, 
+#                   G729 CODEC:
+#       https://github.com/xadhoom/mod_bcg729,
 #       https://github.com/BelledonneCommunications/bcg729
 #------------------------------------------------------------------------------------------------------------
 cd /usr/local/src
@@ -104,7 +118,7 @@ make install
 #------------------------------------------------------------------------------------------------------------
 #apt-get install -y python3 python3-dev python3-pip
 wget https://www.python.org/ftp/python/3.8.9/Python-3.8.9.tar.xz
-tar -xf Python-3.8.9.tar.xz 
+tar -xf Python-3.8.9.tar.xz
 cd Python-3.8.9/
 ./configure --enable-optimizations
 make altinstall
@@ -143,7 +157,7 @@ mv /usr/local/etc/kamailio /usr/local/etc/kamailio.origin
 ### configuration /usr/local/etc/kamailio
 ### modules /usr/local/lib64/kamailio/modules/
 #------------------------------------------------------------------------------------------------------------
-#                   CAPTAGENT: 
+#                   CAPTAGENT:
 #       https://github.com/sipcapture/captagent
 #------------------------------------------------------------------------------------------------------------
 cd /usr/local/src

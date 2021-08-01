@@ -14,11 +14,15 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - inbound normalization and outbound manipulation
 - add realm for routing vars
 - unlimited/bypass capacity check (lower-bound>=-1)
+- codec AMR-NB, AMR-WB
 
 ### Changed
 - ansible role convention
 - no remove verbose log input data
 - replace local var by NgVars
+- use pubsub instead of queue
+- from host with hostname after fresh restart
+
 ### Fixed
 - Fix unintended field for gateways update
 

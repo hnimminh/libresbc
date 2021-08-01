@@ -78,13 +78,32 @@
         <load module="mod_dptools"/>
         <load module="mod_dialplan_xml"/>
         <load module="mod_bcg729"/>
+        <load module="mod_amr"/>
+        <load module="mod_amrwb"/>
         <load module="mod_spandsp"/>
         <load module="mod_sndfile"/>
         <load module="mod_opus"/>
         <load module="mod_flite"/>
       </modules>
     </configuration>
-    <!--- OPUS CODEC --> 
+    <!--- CODECS --> 
+    <configuration name="amr.conf">
+      <settings>
+        <param name="default-bitrate" value="7"/> 
+        <param name="volte" value="1"/>
+        <param name="adjust-bitrate" value="0"/>
+        <param name="force-oa" value="0"/> 
+      </settings>
+    </configuration>
+    <configuration name="amrwb.conf">
+      <settings>
+        <param name="default-bitrate" value="8"/>
+        <param name="volte" value="1"/>
+        <param name="adjust-bitrate" value="0"/>
+        <param name="force-oa" value="0"/>
+        <param name="mode-set-overwrite" value="0"/>
+      </settings>
+    </configuration>
     <configuration name="opus.conf">
       <settings>
         <param name="use-vbr" value="1"/>

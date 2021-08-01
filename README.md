@@ -85,7 +85,7 @@ The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network 
 Offer border-based media control and services such as:
 * Media encoding/decoding ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol)/[RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol))
 * [DTMF](https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling) relay and interworking include In-Band Signaling (touch tones), Out-of-Band Signaling ([RFC2833](https://www.ietf.org/rfc/rfc2833.txt)) and SIP INFO Method
-* Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)).
+* Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)), [AMR](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_audio_codec), [G.722.2 AMR-WB](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_Wideband)
 * Tones and announcements (Early Media)
 * Data and fax interworking
 * Support multiple Media mode: Proxy, Bypass Transcode
