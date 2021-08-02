@@ -1,9 +1,9 @@
 --
 -- callng:main.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 --
 
@@ -17,6 +17,8 @@ redis = require("redis")
 random = math.random
 ----
 unpack = _G.unpack or table.unpack
+__space__ = ' '
+__comma__ = ','
 ----------------------------------------------------------------------------
 -- REDIS CONNECTION
 rdbconn = nil
@@ -44,7 +46,7 @@ end
 function logify(...)
     local arg = {...}
     local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end 
+    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
     -- write log
     logger(message)
 end
@@ -52,7 +54,7 @@ end
 function delogify(...)
     local arg = {...}
     local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end 
+    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
     -- write log
     dlogger(message)
 end
@@ -100,15 +102,15 @@ function toboolean(data)
     if datatype=='string' then
         if string.lower(data) == 'true' then return true
         else return false end
-    elseif datatype=='boolean' then 
-        return data 
+    elseif datatype=='boolean' then
+        return data
     else
         return false
     end
 end
 
 function split(inputstr, separator)
-    if not separator then separator = ',' end
+    if not separator then separator = __comma__ end
     local array = {}
     local newstr = inputstr..separator
     for element in newstr:gmatch("([^"..separator.."]*)"..separator) do arrayinsert(array, element) end
@@ -116,12 +118,12 @@ function split(inputstr, separator)
 end
 
 function join(array, separator)
-    if not separator then separator = ',' end
+    if not separator then separator = __comma__ end
     return table.concat(array, separator)
 end
 
 function rulejoin(array)
-    return '['..table.concat(array, ',')..']'
+    return '['..table.concat(array, __comma__)..']'
 end
 
 function startswith(originstr, startstr)
@@ -141,7 +143,7 @@ function fieldjsonify(data)
         elseif startswith(data, ':int:') then return tonumber(data:sub(6,#data))
         elseif startswith(data, ':float:') then return tonumber(data:sub(8,#data))
         elseif startswith(data, ':list:') then
-            if data==':list:' then return {} 
+            if data==':list:' then return {}
             else return split(data:sub(7,#data)) end
         elseif startswith(data, ':json:') then return json.decode(data:sub(7,#data))
         elseif startswith(data, ':none:') then return nil
@@ -162,7 +164,7 @@ function jsonhash(data)
                 elseif startswith(value, ':int:') then data[key] = tonumber(value:sub(6,#value))
                 elseif startswith(value, ':float:') then data[key] = tonumber(value:sub(8,#value))
                 elseif startswith(value, ':list:') then
-                    if value==':list:' then data[key] = {} 
+                    if value==':list:' then data[key] = {}
                     else data[key] = split(value:sub(7,#value)) end
                 elseif startswith(value, ':json:') then data[key] = json.decode(value:sub(7,#value))
                 elseif startswith(value, ':none:') then data[key] = nil
@@ -174,13 +176,29 @@ function jsonhash(data)
 end
 
 
----------------------------------------------------------------------------- GET KEY 
+----------------------------------------------------------------------------
+function arraycomplement(ai, aj)
+    local a = {}
+    for i=1,#ai do
+        local duplication = false
+        for j=1,#aj do
+            if ai[i] == aj[j] then
+                duplication = true
+                break
+            end
+        end
+        if not duplication then a[#a+1] = ai[i] end
+    end
+    return a
+end
+
+---------------------------------------------------------------------------- GET KEY
 function intconkey(name, direction)
     if direction == INBOUND then
         return 'intcon:in:'..name
     else
         return 'intcon:out:'..name
-    end 
+    end
 end
 
 function concurentcallskey(name)
