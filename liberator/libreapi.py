@@ -1764,11 +1764,11 @@ class CallerIDType(str, Enum):
     auto = 'auto'
     none = 'none'
     rpid = 'rpid'
-    pidd = 'pid'
+    pid = 'pid'
 
 class DistributedGatewayModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='gateway name')
-    weight:  int = Field(default=1, ge=0, le=127, description='weight value use for distribution')
+    weight: int = Field(default=1, ge=0, le=127, description='weight value use for distribution')
 
 class OutboundInterconnection(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of outbound interconnection')
@@ -2023,7 +2023,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
         result = jsonhash(rdbconn.hgetall(_name_key))
-        gateways = [{'name': k, 'weigth': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways')).items()]
+        gateways = [{'name': k, 'weight': v} for k,v in jsonhash(rdbconn.hgetall(f'intcon:{_nameid}:_gateways')).items()]
         engagements = rdbconn.smembers(_engaged_key)
         result.update({'gateways': gateways, 'engagements': engagements})
         response.status_code = 200
