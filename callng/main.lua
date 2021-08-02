@@ -145,7 +145,15 @@ local function main()
             -- distributes calls to gateways in a weighted base
             local forceroute = false
             local _sipprofile = get_sipprofile(NgVars.route, OUTBOUND)
-            local gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '.._sipprofile..' gwlist down}')
+            local dpalgorithm = get_distribution_algorithm(NgVars.route)
+
+            local gateway = '-err'
+            if dpalgorithm == 'hash_callid' then gateway = hashchoicegw(NgVars.route, _sipprofile, call_id)
+            elseif dpalgorithm == 'hash_src_ip' then gateway = hashchoicegw(NgVars.route, _sipprofile, network_ip)
+            elseif dpalgorithm == 'hash_destination_number' then gateway = hashchoicegw(NgVars.route, _sipprofile, destination_number)
+            else
+                gateway = fsapi:execute('expand', 'distributor '..NgVars.route..' ${sofia profile '.._sipprofile..' gwlist down}')
+            end
             if gateway == '-err' then
                 gateway = fsapi:execute('distributor', NgVars.route)
                 forceroute = true
@@ -186,7 +194,7 @@ local function main()
             --------------------------------------------------------------------
 
             -- start outbound leg
-            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', _sipprofile, 'gateway', gateway, 'forceroute', forceroute)
+            logify('module', 'callng', 'space', 'main', 'action', 'connect_gateway', 'seshid', NgVars.seshid, 'uuid', _uuid, 'route', NgVars.route, 'sipprofile', _sipprofile, 'gateway', gateway, 'algorithm', algorithm, 'forceroute', forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dstnumber, InLeg)
 
             -- check leg status
