@@ -601,3 +601,23 @@ function routing_query(tablename, routingdata)
     return primary, secondary, routingrules
 end
 
+---------------------------------------------------------------------------------------------------------------------------------------------
+-- DISTRIBUTION
+---------------------------------------------------------------------------------------------------------------------------------------------
+function get_distribution_algorithm(name)
+    return fieldjsonify(rdbconn:hget(intconkey(name, OUTBOUND), 'distribution'))
+end
+
+function hashchoicegw(name, _sipprofile, field)
+    local allgws = rdbconn:hkeys(intconkey(name, OUTBOUND)..':_gateways')
+    local downgws = split(fsapi:executeString('sofia profile '.._sipprofile..' gwlist down'), __space__)
+    local upgws = arraycomplement(allgws, downgws)
+    table.sort(upgws)
+    local hnumber =  tonumber(string.sub(fsapi:executeString('md5 '..field),12,20),32)
+    if #upgws > 0 then
+        return upgws[1+hnumber-math.floor(hnumber/#upgws)*#upgws]
+    else
+        return '-err'
+    end
+end
+
