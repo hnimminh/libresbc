@@ -88,7 +88,7 @@ Offer border-based media control and services such as:
 * Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)), [AMR](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_audio_codec), [G.722.2 AMR-WB](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_Wideband)
 * Tones and announcements (Early Media)
 * Data and fax interworking
-* Support multiple Media mode: Proxy, Bypass Transcode
+* Support multiple Media mode: Proxy, Bypass, Transcode
 * Voice Activity Detection [VAD](https://en.wikipedia.org/wiki/Voice_activity_detection)
 * Confort Noise Generation [CNG](https://en.wikipedia.org/wiki/Comfort_noise)
 
