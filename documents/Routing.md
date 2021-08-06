@@ -34,7 +34,7 @@ Parameter  | Category           | Description
 :---       |:---                |:---                             
 table       |`string` `required` | The routing table name  the routing record belong to 
 match       |`enum` `required` | The matching type that will be define criteria to select. <br/>{`eq`, `ne`, `gt`, `lt`}: compare matching <br/>`em`: exactly match <br/>`lpm`: longest prefix matching
-value |`string` `required` |The value can be present by two purpose:<br/>→ The fixed value of variable that already defined in routing table (`lpm` `em`) <br/>→ Name of other variable for compare (`eq`, `ne`, `gt`, `lt`) <br/>💢**DEFAULT_ENTRY** is value alias for default records, its similar to default route (0.0.0.0/0) in network routing table.
+value |`string` `required` |The value can be present by two purpose:<br/>→ The fixed value of variable that already defined in routing table (`lpm` `em`) <br/>→ Name of other variable for compare (`eq`, `ne`, `gt`, `lt`) <br/>**DEFAULT_ENTRY** is value alias for default records, its similar to default route (0.0.0.0/0) in network routing table.
 action     |`enum` `required`| The action for routing, include `route`, `block`, `jumps`. Default is `query` <br/> `route` go directly to destination interconnection that defined in routes map object. <br/> `block` block traffic <br/>`jumps` jumps to another routing table
 routes     |`map` | Route Map Object. Applicable only action is `route`.
 
