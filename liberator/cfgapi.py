@@ -20,7 +20,7 @@ from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_,
                            ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 
-from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, threaded
+from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify
 from basemgr import fssocket
 
 
@@ -195,7 +195,7 @@ def sip(request: Request, response: Response):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        threaded(fssocket, {'commands': fscommands, 'requestid': get_request_uuid()})
+        fssocket({'commands': fscommands, 'requestid': get_request_uuid()})
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},

@@ -1,9 +1,9 @@
 #
 # liberator:basemgr.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -19,17 +19,18 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 
-from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET, 
+from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode
 
 
-REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
+REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=5, timeout=REDIS_TIMEOUT)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
 LIBRESBC_ENGINE_STARTUP = False
 
+@threaded
 def fssocket(reqdata):
     result, fs = True, None
     try:
@@ -50,7 +51,7 @@ def fssocket(reqdata):
                 response = fs.send(f'api {command}')
                 if response:
                     resultstr = response.data
-                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr: 
+                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
                         _result = True
                     else:
                         _result = False
@@ -68,21 +69,23 @@ def osrename(old, new):
     try:
         if os.path.exists(old):
             os.rename(old, new)
-    except: 
+    except:
         return False
     return True
 
 
 def osdelete(filename):
     try:
-        if os.path.exists(filename): 
+        if os.path.exists(filename):
             os.remove(filename)
-    except: 
+    except:
         return False
     return True
 
 
 _ENV = Environment(loader=FileSystemLoader('templates/nft'))
+
+@threaded
 def nftupdate():
     result = True
     try:
@@ -114,8 +117,8 @@ def nftupdate():
             farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
             farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
 
-            sipprofiles[profilename] = {'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]), 
-                                        'sipudpports': set([fieldjsonify(sip_port)]), 
+            sipprofiles[profilename] = {'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
+                                        'sipudpports': set([fieldjsonify(sip_port)]),
                                         'sip_ip': sip_ip,
                                         'rtp_ip': rtp_ip,
                                         'farendrtpaddrs': stringify(farendrtpaddrs, ','),
@@ -126,7 +129,7 @@ def nftupdate():
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
 
-        nftcmd = Popen(['/usr/sbin/nft', '-f', nftfile], stdout=PIPE, stderr=PIPE)    
+        nftcmd = Popen(['/usr/sbin/nft', '-f', nftfile], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(nftcmd.communicate())
         if stderr:
             result = False
@@ -177,13 +180,13 @@ class BaseEventHandler(Thread):
                         commands = list()
                         if portion == _netalias:
                             sipprofiles = data.get('sipprofiles')
-                            for sipprofile in sipprofiles: 
+                            for sipprofile in sipprofiles:
                                 commands.append(f'sofia profile {sipprofile} restart')
                             commands.append('reloadxml')
                         elif portion == _acl:
                             name = data.get('name')
                             _name = data.get('_name')
-                            if name != _name: 
+                            if name != _name:
                                 sipprofiles = data.get('sipprofiles')
                                 for sipprofile in sipprofiles:
                                     commands.append(f'sofia profile {sipprofile} rescan')
@@ -199,9 +202,9 @@ class BaseEventHandler(Thread):
                             elif action=='delete':
                                 commands = [f'sofia profile {_sipprofile} stop', 'reloadxml']
                             elif action=='update':
-                                if sipprofile == _sipprofile: 
+                                if sipprofile == _sipprofile:
                                     commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
-                                else: 
+                                else:
                                     commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
                         elif portion == _gateway:
                             sipprofile = data.get('sipprofile')
@@ -243,10 +246,10 @@ class BaseEventHandler(Thread):
                             pass
                         # execute esl commands
                         data.update({'commands': commands})
-                        threaded(fssocket, data)
+                        fssocket(data)
                         # firewall update
                         if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _ngstartup]:
-                            threaded(nftupdate)
+                            nftupdate()
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
