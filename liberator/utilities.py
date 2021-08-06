@@ -1,9 +1,9 @@
 #
 # liberator:utilities.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -88,9 +88,9 @@ def fieldjsonify(data):
         if data.startswith(':bool:'):
             if data == ':bool:true': return True
             if data == ':bool:false': return False
-        elif data.startswith(':int:'): return int(data[5:]) 
+        elif data.startswith(':int:'): return int(data[5:])
         elif data.startswith(':float:'): return float(data[7:])
-        elif data.startswith(':list:'): 
+        elif data.startswith(':list:'):
             if data==':list:': return []
             else:
                 _data = data[6:].split(_delimiter_)
@@ -109,9 +109,9 @@ def jsonhash(data: dict) -> dict:
                 if value.startswith(':bool:'):
                     if value == ':bool:true': data.update({key: True})
                     if value == ':bool:false': data.update({key: False})
-                elif value.startswith(':int:'): data.update({key: int(value[5:])}) 
-                elif value.startswith(':float:'): data.update({key: float(value[7:])}) 
-                elif value.startswith(':list:'): 
+                elif value.startswith(':int:'): data.update({key: int(value[5:])})
+                elif value.startswith(':float:'): data.update({key: float(value[7:])})
+                elif value.startswith(':list:'):
                     if value==':list:': data.update({key: []})
                     else:
                         _value = value[6:].split(_delimiter_)
@@ -142,6 +142,9 @@ def removekey(keys, data):
         data.pop(key, None)
     return data
 
-def threaded(func, *params):
-    th = Thread(target=func, args=params)
-    th.start()
+def threaded(func):
+    def wrapper(*args, **kwargs):
+        thread = Thread(target=func, args=args, kwargs=kwargs)
+        thread.start()
+        return thread
+    return wrapper
