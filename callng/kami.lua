@@ -1,9 +1,9 @@
 --
 -- callng:kami.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 --
@@ -24,7 +24,7 @@ FLT_NATS=5
 FLB_NATB=6
 FLB_NATSIPPING=7
 
-SWTRFFLAG = 9
+SW_TRAFFIC_FLAG = 9
 B2BUA_IP = '127.0.0.2'
 PROXY_IP = '127.0.0.3'
 
@@ -66,8 +66,8 @@ function ksr_request_route()
 		KSR.tm.t_check_trans()
 		return 1
 	end
-	if KSR.tm.t_check_trans()==0 then 
-		return 1 
+	if KSR.tm.t_check_trans()==0 then
+		return 1
 	end
 
 	-- record routing for dialog forming requests (in case they are routed)
@@ -84,7 +84,7 @@ function ksr_request_route()
 
 	-- incoming call
 	if KSR.is_INVITE() then
-		if KSR.isflagset(SWTRFFLAG) then 
+		if KSR.isflagset(SW_TRAFFIC_FLAG) then
 			call_from_switch()
 		else
 			call_from_public()
@@ -159,12 +159,12 @@ function sanitize()
 end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
---  DISTINCT AND TAG TRAFFIC 
+--  DISTINCT AND TAG TRAFFIC
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function srctraffic()
 	local srcip = KSR.pv.get('$si')
 	if srcip == B2BUA_IP then
-		KSR.setflag(SWTRFFLAG)
+		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
 -- ---------------------------------------------------------------------------------------------------------------------------------
@@ -181,7 +181,7 @@ end
 -- Originator NAT Detection and Fix
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function nathandle()
-	if KSR.isflagset(SWTRFFLAG) then 
+	if KSR.isflagset(SW_TRAFFIC_FLAG) then
 		return 1
 	end
 	KSR.force_rport()
@@ -220,7 +220,7 @@ end
 -- Handle requests within SIP dialogs
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function withindlg()
-	if KSR.siputils.has_totag()<0 then 
+	if KSR.siputils.has_totag()<0 then
 		return 1
 	end
 
@@ -287,7 +287,7 @@ function registrar()
 		-- do SIP NAT pinging
 		KSR.setbflag(FLB_NATSIPPING)
 	end
-	
+
 	local aorsaved = KSR.registrar.save_uri("libreul", "5", "sip:minh@libre.sbc")
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register5', 'aorsaved', aorsaved)
 	if aorsaved < 0 then
