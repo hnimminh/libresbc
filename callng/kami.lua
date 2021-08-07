@@ -351,12 +351,14 @@ end
 -- equivalent of reply_route{}
 function ksr_reply_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
-	if KSR.isflagset(SW_TRAFFIC_FLAG) then
-    else
-		if KSR.isbflagset(BRANCH_NATOUT_FLAG) then
-			KSR.nathelper.set_contact_alias();
-		end
-	end
+
+    if not KSR.isflagset(SW_TRAFFIC_FLAG) then
+        if KSR.nathelper.nat_uac_test(23)>0 then
+            elseif KSR.siputils.is_first_hop()>0 then
+                KSR.nathelper.set_contact_alias()
+            end
+        end
+    end
 
 	return 1
 end
