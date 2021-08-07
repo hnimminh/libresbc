@@ -352,12 +352,9 @@ end
 function ksr_reply_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
 	if KSR.isflagset(SW_TRAFFIC_FLAG) then
-		return 1
-	end
-	KSR.force_rport()
-	if KSR.nathelper.nat_uac_test(23)>0 then
-		if KSR.siputils.is_first_hop()>0 then
-			KSR.nathelper.set_contact_alias()
+    else
+		if KSR.isbflagset(BRANCH_NATOUT_FLAG) then
+			KSR.nathelper.set_contact_alias();
 		end
 	end
 
