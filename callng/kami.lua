@@ -202,8 +202,8 @@ end
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
 	-- - serial forking, RTP relaying handling, a.s.o.
-    local alias = KSR.nathelper.handle_ruri_alias()
     delogify('module', 'callng', 'space', 'kami', 'action', 'handle_ruri_alias', 'result', alias)
+    local alias = KSR.nathelper.handle_ruri_alias()
 
 	delogify('module', 'callng', 'space', 'kami', 'action', 'route-relay')
 	KSR.xlog.xdbg('ROUTE RELAY BEGIN:-----------------------------------------------------------')
