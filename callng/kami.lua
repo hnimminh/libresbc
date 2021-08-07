@@ -16,17 +16,16 @@
 --  * KSR.drop() is only marking the SIP message for drop, but doesn't stop the execution of the script. Use KSR.x.exit() after it or KSR.x.drop()
 --
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
-
 require("callng.sigfunc")
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
 
--- global variables corresponding to defined values (e.g., flags) in kamailio.cfg
-FLT_NATS=5
-FLB_NATB=6
-FLB_NATSIPPING=7
-
+TRANSACTION_NATSCRIPT_FLAG = 5
+BRANCH_NATOUT_FLAG = 6
+BRANCH_NATSIPPING_FLAG = 7
 SW_TRAFFIC_FLAG = 9
-B2BUA_IP = '127.0.0.2'
-PROXY_IP = '127.0.0.3'
+
+B2BUA_IPADDR = '127.0.0.2'
+PROXY_IPADDR = '127.0.0.3'
 
 -- SIP request routing
 -- equivalent of request_route{}
@@ -163,10 +162,11 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function srctraffic()
 	local srcip = KSR.pv.get('$si')
-	if srcip == B2BUA_IP then
+	if srcip == B2BUA_IPADDR then
 		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- Keepalive Repsonse for OPTION
 -- ---------------------------------------------------------------------------------------------------------------------------------
@@ -191,7 +191,7 @@ function nathandle()
 		elseif KSR.siputils.is_first_hop()>0 then
 			KSR.nathelper.set_contact_alias()
 		end
-		KSR.setflag(FLT_NATS)
+		KSR.setflag(TRANSACTION_NATSCRIPT_FLAG)
 	end
 	return 1
 end
@@ -202,6 +202,9 @@ end
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
 	-- - serial forking, RTP relaying handling, a.s.o.
+    local alias = KSR.nathelper.handle_ruri_alias()
+    delogify('module', 'callng', 'space', 'kami', 'action', 'handle_ruri_alias', 'result', alias)
+
 	delogify('module', 'callng', 'space', 'kami', 'action', 'route-relay')
 	KSR.xlog.xdbg('ROUTE RELAY BEGIN:-----------------------------------------------------------')
 
@@ -272,7 +275,7 @@ function registrar()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
 	-- authenticate requests
 	-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
-	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
+	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '4049c87a95aaa24335a9bcaf3b344cb7', 1, 0)
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
 	if auth_check<0 then
 		KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0)
@@ -282,13 +285,13 @@ function registrar()
 
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register4', 'status', 'authenticated')
 
-	if KSR.isflagset(FLT_NATS) then
-		KSR.setbflag(FLB_NATB)
+	if KSR.isflagset(TRANSACTION_NATSCRIPT_FLAG) then
+		KSR.setbflag(BRANCH_NATOUT_FLAG)
 		-- do SIP NAT pinging
-		KSR.setbflag(FLB_NATSIPPING)
+		KSR.setbflag(BRANCH_NATSIPPING_FLAG)
 	end
 
-	local aorsaved = KSR.registrar.save_uri("libreul", "5", "sip:minh@libre.sbc")
+	local aorsaved = KSR.registrar.save_uri("libreul", "5", "sip:joebiden@libre.sbc")
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register5', 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
@@ -305,7 +308,7 @@ function call_from_public()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
 	-- authenticate requests
 	-- local auth_check = KSR.auth_db.auth_check(KSR.kx.gete_fhost(), "subscriber", 1)
-	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '7d807e02493dfd0a8113a8b2f7540f3f', 1, 0)
+	local auth_check = KSR.auth.pv_auth_check(KSR.kx.gete_fhost(), '4049c87a95aaa24335a9bcaf3b344cb7', 1, 0)
 	delogify('module', 'callng', 'space', 'kami', 'action', 'public-invite-2', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid(), 'auth_check', auth_check)
 	if auth_check<0 then
 		KSR.auth.auth_challenge(KSR.kx.gete_fhost(), 0)
@@ -319,14 +322,14 @@ function call_from_public()
 	KSR.dialog.dlg_manage()
 	]]
 
-	KSR.pv.sets('$du', 'sip:'..B2BUA_IP..':5060;transport=udp')
-	KSR.pv.sets('$fs', 'udp:'..PROXY_IP..':5060')
+	KSR.pv.sets('$du', 'sip:'..B2BUA_IPADDR..':5060;transport=udp')
+	KSR.pv.sets('$fs', 'udp:'..PROXY_IPADDR..':5060')
 	ksr_route_relay()
 end
 
 function call_from_switch()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
-	local rc = KSR.registrar.lookup_uri("libreul", "sip:minh@libre.sbc")
+	local rc = KSR.registrar.lookup_uri("libreul", "sip:joebiden@libre.sbc")
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-2', 'localtion', rc)
 	if rc<0 then
 		KSR.tm.t_newtran()
@@ -348,5 +351,15 @@ end
 -- equivalent of reply_route{}
 function ksr_reply_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
+	if KSR.isflagset(SW_TRAFFIC_FLAG) then
+		return 1
+	end
+	KSR.force_rport()
+	if KSR.nathelper.nat_uac_test(23)>0 then
+		if KSR.siputils.is_first_hop()>0 then
+			KSR.nathelper.set_contact_alias()
+		end
+	end
+
 	return 1
 end
