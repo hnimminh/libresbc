@@ -31,6 +31,7 @@
 * [present](./kamailio/present.cfg)
 * [simple](./kamailio/proxy.cfg)
 * [class4-5](./kamailio/class45/kamailio.cfg)
+* [basic](./kamailio/basic/kamailio-basic-kemi.cfg)
 
 ### References
 * [RFC3261](https://tools.ietf.org/html/rfc3261)
