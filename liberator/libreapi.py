@@ -54,6 +54,7 @@ schema.field_schema = field_schema
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PATTERN
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_SRNAME_ = r'^_[a-zA-Z0-9_]+$'
 _REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9_\-+#*@]*$'
 # ROUTING
@@ -2813,15 +2814,50 @@ def check_domain(value):
         raise ValueError('Invalid domain name, please refer rfc1035')
     return value
 
+class InboundPolicy(BaseModel):
+    ringready: bool = Field(default=False, description='response 180 ring indication')
+    media_class: str = Field(description='nameid of media class')
+    capacity_class: str = Field(description='nameid of capacity class')
+    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
+    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+    preanswer_class: str = Field(default=None, description='nameid of preanswer class')
+    # validation
+    _existenpreanswer = validator('preanswer_class')(check_existent_preanswer)
+    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
+    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
+    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+
+
+class OutboundPolicy(BaseModel):
+    media_class: str = Field(description='nameid of media class')
+    capacity_class: str = Field(description='nameid of capacity class')
+    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
+    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
+    # validation
+    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
+    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
+    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+
+class DomainPolicy(BaseModel):
+    domain: str = Field(regex=_REALM_, max_length=32, description='sip domain')
+    name: str = Field(regex=_NAME_, max_length=32, description='unique alias name for domain')
+    inbound: InboundPolicy = Field(description='inbound policy')
+    outbound: OutboundPolicy = Field(description='outbound policy')
+
 class AccessService(BaseModel):
     name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
     desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
+    sdp_user: str = Field(default='LibreSDP', max_length=64, description='username with the o= and s= fields in SDP body', hidden_field=True)
     server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
-    local_port: int = Field(default=5060, ge=0, le=65535, description='local sip port for kam', hidden_field=True)
     transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], min_items=1, max_items=3, description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
-    domains: List[str] = Field(description='Domain List')
+    rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
+    sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
+    sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
+    policy: List[DomainPolicy] = Field(description='Domain Policy')
 
 
 @librerouter.post("/libreapi/access/service", status_code=200)
