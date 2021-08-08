@@ -18,7 +18,6 @@
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 require("callng.sigfunc")
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
-
 TRANSACTION_NATSCRIPT_FLAG = 5
 BRANCH_NATOUT_FLAG = 6
 BRANCH_NATSIPPING_FLAG = 7
@@ -27,26 +26,21 @@ SW_TRAFFIC_FLAG = 9
 B2BUA_IPADDR = '127.0.0.2'
 PROXY_IPADDR = '127.0.0.3'
 
--- SIP request routing
--- equivalent of request_route{}
-function ksr_request_route()
-	-- debug log test
-	delogify('module', 'callng', 'space', 'kami', 'action', 'new-request', 'ru', KSR.pv.get("$ru"))
 
-	-- per request initial checks
+-- ---------------------------------------------------------------------------------------------------------------------------------
+--  MAIN  BLOCK - SIP REQUEST ROUTE
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function ksr_request_route()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'new-request', 'ru', KSR.pv.get("$ru"))
 	sanitize()
 
-	-- connection keepalive response
 	if KSR.is_OPTIONS() then
 		keepalive()
 	end
 
-	-- traffic classify
 	srctraffic()
-	-- NAT detection and fix
 	nathandle()
 
-	-- CANCEL processing
 	if KSR.is_CANCEL() then
 		if KSR.tm.t_check_trans()>0 then
 			ksr_route_relay()
@@ -101,7 +95,7 @@ end
 
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
---  initial security checks and policy
+--  INITIAL SANITY SECURITY CHECK & POLICY
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function sanitize()
 	-- rate limiting anti-flooding attached, optimize them later
@@ -157,6 +151,7 @@ function sanitize()
 
 end
 
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
 --  DISTINCT AND TAG TRAFFIC
 -- ---------------------------------------------------------------------------------------------------------------------------------
@@ -167,8 +162,9 @@ function srctraffic()
 	end
 end
 
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- Keepalive Repsonse for OPTION
+-- SIP OPTION KEEPALIVE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function keepalive()
 	if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
@@ -177,8 +173,9 @@ function keepalive()
 	end
 end
 
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- Originator NAT Detection and Fix
+-- NAT DETECT AND FIX|ALIAS
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function nathandle()
 	if KSR.isflagset(SW_TRAFFIC_FLAG) then
@@ -196,8 +193,9 @@ function nathandle()
 	return 1
 end
 
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- wrapper around tm relay function
+-- WRAP AROUND TM RELAY FUNCTION
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_route_relay()
 	-- enable additional event routes for forwarded requests
@@ -220,7 +218,7 @@ end
 
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- Handle requests within SIP dialogs
+-- WITHIN DIALOG SIP MESSAGE HANDLING
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function withindlg()
 	if KSR.siputils.has_totag()<0 then
@@ -268,8 +266,9 @@ function withindlg()
 	KSR.x.exit()
 end
 
+
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- registrar service with user authentication
+-- REGISTRAR SERVICE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function registrar()
     local domain = KSR.kx.get_fhost()
@@ -308,6 +307,9 @@ function registrar()
 end
 
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- PUBLIC CALL REQUEST
+-- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_public()
     local domain = KSR.kx.get_fhost()
     local authuser = KSR.kx.get_au()
@@ -338,6 +340,10 @@ function call_from_public()
 	ksr_route_relay()
 end
 
+
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- SW CALL REQUEST
+-- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_switch()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
 	local rc = KSR.registrar.lookup_uri("libreul", "sip:joebiden@libre.sbc")
@@ -358,8 +364,10 @@ function call_from_switch()
 	KSR.x.exit()
 end
 
--- SIP response handling
--- equivalent of reply_route{}
+
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- SIP RESPONSE HANDLING - REPLY ROUTE
+-- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_reply_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
 
