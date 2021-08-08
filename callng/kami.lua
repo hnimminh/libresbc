@@ -48,13 +48,9 @@ function ksr_request_route()
 		return 1
 	end
 
-	delogify('module', 'callng', 'space', 'kami', 'action', 'before-withindlg', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
-	-- handle requests within SIP dialogs
 	withindlg()
 
-	delogify('module', 'callng', 'space', 'kami', 'action', 'after-withindlg', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
-	-- only initial requests (no To tag)
-	-- handle retransmissions
+	-- only initial requests (no To tag), handle retransmissions
 	if KSR.tmx.t_precheck_trans()>0 then
 		KSR.tm.t_check_trans()
 		return 1
@@ -164,7 +160,7 @@ end
 
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- SIP OPTION KEEPALIVE
+-- NAT KEEPALIVE SIP OPTION
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function keepalive()
 	if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
@@ -196,23 +192,16 @@ end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- WRAP AROUND TM RELAY FUNCTION
+-- enable additional event routes for forwarded requests
+-- serial forking, RTP relaying handling, a.s.o.
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_route_relay()
-	-- enable additional event routes for forwarded requests
-	-- - serial forking, RTP relaying handling, a.s.o.
-    delogify('module', 'callng', 'space', 'kami', 'action', 'handle_ruri_alias', 'result', alias)
     local alias = KSR.nathelper.handle_ruri_alias()
-
-	delogify('module', 'callng', 'space', 'kami', 'action', 'route-relay')
-	KSR.xlog.xdbg('ROUTE RELAY BEGIN:-----------------------------------------------------------')
-
-	local rrc = KSR.tm.t_relay()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'do-relay', 'state', rrc)
-	if rrc<0 then
+	local relay = KSR.tm.t_relay()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'relay', 'state', relay, 'alias', alias)
+	if relay<0 then
 		KSR.sl.sl_reply_error()
 	end
-	delogify('module', 'callng', 'space', 'kami', 'action', 'exit-relay')
-	KSR.xlog.xdbg('ROUTE RELAY END:-----------------------------------------------------------')
 	KSR.x.exit()
 end
 
@@ -227,37 +216,29 @@ function withindlg()
 
 	--[[
 	if KSR.dialog.is_known_dlg()<0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'unknown-dialog')
 		if KSR.is_ACK() and KSR.tm.t_check_trans()>0 then
-			delogify('module', 'callng', 'space', 'kami', 'action', 'ack-t-check-trans')
 			ksr_route_relay()
 			KSR.x.exit()
 		end
 		KSR.x.exit()
 	end
+    ]]--
 
-	delogify('module', 'callng', 'space', 'kami', 'action', 'known-dialog', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
-	]]--
 	-- sequential request withing a dialog should
 	-- take the path determined by record-routing
 	if KSR.rr.loose_route()>0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-lr-go-relay', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 		ksr_route_relay()
 		KSR.x.exit()
 	end
-
-	delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-not-lr', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 
 	if KSR.is_ACK() then
 		if KSR.tm.t_check_trans() >0 then
 			-- no loose-route, but stateful ACK
 			-- must be an ACK after a 487
 			-- or e.g. 404 from upstream server
-			delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-trans', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 			ksr_route_relay()
 			KSR.x.exit()
 		else
-			delogify('module', 'callng', 'space', 'kami', 'action', 'withindlg-no-trans', 'method', KSR.pv.gete("$rm"), 'cid', KSR.kx.get_callid(), 'ft', KSR.pv.gete("$ft"), 'tt', KSR.pv.gete("$tt"), 'br', KSR.pv.gete("$br"))
 			-- ACK without matching transaction ... ignore and discard
 			KSR.x.exit()
 		end
@@ -331,12 +312,9 @@ function call_from_public()
     end
 
 	KSR.auth.consume_credentials()
-	--[[
-	delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.dialog.manage')
-	KSR.dialog.dlg_manage()
-	]]
 	KSR.pv.sets('$du', 'sip:'..B2BUA_LOOPBACK_IPADDR..':5060;transport=udp')
 	KSR.pv.sets('$fs', 'udp:'..PROXY_LOOPBACK_IPADDR..':5060')
+    -- KSR.dialog.dlg_manage()
 	ksr_route_relay()
 end
 
@@ -345,13 +323,11 @@ end
 -- SW CALL REQUEST
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_switch()
-    local domain = KSR.kx.get_fhost()
-    local authuser = KSR.kx.get_au()
+    local swruri = KSR.hdr.get('X-SW-RURI')
     local callid = KSR.kx.get_callid()
-
-	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
+	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'callid', callid, 'swruri', swruri)
 	local rc = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, "sip:joebiden@libre.sbc")
-	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-2', 'localtion', rc)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'location', rc, 'callid', callid)
 	if rc<0 then
 		KSR.tm.t_newtran()
 		if rc==-1 or rc==-3 then
@@ -363,9 +339,8 @@ function call_from_switch()
 		end
 	end
 
-	-- KSR.dialog.dlg_manage()
+    -- KSR.dialog.dlg_manage()
 	ksr_route_relay()
-	KSR.x.exit()
 end
 
 
