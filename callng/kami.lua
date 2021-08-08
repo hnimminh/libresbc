@@ -23,9 +23,9 @@ BRANCH_NATOUT_FLAG = 6
 BRANCH_NATSIPPING_FLAG = 7
 SW_TRAFFIC_FLAG = 9
 
-B2BUA_IPADDR = '127.0.0.2'
-PROXY_IPADDR = '127.0.0.3'
-
+LIBRE_USER_LOCATION = 'LIBREUL'
+B2BUA_LOOPBACK_IPADDR = '127.0.0.2'
+PROXY_LOOPBACK_IPADDR = '127.0.0.3'
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
 --  MAIN  BLOCK - SIP REQUEST ROUTE
@@ -157,7 +157,7 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function srctraffic()
 	local srcip = KSR.pv.get('$si')
-	if srcip == B2BUA_IPADDR then
+	if srcip == B2BUA_LOOPBACK_IPADDR then
 		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
@@ -296,7 +296,7 @@ function registrar()
 		KSR.setbflag(BRANCH_NATSIPPING_FLAG)
 	end
 
-	local aorsaved = KSR.registrar.save_uri("libreul", "5", "sip:"..authuser.."@"..domain)
+	local aorsaved = KSR.registrar.save_uri(LIBRE_USER_LOCATION, "5", "sip:"..authuser.."@"..domain)
 	delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
@@ -335,8 +335,8 @@ function call_from_public()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.dialog.manage')
 	KSR.dialog.dlg_manage()
 	]]
-	KSR.pv.sets('$du', 'sip:'..B2BUA_IPADDR..':5060;transport=udp')
-	KSR.pv.sets('$fs', 'udp:'..PROXY_IPADDR..':5060')
+	KSR.pv.sets('$du', 'sip:'..B2BUA_LOOPBACK_IPADDR..':5060;transport=udp')
+	KSR.pv.sets('$fs', 'udp:'..PROXY_LOOPBACK_IPADDR..':5060')
 	ksr_route_relay()
 end
 
@@ -345,8 +345,12 @@ end
 -- SW CALL REQUEST
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_switch()
+    local domain = KSR.kx.get_fhost()
+    local authuser = KSR.kx.get_au()
+    local callid = KSR.kx.get_callid()
+
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-1', 'fhost', KSR.kx.gete_fhost(), 'fd', KSR.kx.get_fhost(), 'au', KSR.kx.gete_au(), 'cid', KSR.kx.get_callid())
-	local rc = KSR.registrar.lookup_uri("libreul", "sip:joebiden@libre.sbc")
+	local rc = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, "sip:joebiden@libre.sbc")
 	delogify('module', 'callng', 'space', 'kami', 'action', 'switch-invite-2', 'localtion', rc)
 	if rc<0 then
 		KSR.tm.t_newtran()
