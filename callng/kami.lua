@@ -31,7 +31,7 @@ PROXY_LOOPBACK_IPADDR = '127.0.0.3'
 --  MAIN  BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'new-request', 'ru', KSR.pv.get("$ru"))
+	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
 	sanitize()
 
 	if KSR.is_OPTIONS() then
@@ -198,7 +198,7 @@ end
 function ksr_route_relay()
     local alias = KSR.nathelper.handle_ruri_alias()
 	local relay = KSR.tm.t_relay()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'relay', 'state', relay, 'alias', alias)
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'relay', 'state', relay, 'alias', alias)
 	if relay<0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -247,30 +247,47 @@ function withindlg()
 	KSR.x.exit()
 end
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- DIGEST AUTHENTICATE
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function authenticate()
+    local domain = KSR.kx.get_fhost()
+    local authuser = KSR.kx.get_au()
+    local callid = KSR.kx.get_callid()
+    local authcheck = -9
+    -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
+    if domain and authuser then
+        local code, a1hash = authserect(domain, authuser)
+        -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
+        if code == 1 then
+            authcheck = KSR.auth.pv_auth_check(domain, a1hash, 1, 0)
+            -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
+        end
+    end
+    if authcheck < 0 then
+        KSR.auth.auth_challenge(domain, 0)
+		-- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.challenge')
+		KSR.x.exit()
+    else
+        return authcheck, domain, authuser
+    end
+    -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'state', 'authorised')
+end
+
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- IP AUTHENTICATE
+-- ---------------------------------------------------------------------------------------------------------------------------------
+function iptrust()
+    local domain = KSR.kx.get_fhost()
+    local srcip = KSR.kx.get_srcip()
+    local callid = KSR.kx.get_callid()
+end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- REGISTRAR SERVICE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function registrar()
-    local domain = KSR.kx.get_fhost()
-    local authuser = KSR.kx.get_au()
-    local callid = KSR.kx.get_callid()
-    local authcheck = -9
-    delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
-    if domain and authuser then
-        local code, a1hash = authserect(domain, authuser)
-        delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
-        if code == 1 then
-            authcheck = KSR.auth.pv_auth_check(domain, a1hash, 1, 0)
-            delogify('module', 'callng', 'space', 'kami', 'action', 'register.auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
-        end
-    end
-    if authcheck < 0 then
-        KSR.auth.auth_challenge(domain, 0)
-		delogify('module', 'callng', 'space', 'kami', 'action', 'register.auth.challenge')
-		KSR.x.exit()
-    end
-	delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'state', 'authorised')
+    local _, domain, authuser = authenticate()
 
 	if KSR.isflagset(TRANSACTION_NATSCRIPT_FLAG) then
 		KSR.setbflag(BRANCH_NATOUT_FLAG)
@@ -278,7 +295,7 @@ function registrar()
 	end
 
 	local aorsaved = KSR.registrar.save_uri(LIBRE_USER_LOCATION, "5", "sip:"..authuser.."@"..domain)
-	delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'aorsaved', aorsaved)
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -292,24 +309,7 @@ end
 -- PUBLIC CALL REQUEST
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_public()
-    local domain = KSR.kx.get_fhost()
-    local authuser = KSR.kx.get_au()
-    local callid = KSR.kx.get_callid()
-    local authcheck = -9
-    delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
-    if domain and authuser then
-        local code, a1hash = authserect(domain, authuser)
-        delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
-        if code == 1 then
-            authcheck = KSR.auth.pv_auth_check(domain, a1hash, 1, 0)
-            delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
-        end
-    end
-    if authcheck < 0 then
-        KSR.auth.auth_challenge(domain, 0)
-		delogify('module', 'callng', 'space', 'kami', 'action', 'publiccall.auth.challenge')
-		KSR.x.exit()
-    end
+    authenticate()
 
 	KSR.auth.consume_credentials()
 	KSR.pv.sets('$du', 'sip:'..B2BUA_LOOPBACK_IPADDR..':5060;transport=udp')
@@ -325,9 +325,9 @@ end
 function call_from_switch()
     local swruri = KSR.hdr.get('X-SW-RURI')
     local callid = KSR.kx.get_callid()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'callid', callid, 'swruri', swruri)
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'callid', callid, 'swruri', swruri)
 	local rc = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, "sip:joebiden@libre.sbc")
-	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'location', rc, 'callid', callid)
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'location', rc, 'callid', callid)
 	if rc<0 then
 		KSR.tm.t_newtran()
 		if rc==-1 or rc==-3 then
@@ -348,8 +348,7 @@ end
 -- SIP RESPONSE HANDLING - REPLY ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_reply_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'reply-route')
-
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'route.reply')
     if not KSR.isflagset(SW_TRAFFIC_FLAG) then
         -- if KSR.isflagset(TRANSACTION_NATSCRIPT_FLAG) then
         if KSR.nathelper.nat_uac_test(23)>0 then
@@ -358,6 +357,5 @@ function ksr_reply_route()
             end
         end
     end
-
 	return 1
 end
