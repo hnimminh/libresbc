@@ -9,9 +9,9 @@
 
 require("callng.utilities")
 
-PATTERN = '^[%w_%.%-]$'
+PATTERN = '^[%w_%.%-]+$'
 
-function digestauth(authuser, domain)
+function authserect(domain, authuser)
     if not authuser:match(PATTERN) or not domain:match(PATTERN) then
         return -1
     end
