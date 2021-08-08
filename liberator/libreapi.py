@@ -2100,7 +2100,7 @@ class InboundInterconnection(BaseModel):
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
-    _existenpreanswer = validator('preanswer_class')(check_existent_preanswer)
+    _existenpreanswer = validator('preanswer_class', allow_reuse=True)(check_existent_preanswer)
     _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
@@ -2846,6 +2846,10 @@ class DomainPolicy(BaseModel):
     inbound: InboundPolicy = Field(description='inbound policy')
     outbound: OutboundPolicy = Field(description='outbound policy')
 
+@librerouter.post("/libreapi/access/policy", status_code=200)
+def create_access_policy(reqbody: DomainPolicy, response: Response):
+    return True
+
 class AccessService(BaseModel):
     name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
     desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
@@ -2857,7 +2861,6 @@ class AccessService(BaseModel):
     rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
-    policy: List[DomainPolicy] = Field(description='Domain Policy')
 
 
 @librerouter.post("/libreapi/access/service", status_code=200)
