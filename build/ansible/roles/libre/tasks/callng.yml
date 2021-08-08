@@ -46,5 +46,3 @@
       dest: /usr/local/share/lua/5.2/callng
     - src: "{{destinationdir}}/callng"
       dest: /usr/local/share/freeswitch/scripts/callng
-    - src: "{{destinationdir}}/callng/kami.lua"
-      dest: /usr/local/etc/kamailio/kami.lua
