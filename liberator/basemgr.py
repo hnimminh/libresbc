@@ -93,7 +93,7 @@ def osdelete(filename):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # NETFILTER TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_ENV = Environment(loader=FileSystemLoader('templates/nft'))
+_NFT = Environment(loader=FileSystemLoader('templates/nft'))
 
 @threaded
 def nftupdate():
@@ -134,7 +134,7 @@ def nftupdate():
                                         'farendrtpaddrs': stringify(farendrtpaddrs, ','),
                                         'farendsipaddrs': stringify(farendsipaddrs, ',')}
 
-        template = _ENV.get_template("nftables.j2.conf")
+        template = _NFT.get_template("nftables.j2.conf")
         stream = template.render(sipprofiles=sipprofiles, rtpportrange=rtpportrange)
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
@@ -162,7 +162,7 @@ def nftupdate():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROXY MANAGE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+_KAM = Environment(loader=FileSystemLoader('templates/kamcfg'))
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASES MANAGE HANDLE
