@@ -2808,42 +2808,6 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ACCESS SERVICE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class InboundPolicy(BaseModel):
-    ringready: bool = Field(default=False, description='response 180 ring indication')
-    media_class: str = Field(description='nameid of media class')
-    capacity_class: str = Field(description='nameid of capacity class')
-    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
-    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
-    preanswer_class: str = Field(default=None, description='nameid of preanswer class')
-    # validation
-    _existenpreanswer = validator('preanswer_class')(check_existent_preanswer)
-    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
-    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
-    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
-
-
-class OutboundPolicy(BaseModel):
-    media_class: str = Field(description='nameid of media class')
-    capacity_class: str = Field(description='nameid of capacity class')
-    translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
-    manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
-    # validation
-    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
-    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
-    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
-
-class DomainPolicy(BaseModel):
-    domain: str = Field(regex=_REALM_, max_length=32, description='sip domain')
-    name: str = Field(regex=_NAME_, max_length=32, description='unique alias name for domain')
-    inbound: InboundPolicy = Field(description='inbound policy')
-    outbound: OutboundPolicy = Field(description='outbound policy')
-
-@librerouter.post("/libreapi/access/policy", status_code=200)
-def create_access_policy(reqbody: DomainPolicy, response: Response):
-    return True
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 class Socket(BaseModel):
     transport: TransportEnum = Field(default='udp', description='transport protocol', hidden_field=True)
@@ -3007,7 +2971,7 @@ class AccessService(BaseModel):
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
-    domains: list[str] = Field(min_items=1, max_items=8, description='list of policy domain')
+    domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
         domains = kvs.get('domains')
@@ -3050,7 +3014,7 @@ def create_access_service(reqbody: AccessService, response: Response):
     finally:
         return result
 
-@librerouter.update("/libreapi/access/service/{identifier}", status_code=200)
+@librerouter.put("/libreapi/access/service/{identifier}", status_code=200)
 def update_access_service(reqbody: AccessService, response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -3093,7 +3057,7 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
         return result
 
 
-@librerouter.delete("/libreapi/access/service/{identifier}", status_code=200)
+@librerouter.get("/libreapi/access/service/{identifier}", status_code=200)
 def detail_access_service(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
     result = None
@@ -3141,8 +3105,7 @@ class NetDirectory(BaseModel):
     ip: IPv4Network = Field(description='IPv4 Address for IP auth')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for arriving call')
     transport: TransportEnum = Field(default='udp', description='farend transport protocol for arriving call')
-    # validate
-    _checkdomain = validator('domain', allow_reuse=True)(check_domain)
+
 
 class UserDirectory(BaseModel):
     domain: str = Field(description='user domain')
