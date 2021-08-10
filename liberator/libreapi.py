@@ -2983,7 +2983,7 @@ class AccessService(BaseModel):
             if not rdbconn.exists(f'access:policy:{domain}'):
                 raise ValueError('Undefined domain')
         sip_address = kvs.get('sip_address')
-        if not rdbconn.exists(f'base:netalias:{value}'):
+        if not rdbconn.exists(f'base:netalias:{sip_address}'):
             raise ValueError('nonexistent network alias')
         return kvs
 
