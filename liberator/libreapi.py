@@ -2808,12 +2808,6 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ACCESS SERVICE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-def check_domain(value):
-    if not validators.domain(value):
-        raise ValueError('Invalid domain name, please refer rfc1035')
-    return value
-
 class InboundPolicy(BaseModel):
     ringready: bool = Field(default=False, description='response 180 ring indication')
     media_class: str = Field(description='nameid of media class')
@@ -2849,24 +2843,299 @@ class DomainPolicy(BaseModel):
 @librerouter.post("/libreapi/access/policy", status_code=200)
 def create_access_policy(reqbody: DomainPolicy, response: Response):
     return True
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+class Socket(BaseModel):
+    transport: TransportEnum = Field(default='udp', description='transport protocol', hidden_field=True)
+    port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
+    ip: IPv4Address = Field(description='ip address')
+    force: Optional[bool] = Field(description='set true if you need to add none loopback ip', hidden_field=True)
+    @root_validator()
+    def socket_ip(cls, kvs):
+        force = kvs.pop('force', None)
+        if not force:
+            ip = kvs.get('ip')
+            if not IPv4Network.is_loopback(ip):
+                raise ValueError('ip must be loopback address only')
+        return kvs
+
+class DomainPolicy(BaseModel):
+    domain: str = Field(regex=_REALM_, max_length=32, description='sip domain')
+    srcsocket: Socket = Field(description='listen socket of sip between proxy and b2bua')
+    dstsocket: Socket = Field(description='forward socket of sip between proxy and b2bua')
+    @root_validator()
+    def policy(cls, kvs):
+        domain = kvs.get('domain')
+        if not validators.domain(domain):
+            raise ValueError('Invalid domain name, please refer rfc1035')
+        src_socket: kvs.get('srcsocket')
+        srcsocket = f'{src_socket["transport"]}:{src_socket["ip"]}:{src_socket["port"]}'
+        dst_socket: kvs.get('dstsocket')
+        dstsocket = f'{dst_socket["transport"]}:{dst_socket["ip"]}:{dst_socket["port"]}'
+        if dstsocket == srcsocket:
+            raise ValueError('source and destination sockets are same')
+        kvs.update({'srcsocket': srcsocket, 'dstsocket': dstsocket})
+        return kvs
+
+
+@librerouter.post("/libreapi/access/domain-policy", status_code=200)
+def create_access_domain_policy(reqbody: DomainPolicy, response: Response):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        data = jsonable_encoder(reqbody)
+        domain = data.pop('domain')
+        # verification
+        name_key = f'access:policy:{domain}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent access policy domain'}; return
+        rdbconn.hmset(name_key, data)
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.patch("/libreapi/access/domain-policy", status_code=200)
+def update_access_domain_policy(reqbody: DomainPolicy, response: Response):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        data = jsonable_encoder(reqbody)
+        domain = data.pop('domain')
+        # verification
+        name_key = f'access:policy:{domain}'
+        _engage_key = f'engagement:{name_key}'
+        if not rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access policy domain'}; return
+        rdbconn.hmset(name_key, data)
+        response.status_code, result = 200, {'passed': True}
+
+        layer = rdbconn.srandmember(_engage_key)
+        if layer:
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'policy:domain', 'action': 'update', 'layer': layer, 'requestid': requestid}))
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.delete("/libreapi/access/domain-policy/{domain}", status_code=200)
+def delete_access_domain_policy(response: Response, domain:str=Path(..., regex=_REALM_)):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        _name_key = f'access:policy:{domain}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access policy domain'}; return
+        if rdbconn.scard(_engage_key):
+            response.status_code, result = 403, {'error': 'engaged access policy domain'}; return
+
+        # check if routing records exists in table
+        _DIRECTORY_KEY_PATTERN = f'access:dir:*:{domain}:*'
+        next, records = rdbconn.scan(0, _DIRECTORY_KEY_PATTERN, SCAN_COUNT)
+        if records:
+            response.status_code, result = 400, {'error': 'domain policy in used'}; return
+        else:
+            while next:
+                next, records = rdbconn.scan(next, _DIRECTORY_KEY_PATTERN, SCAN_COUNT)
+                if records:
+                    response.status_code, result = 400, {'error': 'domain policy in used'}; return
+
+        pipe = rdbconn.pipeline()
+        pipe.delete(_name_key)
+        pipe.delete(_engage_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.get("/libreapi/access/domain-policy/{domain}", status_code=200)
+def detail_access_domain_policy(response: Response, domain:str=Path(..., regex=_REALM_)):
+    result = None
+    try:
+        _name_key = f'access:policy:{domain}'
+        _engage_key = f'engagement:{_name_key}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access policy domain'}; return
+        data = rdbconn.hgetall(_name_key)
+        src_socket: listify(data.get('srcsocket'))
+        srcsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[2]}
+        dst_socket: listify(data.get('dstsocket'))
+        dstsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[2]}
+        engagements = rdbconn.smembers(_engage_key)
+        result = {'domain': domain, 'srcsocket': srcsocket, 'dstsocket': dstsocket, 'engagements': engagements}
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.get("/libreapi/access/domain-policy", status_code=200)
+def list_access_domain_policy(response: Response):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        KEYPATTERN = f'access:policy:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+        result = [getaname(mainkey) for mainkey in mainkeys]
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class AccessService(BaseModel):
-    name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service', hidden_field=True)
-    desc: Optional[str] = Field(default='default access service', max_length=64, description='description', hidden_field=True)
-    user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
-    sdp_user: str = Field(default='LibreSDP', max_length=64, description='username with the o= and s= fields in SDP body', hidden_field=True)
+    name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service')
+    desc: Optional[str] = Field(default='default access service', max_length=64, description='description')
     server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
     transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], min_items=1, max_items=3, description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
-    rtp_address: str = Field(description='IP address via NetAlias use for RTP Media')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
+    domains: list[str] = Field(min_items=1, max_items=8, description='list of policy domain')
+    @root_validator
+    def access_service_validation(cls, kvs):
+        domains = kvs.get('domains')
+        for domain in domains:
+            if not validators.domain(domain):
+                raise ValueError('Invalid domain name, please refer rfc1035')
+            if not rdbconn.exists(f'access:policy:{domain}'):
+                raise ValueError('Undefined domain')
+        return kvs
 
 
 @librerouter.post("/libreapi/access/service", status_code=200)
 def create_access_service(reqbody: AccessService, response: Response):
-    return True
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        data = jsonable_encoder(reqbody)
+        name = data.get('name')
+        domains = data.get('domains')
+        # verification
+        name_key = f'access:service:{name}'
+        if rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent access layer'}; return
 
+        domain_engaged_prefix = 'engagement:access:policy'
+        for domain in domains:
+            if rdbconn.srandmember(f'{domain_engaged_prefix}:{domain}'):
+                response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
+        pipe.hmset(name_key, redishash(data))
+        for domain in domains:
+            pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+        # fire-event inbound interconnect create
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'create', 'name': name, 'requestid': requestid}))
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=create_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.update("/libreapi/access/service/{identifier}", status_code=200)
+def update_access_service(reqbody: AccessService, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        data = jsonable_encoder(reqbody)
+        name = data.get('name')
+        domains = data.get('domains')
+        # verification
+        name_key = f'access:service:{name}'
+        _name_key = f'access:service:{identifier}'
+
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access layer'}; return
+        if name != identifier and rdbconn.exists(name_key):
+            response.status_code, result = 403, {'error': 'existent class name'}; return
+
+        domain_engaged_prefix = 'engagement:access:policy'
+        for domain in domains:
+            layer = rdbconn.srandmember(f'{domain_engaged_prefix}:{domain}')
+            if layer and layer != identifier:
+                response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
+
+        _domains = listify(rdbconn.hget(_name_key, 'domains'))
+        for _domain in set(_domains)-set(domain):
+            pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
+        pipe.hmset(name_key, redishash(data))
+        for domain in set(domains)-set(_domains) :
+            pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
+        if name != identifier:
+            pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+        # fire-event inbound interconnect create
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'update', 'name': name, '_name': identifier, 'requestid': requestid}))
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@librerouter.delete("/libreapi/access/service/{identifier}", status_code=200)
+def detail_access_service(response: Response, identifier: str=Path(..., regex=_NAME_)):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        _name_key = f'access:service:{identifier}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access layer'}; return
+        result = jsonhash(rdbconn.hgetall(_name_key))
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=detail_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/access/service", status_code=200)
+def list_access_service(response: Response):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        KEYPATTERN = f'access:service:*'
+        next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
+        while next:
+            next, tmpkeys = rdbconn.scan(next, KEYPATTERN, SCAN_COUNT)
+            mainkeys += tmpkeys
+
+        for mainkey in mainkeys:
+            pipe.hget(mainkey, 'desc')
+        descriptions = pipe.execute()
+
+        data = list()
+        for mainkey, description in zip(mainkeys, descriptions):
+            data.append({'name': getaname(mainkey), 'desc': description})
+
+        response.status_code, result = 200, data
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=list_access_service, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class NetDirectory(BaseModel):
     domain: str = Field(description='user domain')
     ip: IPv4Network = Field(description='IPv4 Address for IP auth')
@@ -2879,8 +3148,15 @@ class UserDirectory(BaseModel):
     domain: str = Field(description='user domain')
     id: str = Field(regex=_NAME_, max_length=16, description='user identifier')
     secret: str = Field(min_length=8, max_length=32, description='password of digest auth for inbound')
-    # validate
-    _checkdomain = validator('domain', allow_reuse=True)(check_domain)
+    @root_validator
+    def user_directory_validation(cls, kvs):
+        domains = kvs.get('domains')
+        for domain in domains:
+            if not validators.domain(domain):
+                raise ValueError('Invalid domain name, please refer rfc1035')
+            if not rdbconn.exists(f'access:policy:{domain}'):
+                raise ValueError('Undefined domain')
+        return kvs
 
 
 @librerouter.post("/libreapi/access/directory/user", status_code=200)
