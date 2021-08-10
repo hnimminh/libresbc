@@ -542,7 +542,7 @@ class SIPProfileModel(BaseModel):
     tls_cert_dir: Optional[str] = Field(min_length=4, max_length=256, description='TLS Certificate dirrectory', hidden_field=True)
     # validation
     @root_validator()
-    def gateway_agreement(cls, values):
+    def sipprofile_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
             # SIP TIMER
