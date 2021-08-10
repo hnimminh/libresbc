@@ -3057,6 +3057,30 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
         return result
 
 
+@librerouter.delete("/libreapi/access/service/{identifier}", status_code=200)
+def delete_access_service(reqbody: AccessService, response: Response, identifier: str=Path(..., regex=_NAME_)):
+    result = None
+    try:
+        _name_key = f'access:service:{identifier}'
+        if not rdbconn.exists(_name_key):
+            response.status_code, result = 403, {'error': 'nonexistent access layer'}; return
+
+        _domains = listify(rdbconn.hget(_name_key, 'domains'))
+        pipe = rdbconn.pipeline()
+        for _domain in _domains:
+            pipe.srem(f'engagement:access:policy:{_domain}', identifier)
+        pipe.delete(_name_key)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+        # fire-event inbound interconnect create
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'delete', '_name': identifier, 'requestid': requestid}))
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=delete_access_service, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
 @librerouter.get("/libreapi/access/service/{identifier}", status_code=200)
 def detail_access_service(response: Response, identifier: str=Path(..., regex=_NAME_)):
     requestid=get_request_uuid()
