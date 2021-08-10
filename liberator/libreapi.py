@@ -2809,9 +2809,9 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 # ACCESS SERVICE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-class Socket(BaseModel):
+class (BaseModel):
     transport: TransportEnum = Field(default='udp', description='transport protocol', hidden_field=True)
-    port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
+    pSocketort: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
     ip: IPv4Address = Field(description='ip address')
     force: Optional[bool] = Field(description='set true if you need to add none loopback ip', hidden_field=True)
     @root_validator()
@@ -3137,12 +3137,11 @@ class UserDirectory(BaseModel):
     secret: str = Field(min_length=8, max_length=32, description='password of digest auth for inbound')
     @root_validator
     def user_directory_validation(cls, kvs):
-        domains = kvs.get('domains')
-        for domain in domains:
-            if not validators.domain(domain):
-                raise ValueError('Invalid domain name, please refer rfc1035')
-            if not rdbconn.exists(f'access:policy:{domain}'):
-                raise ValueError('Undefined domain')
+        domain = kvs.get('domain')
+        if not validators.domain(domain):
+            raise ValueError('Invalid domain name, please refer rfc1035')
+        if not rdbconn.exists(f'access:policy:{domain}'):
+            raise ValueError('Undefined domain')
         return kvs
 
 
