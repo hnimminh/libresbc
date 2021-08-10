@@ -2830,7 +2830,6 @@ class DomainPolicy(BaseModel):
     dstsocket: Socket = Field(description='forward socket of sip between proxy and b2bua')
     @root_validator()
     def policy(cls, kvs):
-        #try:
         kvs = jsonable_encoder(kvs)
         domain = kvs.get('domain')
         if not validators.domain(domain):
@@ -2843,8 +2842,6 @@ class DomainPolicy(BaseModel):
             raise ValueError('source and destination sockets are same')
         kvs.update({'srcsocket': srcsocket, 'dstsocket': dstsocket})
         return kvs
-        #except Exception as e:
-        #    logify(f"module=liberator, space=libreapi, action=policy, exception={e}, traceback={traceback.format_exc()}")
 
 @librerouter.post("/libreapi/access/domain-policy", status_code=200)
 def create_access_domain_policy(reqbody: DomainPolicy, response: Response):
@@ -2968,8 +2965,8 @@ def list_access_domain_policy(response: Response):
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class AccessService(BaseModel):
-    name: str = Field(default='AccessLayer', regex=_NAME_, max_length=32, description='name of access service')
-    desc: Optional[str] = Field(default='default access service', max_length=64, description='description')
+    name: str = Field(regex=_NAME_, max_length=32, description='name of access service')
+    desc: Optional[str] = Field(default='access service', max_length=64, description='description')
     server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
     transports: List[TransportEnum] = Field(default=['udp', 'tcp', 'tls'], min_items=1, max_items=3, description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
@@ -2985,6 +2982,9 @@ class AccessService(BaseModel):
                 raise ValueError('Invalid domain name, please refer rfc1035')
             if not rdbconn.exists(f'access:policy:{domain}'):
                 raise ValueError('Undefined domain')
+        sip_address = kvs.get('sip_address')
+        if not rdbconn.exists(f'base:netalias:{value}'):
+            raise ValueError('nonexistent network alias')
         return kvs
 
 
