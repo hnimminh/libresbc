@@ -2935,10 +2935,10 @@ def detail_access_domain_policy(response: Response, domain:str=Path(..., regex=_
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent access policy domain'}; return
         data = rdbconn.hgetall(_name_key)
-        src_socket: listify(data.get('srcsocket'))
-        srcsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[2]}
-        dst_socket: listify(data.get('dstsocket'))
-        dstsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[2]}
+        src_socket = listify(data.get('srcsocket'))
+        srcsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[dst_socket2]}
+        dst_socket = listify(data.get('dstsocket'))
+        dstsocket = {'transport': [0], 'ip': dst_socket[1], 'port': dst_socket[2]}
         engagements = rdbconn.smembers(_engage_key)
         result = {'domain': domain, 'srcsocket': srcsocket, 'dstsocket': dstsocket, 'engagements': engagements}
         response.status_code = 200
