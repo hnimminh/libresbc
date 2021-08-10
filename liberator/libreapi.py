@@ -2809,17 +2809,18 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 # ACCESS SERVICE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-class (BaseModel):
+class Socket(BaseModel):
     transport: TransportEnum = Field(default='udp', description='transport protocol', hidden_field=True)
-    pSocketort: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
+    port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
     ip: IPv4Address = Field(description='ip address')
     force: Optional[bool] = Field(description='set true if you need to add none loopback ip', hidden_field=True)
     @root_validator()
     def socket_ip(cls, kvs):
+        kvs = jsonable_encoder(kvs)
         force = kvs.pop('force', None)
         if not force:
             ip = kvs.get('ip')
-            if not IPv4Network.is_loopback(ip):
+            if not IPv4Network('127.0.0.0/8').overlaps(IPv4Network(ip)):
                 raise ValueError('ip must be loopback address only')
         return kvs
 
@@ -2829,18 +2830,21 @@ class DomainPolicy(BaseModel):
     dstsocket: Socket = Field(description='forward socket of sip between proxy and b2bua')
     @root_validator()
     def policy(cls, kvs):
+        #try:
+        kvs = jsonable_encoder(kvs)
         domain = kvs.get('domain')
         if not validators.domain(domain):
             raise ValueError('Invalid domain name, please refer rfc1035')
-        src_socket: kvs.get('srcsocket')
+        src_socket = kvs.get('srcsocket')
         srcsocket = f'{src_socket["transport"]}:{src_socket["ip"]}:{src_socket["port"]}'
-        dst_socket: kvs.get('dstsocket')
+        dst_socket = kvs.get('dstsocket')
         dstsocket = f'{dst_socket["transport"]}:{dst_socket["ip"]}:{dst_socket["port"]}'
         if dstsocket == srcsocket:
             raise ValueError('source and destination sockets are same')
         kvs.update({'srcsocket': srcsocket, 'dstsocket': dstsocket})
         return kvs
-
+        #except Exception as e:
+        #    logify(f"module=liberator, space=libreapi, action=policy, exception={e}, traceback={traceback.format_exc()}")
 
 @librerouter.post("/libreapi/access/domain-policy", status_code=200)
 def create_access_domain_policy(reqbody: DomainPolicy, response: Response):
@@ -2974,6 +2978,7 @@ class AccessService(BaseModel):
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
+        kvs = jsonable_encoder(kvs)
         domains = kvs.get('domains')
         for domain in domains:
             if not validators.domain(domain):
