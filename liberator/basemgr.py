@@ -96,9 +96,10 @@ def osdelete(filename):
 _NFT = Environment(loader=FileSystemLoader('templates/nft'))
 
 @threaded
-def nftupdate():
+def nftupdate(data):
     result = True
     try:
+        requestid = data.get('requestid')
         pipe = rdbconn.pipeline()
         # RTP PORTRANGE
         rtpportrange = list(map(fieldjsonify ,rdbconn.hmget('cluster:attributes', 'rtp_start_port', 'rtp_end_port')))
@@ -144,17 +145,17 @@ def nftupdate():
         if stderr:
             result = False
             stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=nftupdate, nftfile={nftfile}, error={stderr}")
+            logify(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, nftfile={nftfile}, error={stderr}")
         else:
             old = osrename('/etc/nftables.conf', '/etc/nftables.conf.old')
             new = osrename('/etc/nftables.conf.new', '/etc/nftables.conf')
             if not (old and new):
-                logify(f"module=liberator, space=basemgr, action=osrename, subtasks=rename:{old}:{new}")
+                logify(f"module=liberator, space=basemgr, action=osrename, requestid={requestid}, subtasks=rename:{old}:{new}")
             else:
-                logify(f"module=liberator, space=basemgr, action=nftupdate, result=success")
+                logify(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=nftupdate, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=basemgr, action=nftupdate, data={data}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -319,8 +320,9 @@ class BaseEventHandler(Thread):
                         else:
                             pass
                         # execute esl commands
-                        data.update({'commands': commands})
-                        fssocket(data)
+                        if commands:
+                            data.update({'commands': commands})
+                            fssocket(data)
                         # firewall update
                         if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _ngstartup]:
                             nftupdate()
