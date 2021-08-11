@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
-from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode
+from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -164,6 +164,51 @@ def nftupdate():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _KAM = Environment(loader=FileSystemLoader('templates/kamcfg'))
 
+@threaded
+def kaminstance(layer):
+    result = True
+    try:
+        pipe = rdbconn.pipeline()
+        kambin = '/usr/local/sbin/kamailio'
+        pidfile = f'/run/kamailio/{layer}.pid'
+        cfgfile = f'/usr/local/etc/kamailio/{layer}.cfg'
+
+        kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
+        netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
+        addresses = [address for address in netaliases if address.get('member') == NODEID][0]
+        kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
+
+        domains = kamcfgs.get('domains')
+        for domain in domains:
+            pipe.hgetall(f'access:policy:{domain}')
+        sockets = pipe.execute()
+        policies = dict()
+        for domain, socket in zip(domains, sockets):
+            srcsocket = listify(socket.get('srcsocket'))
+            dstsocket = listify(socket.get('dstsocket'))
+            policies[domain] = {'srcsocket': {'transport': srcsocket[0], 'ip': srcsocket[1], 'port': srcsocket[2]},
+                                'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
+        kamcfgs.update({'policies': policies})
+
+        template = _KAM.get_template("kamailio.j2.cfg")
+        stream = template.render(kamcfgs=kamcfgs, layer=layer)
+        with open(cfgfile, 'w') as kmf: kmf.write(stream)
+
+        kamrun = Popen([kambin, '-S', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
+        _, stderr = bdecode(kamrun.communicate())
+        if stderr:
+            result = False
+            stderr = stderr.replace('\n', '')
+            logify(f"module=liberator, space=basemgr, action=kaminstance, cfgfile={cfgfile}, error={stderr}")
+        else:
+            logify(f"module=liberator, space=basemgr, action=kaminstance, result=success")
+    except Exception as e:
+        result = False
+        logify(f"module=liberator, space=basemgr, action=kaminstance, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASES MANAGE HANDLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -184,6 +229,8 @@ class BaseEventHandler(Thread):
         _sipprofile     = 'sipprofile'
         _gateway        = 'gateways'
         _ngstartup      = 'ngstartup'
+        _access         = 'access:service'
+        _policy         = 'policy:domain'
         # listen events
         while True:
             try:
@@ -195,6 +242,7 @@ class BaseEventHandler(Thread):
                     if msgtype == "message":
                         data = json.loads(message.get("data"))
                         portion = data.get('portion')
+                        requestid = data.get('requestid')
                         # specify event
                         commands = list()
                         if portion == _netalias:
@@ -261,6 +309,13 @@ class BaseEventHandler(Thread):
                             #commands = ['global_setvar LIBRESBC_FS_STARTUP=COMPLETED']
                             #eventvalue.update({'delay': commands})
                             pass
+                        elif portion == _access:
+                            name = data.get('name')
+                            _name = data.get('_name')
+                            kaminstance({'layer': name, '_layer': _name, 'requestid': requestid})
+                        elif portion == _policy:
+                            layer = data.get('layer')
+                            kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
                         else:
                             pass
                         # execute esl commands
