@@ -2968,9 +2968,11 @@ class AccessService(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of access service')
     desc: Optional[str] = Field(default='access service', max_length=64, description='description')
     server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
+    trying_reason: str = Field(default='Trying', max_length=64, description='Trying Reason', hidden_field=True)
+    natping_from: str = Field(default='sip:keepalive@libre.sbc', max_length=64, description='natping from', hidden_field=True)
     transports: List[TransportEnum] = Field(default=['udp', 'tcp'], min_items=1, max_items=3, description='list of bind transport protocol')
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
-    sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
+    sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True)
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
