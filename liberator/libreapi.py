@@ -3048,9 +3048,10 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
             if layer and layer != identifier:
                 response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
 
-        _domains, _sip_address = listify(rdbconn.hmget(_name_key, 'domains', 'sip_address'))
+        _domains = listify(rdbconn.hget(_name_key, 'domains'))
         for _domain in set(_domains)-set(domain):
             pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
+        _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
 
         pipe.hmset(name_key, redishash(data))
@@ -3073,15 +3074,17 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
 @librerouter.delete("/libreapi/access/service/{identifier}", status_code=200)
 def delete_access_service(reqbody: AccessService, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
+    requestid = get_request_uuid()
     try:
         _name_key = f'access:service:{identifier}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent access layer'}; return
 
-        _domains, _sip_address = listify(rdbconn.hmget(_name_key, 'domains', 'sip_address'))
+        _domains = listify(rdbconn.hget(_name_key, 'domains'))
         pipe = rdbconn.pipeline()
         for _domain in _domains:
             pipe.srem(f'engagement:access:policy:{_domain}', identifier)
+        _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.delete(_name_key)
         pipe.execute()
@@ -3090,7 +3093,7 @@ def delete_access_service(reqbody: AccessService, response: Response, identifier
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'delete', '_name': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_access_service, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=delete_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
