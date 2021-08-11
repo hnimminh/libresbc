@@ -2935,7 +2935,7 @@ def detail_access_domain_policy(response: Response, domain:str=Path(..., regex=_
         src_socket = listify(data.get('srcsocket'))
         srcsocket = {'transport': src_socket[0], 'ip': src_socket[1], 'port': src_socket[2]}
         dst_socket = listify(data.get('dstsocket'))
-        dstsocket = {'transport': [0], 'ip': dst_socket[1], 'port': dst_socket[2]}
+        dstsocket = {'transport': dst_socket[0], 'ip': dst_socket[1], 'port': dst_socket[2]}
         engagements = rdbconn.smembers(_engage_key)
         result = {'domain': domain, 'srcsocket': srcsocket, 'dstsocket': dstsocket, 'engagements': engagements}
         response.status_code = 200
