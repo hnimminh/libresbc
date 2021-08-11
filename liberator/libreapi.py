@@ -2999,6 +2999,7 @@ def create_access_service(reqbody: AccessService, response: Response):
         data = jsonable_encoder(reqbody)
         name = data.get('name')
         domains = data.get('domains')
+        sip_address = data.get('sip_address')
         # verification
         name_key = f'access:service:{name}'
         if rdbconn.exists(name_key):
@@ -3011,6 +3012,7 @@ def create_access_service(reqbody: AccessService, response: Response):
         pipe.hmset(name_key, redishash(data))
         for domain in domains:
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
+        pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event inbound interconnect create
@@ -3030,6 +3032,7 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
         data = jsonable_encoder(reqbody)
         name = data.get('name')
         domains = data.get('domains')
+        sip_address = data.get('sip_address')
         # verification
         name_key = f'access:service:{name}'
         _name_key = f'access:service:{identifier}'
@@ -3045,12 +3048,15 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
             if layer and layer != identifier:
                 response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
 
-        _domains = listify(rdbconn.hget(_name_key, 'domains'))
+        _domains, _sip_address = listify(rdbconn.hmget(_name_key, 'domains', 'sip_address'))
         for _domain in set(_domains)-set(domain):
             pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
+        pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
+
         pipe.hmset(name_key, redishash(data))
         for domain in set(domains)-set(_domains) :
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
+        pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         if name != identifier:
             pipe.delete(_name_key)
         pipe.execute()
@@ -3072,10 +3078,11 @@ def delete_access_service(reqbody: AccessService, response: Response, identifier
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent access layer'}; return
 
-        _domains = listify(rdbconn.hget(_name_key, 'domains'))
+        _domains, _sip_address = listify(rdbconn.hmget(_name_key, 'domains', 'sip_address'))
         pipe = rdbconn.pipeline()
         for _domain in _domains:
             pipe.srem(f'engagement:access:policy:{_domain}', identifier)
+        pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
