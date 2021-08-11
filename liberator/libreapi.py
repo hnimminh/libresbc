@@ -3010,6 +3010,7 @@ def create_access_service(reqbody: AccessService, response: Response):
             if rdbconn.srandmember(f'{domain_engaged_prefix}:{domain}'):
                 response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
         pipe.hmset(name_key, redishash(data))
+        pipe.sadd('nameset:access:service', name)
         for domain in domains:
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
@@ -3053,7 +3054,8 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
             pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
         _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
-
+        pipe.srem(f'nameset:access:service', identifier)
+        pipe.sadd(f'nameset:access:service', name)
         pipe.hmset(name_key, redishash(data))
         for domain in set(domains)-set(_domains) :
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
@@ -3072,7 +3074,7 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
 
 
 @librerouter.delete("/libreapi/access/service/{identifier}", status_code=200)
-def delete_access_service(reqbody: AccessService, response: Response, identifier: str=Path(..., regex=_NAME_)):
+def delete_access_service(response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
     requestid = get_request_uuid()
     try:
@@ -3086,6 +3088,7 @@ def delete_access_service(reqbody: AccessService, response: Response, identifier
             pipe.srem(f'engagement:access:policy:{_domain}', identifier)
         _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
+        pipe.srem(f'nameset:access:service', identifier)
         pipe.delete(_name_key)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
