@@ -166,46 +166,73 @@ def nftupdate(data):
 _KAM = Environment(loader=FileSystemLoader('templates/kamcfg'))
 
 @threaded
-def kaminstance(layer):
+def kaminstance(data):
     result = True
     try:
-        pipe = rdbconn.pipeline()
-        kambin = '/usr/local/sbin/kamailio'
-        pidfile = f'/run/kamailio/{layer}.pid'
-        cfgfile = f'/usr/local/etc/kamailio/{layer}.cfg'
+        PIDDIR = f'/run/kamailio'
+        CFGDIR = f'/usr/local/etc/kamailio'
+        requestid = data.get('requestid')
+        layer = data.get('layer')
+        _layer = data.get('_layer')
+        # ------------------------------------------------------------
+        # TEARDOWN THE EXISTENT INSTANCE
+        # ------------------------------------------------------------
+        if _layer:
+            pidkill = '/bin/pkill'
+            pidfile = f'{PIDDIR}/{_layer}.pid'
+            cfgfile = f'{CFGDIR}/{_layer}.cfg'
 
-        kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
-        netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
-        addresses = [address for address in netaliases if address.get('member') == NODEID][0]
-        kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
+            kamend = Popen([pidkill, '-F', pidfile], stdout=PIPE, stderr=PIPE)
+            _, stderr = bdecode(kamend.communicate())
+            if stderr:
+                result = False
+                stderr = stderr.replace('\n', '')
+                logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
+            else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
 
-        domains = kamcfgs.get('domains')
-        for domain in domains:
-            pipe.hgetall(f'access:policy:{domain}')
-        sockets = pipe.execute()
-        policies = dict()
-        for domain, socket in zip(domains, sockets):
-            srcsocket = listify(socket.get('srcsocket'))
-            dstsocket = listify(socket.get('dstsocket'))
-            policies[domain] = {'srcsocket': {'transport': srcsocket[0], 'ip': srcsocket[1], 'port': srcsocket[2]},
-                                'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
-        kamcfgs.update({'policies': policies})
+            cfgdel = osdelete(cfgfile)
+            logify(f"module=liberator, space=basemgr, action=kaminstance.cfgdel, requestid={requestid}, result={'success' if cfgdel else 'failure'}")
+        # ------------------------------------------------------------
+        # LAUNCH THE NEW INSTANCE
+        # ------------------------------------------------------------
+        if layer:
+            pipe = rdbconn.pipeline()
+            kambin = '/usr/local/sbin/kamailio'
+            pidfile = f'{PIDDIR}/{layer}.pid'
+            cfgfile = f'{CFGDIR}/{layer}.cfg'
 
-        template = _KAM.get_template("kamailio.j2.cfg")
-        stream = template.render(kamcfgs=kamcfgs, layer=layer)
-        with open(cfgfile, 'w') as kmf: kmf.write(stream)
+            kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
+            netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
+            addresses = [address for address in netaliases if address.get('member') == NODEID][0]
+            kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
 
-        kamrun = Popen([kambin, '-S', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
-        _, stderr = bdecode(kamrun.communicate())
-        if stderr:
-            result = False
-            stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=kaminstance, cfgfile={cfgfile}, error={stderr}")
-        else:
-            logify(f"module=liberator, space=basemgr, action=kaminstance, result=success")
+            domains = kamcfgs.get('domains')
+            for domain in domains:
+                pipe.hgetall(f'access:policy:{domain}')
+            sockets = pipe.execute()
+            policies = dict()
+            for domain, socket in zip(domains, sockets):
+                srcsocket = listify(socket.get('srcsocket'))
+                dstsocket = listify(socket.get('dstsocket'))
+                policies[domain] = {'srcsocket': {'transport': srcsocket[0], 'ip': srcsocket[1], 'port': srcsocket[2]},
+                                    'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
+            kamcfgs.update({'policies': policies})
+
+            template = _KAM.get_template("kamailio.j2.cfg")
+            stream = template.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR)
+            with open(cfgfile, 'w') as kmf: kmf.write(stream)
+
+            kamrun = Popen([kambin, '-S', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
+            _, stderr = bdecode(kamrun.communicate())
+            if stderr:
+                result = False
+                stderr = stderr.replace('\n', '')
+                logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, cfgfile={cfgfile}, error={stderr}")
+            else:
+                logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=kaminstance, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=basemgr, action=kaminstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
