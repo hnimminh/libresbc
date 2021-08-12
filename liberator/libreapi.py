@@ -2376,7 +2376,7 @@ class RoutingVariableEnum(str, Enum):
 class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    variables: Optional[List[RoutingVariableEnum]] = Field(min_items=1, max_items=5, description='sip variable for routing base')
+    variables: Optional[List[str]] = Field(min_items=1, max_items=5, description='sip variable for routing base, eg: cidnumber, cidname, dstnumber, intconname, realm')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
     routes: Optional[RouteModel] = Field(description='route model data')
     # validation

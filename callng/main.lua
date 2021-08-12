@@ -79,13 +79,12 @@ local function main()
         -- routing
         local routingrules
         local routingname = InLeg:getVariable("x-routing-plan")
-        local routingjson = {cidname=NgVars.cidname, cidnumber=NgVars.cidnumber, dstnumber=NgVars.dstnumber, intconname=NgVars.intconname, realm=NgVars.realm}
-        NgVars.route1, NgVars.route2, routingrules = routing_query(routingname, routingjson)
+        NgVars.route1, NgVars.route2, routingrules = routing_query(routingname, NgVars)
 
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
 
-        logify('module', 'callng', 'space', 'main', 'action', 'routing_query', 'seshid', NgVars.seshid, 'uuid', uuid, 'routingname', routingname, 'routingjson', json.encode(routingjson), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
+        logify('module', 'callng', 'space', 'main', 'action', 'routing_query', 'seshid', NgVars.seshid, 'uuid', uuid, 'routingname', routingname, 'NgVars', json.encode(NgVars), 'route1', NgVars.route1, 'route2', NgVars.route2, 'routingrules', routingrulestr)
         if not (NgVars.route1 and NgVars.route2) then
             HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; NgVars.LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
