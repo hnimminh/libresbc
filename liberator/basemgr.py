@@ -179,19 +179,20 @@ def kaminstance(data):
         # ------------------------------------------------------------
         if _layer:
             pidkill = '/bin/pkill'
-            pidfile = f'{PIDDIR}/{_layer}.pid'
-            cfgfile = f'{CFGDIR}/{_layer}.cfg'
+            _pidfile = f'{PIDDIR}/{_layer}.pid'
+            _cfgfile = f'{CFGDIR}/{_layer}.cfg'
+            _luafile = f'{CFGDIR}/{layer}.lua'
 
-            kamend = Popen([pidkill, '-F', pidfile], stdout=PIPE, stderr=PIPE)
+            kamend = Popen([pidkill, '-F', _pidfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamend.communicate())
             if stderr:
-                result = False
                 stderr = stderr.replace('\n', '')
                 logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
             else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
 
-            cfgdel = osdelete(cfgfile)
-            logify(f"module=liberator, space=basemgr, action=kaminstance.cfgdel, requestid={requestid}, result={'success' if cfgdel else 'failure'}")
+            cfgdel = osdelete(_pidfile)
+            luadel = osdelete(_luafile)
+            logify(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
         # ------------------------------------------------------------
         # LAUNCH THE NEW INSTANCE
         # ------------------------------------------------------------
@@ -200,6 +201,7 @@ def kaminstance(data):
             kambin = '/usr/local/sbin/kamailio'
             pidfile = f'{PIDDIR}/{layer}.pid'
             cfgfile = f'{CFGDIR}/{layer}.cfg'
+            luafile = f'{CFGDIR}/{layer}.lua'
 
             kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
             netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
@@ -211,16 +213,23 @@ def kaminstance(data):
                 pipe.hgetall(f'access:policy:{domain}')
             sockets = pipe.execute()
             policies = dict()
+            swipaddrs = set()
             for domain, socket in zip(domains, sockets):
                 srcsocket = listify(socket.get('srcsocket'))
                 dstsocket = listify(socket.get('dstsocket'))
                 policies[domain] = {'srcsocket': {'transport': srcsocket[0], 'ip': srcsocket[1], 'port': srcsocket[2]},
                                     'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
+                swipaddrs.add(dstsocket[1])
             kamcfgs.update({'policies': policies})
 
-            template = _KAM.get_template("kamailio.j2.cfg")
-            stream = template.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR)
-            with open(cfgfile, 'w') as kmf: kmf.write(stream)
+            # configuration
+            cfgtemplate = _KAM.get_template("kamailio.j2.cfg")
+            cfgstream = cfgtemplate.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR)
+            with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
+            # localization
+            luatemplate = _KAM.get_template("layer.j2.lua")
+            luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), layer=layer)
+            with open(luafile, 'w') as lf: lf.write(luastream)
 
             kamrun = Popen([kambin, '-S', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamrun.communicate())
