@@ -223,7 +223,7 @@ def kaminstance(data):
             kamcfgs.update({'policies': policies})
 
             # configuration
-            cfgtemplate = _KAM.get_template("kamailio.j2.cfg")
+            cfgtemplate = _KAM.get_template("layer.j2.cfg")
             cfgstream = cfgtemplate.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR)
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
