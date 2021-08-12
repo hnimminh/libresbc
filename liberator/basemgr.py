@@ -231,14 +231,13 @@ def kaminstance(data):
             luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), layer=layer)
             with open(luafile, 'w') as lf: lf.write(luastream)
 
-            kamrun = Popen([kambin, '-S', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
+            kamrun = Popen([kambin, '-S', '-M', '12', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamrun.communicate())
             if stderr:
                 result = False
                 stderr = stderr.replace('\n', '')
                 logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, cfgfile={cfgfile}, error={stderr}")
-            else:
-                logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
+            else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
     except Exception as e:
         result = False
         logify(f"module=liberator, space=basemgr, action=kaminstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
