@@ -17,7 +17,7 @@
     - role: freeswitch
       tags: [platform, application]
     - role: kamailio
-      tags: [platform, application]
+      tags: [platform]
     - role: nftables
       tags: [platform, application]
     - role: captagent
