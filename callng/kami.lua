@@ -28,7 +28,7 @@ LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 --  MAIN  BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid(), 'pstngw', KSR.pv.get("$var(pstngw)"), 'USRLOC', LIBRE_USER_LOCATION, 'LAYER', LAYER)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid(), 'USRLOC', LIBRE_USER_LOCATION, 'LAYER', LAYER)
 
     sanitize()
 
@@ -322,22 +322,19 @@ end
 -- SW CALL REQUEST
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_switch()
-    local swruri = KSR.hdr.get('X-SW-RURI')
-    local callid = KSR.kx.get_callid()
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'callid', callid, 'swruri', swruri)
-	local rc = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, "sip:joebiden@libre.sbc")
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'location', rc, 'callid', callid)
-	if rc<0 then
+    local sipuser = KSR.hdr.get('X-USER-ID')
+	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'state', state, 'callid', KSR.kx.get_callid())
+	if state<0 then
 		KSR.tm.t_newtran()
-		if rc==-1 or rc==-3 then
+		if state==-1 or state==-3 then
 			KSR.sl.send_reply(404, "Not Found")
 			KSR.x.exit()
-		elseif rc==-2 then
+		elseif state==-2 then
 			KSR.sl.send_reply(405, "Method Not Allowed")
 			KSR.x.exit()
 		end
 	end
-
     -- KSR.dialog.dlg_manage()
 	ksr_route_relay()
 end
