@@ -22,17 +22,15 @@ TRANSACTION_NATSCRIPT_FLAG = 5
 BRANCH_NATOUT_FLAG = 6
 BRANCH_NATSIPPING_FLAG = 7
 SW_TRAFFIC_FLAG = 9
-
-LIBRE_USER_LOCATION = 'LIBREUL'
-B2BUA_LOOPBACK_IPADDR = '127.0.0.2'
-PROXY_LOOPBACK_IPADDR = '127.0.0.3'
+LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
 --  MAIN  BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
-	sanitize()
+	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid(), 'pstngw', KSR.pv.get("$var(pstngw)"), 'USRLOC', LIBRE_USER_LOCATION, 'LAYER', LAYER)
+
+    sanitize()
 
 	if KSR.is_OPTIONS() then
 		keepalive()
@@ -153,7 +151,7 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function srctraffic()
 	local srcip = KSR.pv.get('$si')
-	if srcip == B2BUA_LOOPBACK_IPADDR then
+	if ismeberof(B2BUA_LOOPBACK_IPADDRS, srcip) then
 		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
@@ -309,11 +307,12 @@ end
 -- PUBLIC CALL REQUEST
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function call_from_public()
-    authenticate()
-
+    local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
-	KSR.pv.sets('$du', 'sip:'..B2BUA_LOOPBACK_IPADDR..':5060;transport=udp')
-	KSR.pv.sets('$fs', 'udp:'..PROXY_LOOPBACK_IPADDR..':5060')
+    local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
+	KSR.pv.sets('$du', 'sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
+    local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
+	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
     -- KSR.dialog.dlg_manage()
 	ksr_route_relay()
 end
