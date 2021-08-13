@@ -30,6 +30,26 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
 LIBRESBC_ENGINE_STARTUP = False
 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# OS
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+def osrename(old, new):
+    try:
+        if os.path.exists(old):
+            os.rename(old, new)
+    except:
+        return False
+    return True
+
+
+def osdelete(filename):
+    try:
+        if os.path.exists(filename):
+            os.remove(filename)
+    except:
+        return False
+    return True
+
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # B2BUA CONTROL
@@ -67,27 +87,6 @@ def fssocket(reqdata):
     finally:
         if fs and fs.connected: fs.stop()
         return result
-
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# OS
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-def osrename(old, new):
-    try:
-        if os.path.exists(old):
-            os.rename(old, new)
-    except:
-        return False
-    return True
-
-
-def osdelete(filename):
-    try:
-        if os.path.exists(filename):
-            os.remove(filename)
-    except:
-        return False
-    return True
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -248,7 +247,6 @@ def kaminstance(data):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 @threaded
 def basestartup():
     result = False
@@ -367,7 +365,6 @@ class BaseEventHandler(Thread):
                             # reload xml & distributor
                             commands += ['reloadxml', 'distributor_ctl reload']
                         elif portion == _ngstartup:
-                            # pre-setup environment: voice/firewall/service
                             #commands = ['global_setvar LIBRESBC_FS_STARTUP=COMPLETED']
                             #eventvalue.update({'delay': commands})
                             pass
@@ -385,7 +382,7 @@ class BaseEventHandler(Thread):
                             data.update({'commands': commands})
                             fssocket(data)
                         # firewall update
-                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _ngstartup]:
+                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile]:
                             nftupdate(data)
             except redis.RedisError as e:
                 time.sleep(5)
