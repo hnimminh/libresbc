@@ -312,8 +312,9 @@ end
 function call_from_public()
     local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
+
     local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
-	KSR.pv.sets('$du', 'sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
+    KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
     local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
 	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
     -- KSR.dialog.dlg_manage()
