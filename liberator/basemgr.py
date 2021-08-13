@@ -60,8 +60,8 @@ def fssocket(reqdata):
     try:
         commands = reqdata.get('commands')
         requestid = reqdata.get('requestid')
-        defer = reqdata.get('defer')
-        if defer: time.sleep(defer)
+        delay = reqdata.get('delay')
+        if delay: time.sleep(delay)
         # connecting
         fs = redfs.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET, timeout=10)
         for _ in range(0,3):
