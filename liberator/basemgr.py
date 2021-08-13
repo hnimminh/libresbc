@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
-from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash
+from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -207,6 +207,9 @@ def kaminstance(data):
             netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
             addresses = [address for address in netaliases if address.get('member') == NODEID][0]
             kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
+
+            if 'topology_hiding' in kamcfgs:
+                kamcfgs.update({'randomsecret': randomstr()})
 
             domains = kamcfgs.get('domains')
             for domain in domains:
