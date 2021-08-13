@@ -17,7 +17,7 @@ import uvicorn
 
 from utilities import logify, debugy
 from api import httpapi
-from basemgr import BaseEventHandler
+from basemgr import BaseEventHandler, basestartup
 from cdr import CDRMaster
 
 #---------------------------------------------------------------------------------------------------------------------------
@@ -27,6 +27,7 @@ if __name__ == '__main__':
     try:
         debugy('module=liberator, space=main, action=initialize')
         # EVENT HANDLER
+        basestartup()
         eventthead = BaseEventHandler()
         eventthead.start()
         # CDR HANDLER

@@ -246,6 +246,32 @@ def kaminstance(data):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# BASE RESOURCE STARTUP
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@threaded
+def basestartup():
+    result = False
+    try:
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup")
+        requestid = '00000000-0000-0000-0000-111111111111'
+        portion = 'liberator:startup'
+
+        nftupdate({'portion': portion, 'requestid': requestid})
+        layers = rdbconn.smembers('nameset:access:service')
+        for layer in layers:
+            kaminstance({'layer': layer, '_layer': layer, 'portion': portion, 'requestid': requestid})
+        result = True
+    except redis.RedisError as e:
+        time.sleep(10)
+    except Exception as e:
+        logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+        time.sleep(5)
+    finally:
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'success' if result else 'failure'}")
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASES MANAGE HANDLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class BaseEventHandler(Thread):
