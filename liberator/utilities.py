@@ -9,6 +9,7 @@
 
 import syslog
 import json
+import random
 from threading import Thread
 from uuid import uuid4
 from hashlib import md5
@@ -142,6 +143,11 @@ def removekey(keys, data):
         data.pop(key, None)
     return data
 
+# random string
+def randomstr(size=8, chars='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz'):
+    return ''.join(random.choice(chars) for _ in range(size))
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 def threaded(func):
     def wrapper(*args, **kwargs):
         thread = Thread(target=func, args=args, kwargs=kwargs)
