@@ -195,7 +195,7 @@ def sip(request: Request, response: Response):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        fssocket({'commands': fscommands, 'requestid': get_request_uuid()})
+        fssocket({'delay': 30, 'commands': fscommands, 'requestid': get_request_uuid()})
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
