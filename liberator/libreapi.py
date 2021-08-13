@@ -3050,14 +3050,14 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
                 response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
 
         _domains = listify(rdbconn.hget(_name_key, 'domains'))
-        for _domain in set(_domains)-set(domain):
+        for _domain in _domains:
             pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
         _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'nameset:access:service', identifier)
         pipe.sadd(f'nameset:access:service', name)
         pipe.hmset(name_key, redishash(data))
-        for domain in set(domains)-set(_domains) :
+        for domain in domains:
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
         if name != identifier:

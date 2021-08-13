@@ -181,7 +181,7 @@ def kaminstance(data):
             pidkill = '/bin/pkill'
             _pidfile = f'{PIDDIR}/{_layer}.pid'
             _cfgfile = f'{CFGDIR}/{_layer}.cfg'
-            _luafile = f'{CFGDIR}/{layer}.lua'
+            _luafile = f'{CFGDIR}/{_layer}.lua'
 
             kamend = Popen([pidkill, '-F', _pidfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamend.communicate())
@@ -190,7 +190,7 @@ def kaminstance(data):
                 logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
             else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
 
-            cfgdel = osdelete(_pidfile)
+            cfgdel = osdelete(_cfgfile)
             luadel = osdelete(_luafile)
             logify(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
         # ------------------------------------------------------------
