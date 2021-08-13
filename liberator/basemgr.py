@@ -360,11 +360,12 @@ class BaseEventHandler(Thread):
                             fssocket(data)
                         # firewall update
                         if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _ngstartup]:
-                            nftupdate()
+                            nftupdate(data)
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
                 logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
                 time.sleep(2)
             finally:
-                pubsub.close()
+                if pubsub in locals():
+                    pubsub.close()
