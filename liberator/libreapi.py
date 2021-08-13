@@ -2974,6 +2974,7 @@ class AccessService(BaseModel):
     sip_address: str = Field(description='IP address via NetAlias use for SIP Signalling')
     sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True)
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
+    topology_hiding: Optional[str] = Field(description='topology hiding, you should never need to use', hidden_field=True)
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
@@ -2987,6 +2988,8 @@ class AccessService(BaseModel):
         sip_address = kvs.get('sip_address')
         if not rdbconn.exists(f'base:netalias:{sip_address}'):
             raise ValueError('nonexistent network alias')
+        topology_hiding = kvs.pop('topology_hiding', None)
+        if topology_hiding: kvs['topology_hiding'] = topology_hiding
         return kvs
 
 
@@ -3049,10 +3052,11 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
             if layer and layer != identifier:
                 response.status_code, result = 403, {'error': 'domain is used by other access service layer'}; return
 
-        _domains = listify(rdbconn.hget(_name_key, 'domains'))
+        _data = jsonhash(rdbconn.hgetall(_name_key))
+        _domains = _data.get('domains')
+        _sip_address = _data.get('sip_address')
         for _domain in _domains:
             pipe.srem(f'{domain_engaged_prefix}:{_domain}', identifier)
-        _sip_address = rdbconn.hget(_name_key, 'sip_address')
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'nameset:access:service', identifier)
         pipe.sadd(f'nameset:access:service', name)
@@ -3060,6 +3064,10 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
         for domain in domains:
             pipe.sadd(f'{domain_engaged_prefix}:{domain}', name)
         pipe.sadd(f'engagement:base:netalias:{sip_address}', name_key)
+        # remove the unintended-field
+        for _field in _data:
+            if _field not in data:
+                pipe.hdel(_name_key, _field)
         if name != identifier:
             pipe.delete(_name_key)
         pipe.execute()
