@@ -224,7 +224,7 @@ def kaminstance(data):
 
             # configuration
             cfgtemplate = _KAM.get_template("layer.j2.cfg")
-            cfgstream = cfgtemplate.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR)
+            cfgstream = cfgtemplate.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=NODEID)
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
             luatemplate = _KAM.get_template("layer.j2.lua")
