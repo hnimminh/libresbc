@@ -252,7 +252,7 @@ def kaminstance(data):
 def basestartup():
     result = False
     try:
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup")
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         requestid = '00000000-0000-0000-0000-111111111111'
         portion = 'liberator:startup'
 
@@ -267,7 +267,7 @@ def basestartup():
         logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
         time.sleep(5)
     finally:
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'success' if result else 'failure'}")
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'completed' if result else 'dropped'}")
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
