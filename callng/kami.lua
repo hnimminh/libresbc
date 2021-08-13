@@ -194,7 +194,10 @@ end
 -- serial forking, RTP relaying handling, a.s.o.
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_route_relay()
-    local alias = KSR.nathelper.handle_ruri_alias()
+    if not KSR.isdsturiset() then
+		KSR.nathelper.handle_ruri_alias()
+	end
+    -- local alias = KSR.nathelper.handle_ruri_alias()
 	local relay = KSR.tm.t_relay()
 	-- delogify('module', 'callng', 'space', 'kami', 'action', 'relay', 'state', relay, 'alias', alias)
 	if relay<0 then
