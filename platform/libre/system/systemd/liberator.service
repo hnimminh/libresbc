@@ -5,12 +5,9 @@ Before=freeswitch.service
 
 [Service]
 Type=simple
-#Type=forking
 User=root
 Group=root
-#Environment="ENV=cloud"
 WorkingDirectory={{destinationdir}}/liberator
-#ExecStart=/usr/local/bin/liberator.sh
 ExecStart=/usr/bin/python3 {{destinationdir}}/liberator/main.py
 
 SyslogIdentifier=libresbc
