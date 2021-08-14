@@ -249,6 +249,27 @@ def kaminstance(data):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# PROXY MANAGE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@threaded
+def fsinstance(data=None):
+    result = True
+    try:
+        fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
+        _, stderr = bdecode(fsrun.communicate())
+        if stderr:
+            result = False
+            stderr = stderr.replace('\n', '')
+            logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
+        else: logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, result=success")
+    except Exception as e:
+        result = False
+        logify(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
@@ -256,13 +277,14 @@ def basestartup():
     result = False
     try:
         logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
-        requestid = '00000000-0000-0000-0000-111111111111'
-        portion = 'liberator:startup'
+        data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-111111111111'}
 
-        nftupdate({'portion': portion, 'requestid': requestid})
+        # fsinstance(data)
+        nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
         for layer in layers:
-            kaminstance({'layer': layer, '_layer': layer, 'portion': portion, 'requestid': requestid})
+            data.update({'layer': layer, '_layer': layer})
+            kaminstance(data)
         result = True
     except redis.RedisError as e:
         time.sleep(10)
