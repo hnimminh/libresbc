@@ -28,7 +28,7 @@ LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 --  MAIN  BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid(), 'USRLOC', LIBRE_USER_LOCATION, 'LAYER', LAYER)
+	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
 
     sanitize()
 
@@ -92,9 +92,9 @@ end
 --  INITIAL SANITY SECURITY CHECK & POLICY
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function sanitize()
+    local srcip = KSR.kx.get_srcip()
 	-- rate limiting anti-flooding attached, optimize them later
 	if not KSR.is_myself_srcip() then
-		local srcip = KSR.kx.get_srcip()
 		if KSR.htable.sht_match_name("ipban", "eq", srcip) > 0 then
 			-- ip is already blocked
 			delogify('module', 'callng', 'space', 'kami', 'action', 'blocked', 'method', KSR.kx.get_method(), 'fromuri', KSR.kx.get_furi(), 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
@@ -106,43 +106,52 @@ function sanitize()
 			KSR.x.exit()
 		end
 	end
-
 	-- blacked list user agent (hack, pentest, ddos)
-	local ua = KSR.kx.gete_ua()
-	if string.find(ua, "friendly")
+    local ua = KSR.kx.gete_ua()
+    if string.find(ua, "friendly")
 		or string.find(ua, "sipsak")
 		or string.find(ua, "siparmyknife")
 		or string.find(ua, "VaxIPUserAgent")
 		or string.find(ua, "VaxSIPUserAgent")
 		or string.find(ua, "scanner")
 		or string.find(ua, "sipcli")
+        or string.find(ua, "test")
 		or string.find(ua, "sipvicious") then
 		KSR.drop()
 		KSR.x.exit()
 	end
-
+    -- SANITY TEST
 	if KSR.kx.get_msglen()>4096 then
 		KSR.sl.sl_send_reply(513,"Message Too Large")
 		KSR.x.exit()
 	end
-
 	if KSR.maxfwd.process_maxfwd(10)<0 then
 		KSR.sl.sl_send_reply(483,"Too Many Hops")
 		KSR.x.exit()
 	end
-
-	if KSR.sanity.sanity_check(1511, 7)<0 then
+	if KSR.sanity.sanity_check(17895, 7)<0 then
 		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
 		KSR.x.exit()
 	end
-
+    -- CVE-2018-8828 [Fixed Already]
+    local ruser = KSR.kx.get_ruser()
+    if ruser and #ruser > 32 then
+        KSR.sl.sl_send_reply(488, "Not Acceptable Here")
+        KSR.x.exit()
+    end
+    -- SPOOFING DECTION
+    if KSR.hdr.is_present('Record-Route') then
+        if string.find(KSR.hdr.get_idx('Record-Route', 0), srcip) then
+            KSR.sl.sl_send_reply(488, "Not Acceptable Here")
+            KSR.x.exit()
+        end
+    end
 	-- Do not support yet these method {M:MESSAGE, N:NOTIFY, P:PUBLISH, F:REFER, S:SUBSCRIBE}
 	-- file the feature request if you wish them to be supported
     if KSR.is_method_in("MNPFS") then
-		KSR.sl.sl_send_reply("405", "Method Not Allowed")
+		KSR.sl.sl_send_reply(405, "Method Not Allowed")
 		KSR.x.exit()
 	end
-
 end
 
 
