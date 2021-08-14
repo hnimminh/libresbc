@@ -1,4 +1,4 @@
-json = require("json")
+json = require('json')
 
 NODEID = '{{nodeid}}'
 LAYER = '{{layer}}'
