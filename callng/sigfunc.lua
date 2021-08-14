@@ -6,8 +6,8 @@
 -- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
-
 require("callng.utilities")
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
 
 PATTERN = '^[%w_%.%-]+$'
 INJECTION = "[%-%=%#%'%%]"
@@ -23,10 +23,11 @@ function authserect(domain, authuser)
     if a1hash then
         return 1, a1hash
     else
-        return 0
+        return -1
     end
-    return -1
+    return 0
 end
+
 
 function ipauth(ipaddr, domain)
     if not domain:match(PATTERN) then
@@ -41,9 +42,11 @@ function ipauth(ipaddr, domain)
     return -2
 end
 
-function antiattack()
-end
 
-function bruteforce()
+function secpublish(srcip, useragent, authuser, layer)
+    local channel = 'kami:security'
+    local data = json.encode({portion='authfailure', srcip=srcip, useragent=useragent, authuser=authuser, layer=layer})
+    rdbconn:publish(channel, data)
+    logify('module', 'callng', 'space', 'kami', 'action', 'secpublish', 'channel', channel, 'data', data)
 end
 
