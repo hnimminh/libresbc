@@ -40,7 +40,11 @@ function ksr_request_route()
         end
 	end
 
-	srctraffic()
+    --  DISTINCT AND TAG TRAFFIC
+    if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
+        KSR.setflag(SW_TRAFFIC_FLAG)
+    end
+
 	nathandle()
 
 	if KSR.is_CANCEL() then
@@ -155,17 +159,6 @@ function sanitize()
     if KSR.is_method_in("MNPFS") then
 		KSR.sl.sl_send_reply(405, "Method Not Allowed")
 		KSR.x.exit()
-	end
-end
-
-
--- ---------------------------------------------------------------------------------------------------------------------------------
---  DISTINCT AND TAG TRAFFIC
--- ---------------------------------------------------------------------------------------------------------------------------------
-function srctraffic()
-	local srcip = KSR.pv.get('$si')
-	if ismeberof(B2BUA_LOOPBACK_IPADDRS, srcip) then
-		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
 
