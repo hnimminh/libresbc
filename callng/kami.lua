@@ -28,7 +28,7 @@ LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 --  MAIN BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
 
     --  DISTINCT AND TAG TRAFFIC
     if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
@@ -44,7 +44,6 @@ function ksr_request_route()
             KSR.x.exit()
         end
 	end
-
 
 	nathandle()
 
@@ -104,14 +103,21 @@ function sanitize()
     local srcip = KSR.kx.get_srcip()
     local ua = KSR.kx.get_ua()
 	-- anti-flooding attack
-	if not KSR.is_myself_srcip() or not KSR.isflagset(SW_TRAFFIC_FLAG) then
+	if not KSR.is_myself_srcip() and not KSR.isflagset(SW_TRAFFIC_FLAG) then
 		if KSR.htable.sht_match_name("antiflooding", "eq", srcip) > 0 then
-			delogify('module', 'callng', 'space', 'kami', 'action', 'ban', 'srcip', srcip, 'useragent', ua)
+			delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.banned', 'srcip', srcip, 'useragent', ua)
 			KSR.x.exit()
 		end
 		if KSR.pike.pike_check_req() < 0 then
-            delogify('module', 'callng', 'space', 'kami', 'action', 'pike', 'srcip', srcip, 'useragent', ua)
+            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.detected', 'srcip', srcip, 'useragent', ua)
 			KSR.htable.sht_seti("antiflooding", srcip, 1)
+			KSR.x.exit()
+		end
+        local failcount = KSR.htable.sht_get("authfailure", srcip)
+        if failcount and failcount >= 3 then
+            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', ua, 'failcount', failcount)
+            if failcount >= 7 then KSR.htable.sht_seti("authfailure", srcip, 7)
+            else KSR.htable.sht_inc("authfailure", srcip) end
 			KSR.x.exit()
 		end
 	end
@@ -256,13 +262,26 @@ function authenticate()
         local code, a1hash = authserect(domain, authuser)
         -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
         if code == 1 then
-            authcheck = KSR.auth.pv_auth_check(domain, a1hash, 1, 0)
+            authcheck = KSR.auth.pv_auth_check(domain, a1hash, 21, 0)
             -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
+        end
+        -- BRUTEFORCE & INTRUSION PREVENTION
+        if code < 0 or authcheck < 0 then
+            local srcip = KSR.kx.get_srcip()
+            local failcount = KSR.htable.sht_inc("authfailure", srcip)
+            if failcount <= 0 then
+                KSR.htable.sht_seti("authfailure", srcip, 1)
+                failcount = 1
+            end
+
+            if failcount >= 3 then
+                local useragent = KSR.kx.get_ua()
+                secpublish(srcip, useragent, authuser, LAYER)
+            end
         end
     end
     if authcheck < 0 then
-        KSR.auth.auth_challenge(domain, 0)
-		-- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.challenge')
+        KSR.auth.auth_challenge(domain, 21)
 		KSR.x.exit()
     else
         return authcheck, domain, authuser
