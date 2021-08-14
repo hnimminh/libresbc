@@ -30,6 +30,11 @@ LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 function ksr_request_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
 
+    --  DISTINCT AND TAG TRAFFIC
+    if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
+        KSR.setflag(SW_TRAFFIC_FLAG)
+    end
+
     sanitize()
 
     --  NAT KEEPALIVE SIP OPTION
@@ -40,10 +45,6 @@ function ksr_request_route()
         end
 	end
 
-    --  DISTINCT AND TAG TRAFFIC
-    if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
-        KSR.setflag(SW_TRAFFIC_FLAG)
-    end
 
 	nathandle()
 
@@ -101,16 +102,16 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function sanitize()
     local srcip = KSR.kx.get_srcip()
-	-- rate limiting anti-flooding attached, optimize them later
-	if not KSR.is_myself_srcip() then
-		if KSR.htable.sht_match_name("ipban", "eq", srcip) > 0 then
-			-- ip is already blocked
-			delogify('module', 'callng', 'space', 'kami', 'action', 'blocked', 'method', KSR.kx.get_method(), 'fromuri', KSR.kx.get_furi(), 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
+    local ua = KSR.kx.get_ua()
+	-- anti-flooding attack
+	if not KSR.is_myself_srcip() or not KSR.isflagset(SW_TRAFFIC_FLAG) then
+		if KSR.htable.sht_match_name("antiflooding", "eq", srcip) > 0 then
+			delogify('module', 'callng', 'space', 'kami', 'action', 'ban', 'srcip', srcip, 'useragent', ua)
 			KSR.x.exit()
 		end
 		if KSR.pike.pike_check_req() < 0 then
-			delogify('module', 'callng', 'space', 'kami', 'action', 'pike', 'method', KSR.kx.get_method(), 'fromuri', KSR.kx.get_furi(), 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
-			KSR.htable.sht_seti("ipban", srcip, 1)
+            delogify('module', 'callng', 'space', 'kami', 'action', 'pike', 'srcip', srcip, 'useragent', ua)
+			KSR.htable.sht_seti("antiflooding", srcip, 1)
 			KSR.x.exit()
 		end
 	end
@@ -138,7 +139,7 @@ function sanitize()
 		KSR.x.exit()
 	end
 	if KSR.sanity.sanity_check(17895, 7)<0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'srcport', KSR.kx.get_srcport())
+		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'useragent', ua)
 		KSR.x.exit()
 	end
     -- CVE-2018-8828 [Fixed Already]
