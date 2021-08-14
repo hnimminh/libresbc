@@ -32,8 +32,12 @@ function ksr_request_route()
 
     sanitize()
 
+    -- NAT KEEPALIVE SIP OPTION
 	if KSR.is_OPTIONS() then
-		keepalive()
+        if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
+            KSR.sl.sl_send_reply(200, "Keepalive")
+            KSR.x.exit()
+        end
 	end
 
 	srctraffic()
@@ -164,18 +168,6 @@ function srctraffic()
 		KSR.setflag(SW_TRAFFIC_FLAG)
 	end
 end
-
-
--- ---------------------------------------------------------------------------------------------------------------------------------
--- NAT KEEPALIVE SIP OPTION
--- ---------------------------------------------------------------------------------------------------------------------------------
-function keepalive()
-	if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
-		KSR.sl.sl_send_reply(200, "Keepalive")
-		KSR.x.exit()
-	end
-end
-
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- NAT DETECT AND FIX|ALIAS
