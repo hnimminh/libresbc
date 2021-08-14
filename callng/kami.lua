@@ -25,7 +25,7 @@ SW_TRAFFIC_FLAG = 9
 LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
---  MAIN  BLOCK - SIP REQUEST ROUTE
+--  MAIN BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
 	delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
@@ -140,7 +140,7 @@ function sanitize()
         KSR.x.exit()
     end
     -- SPOOFING DECTION
-    if KSR.hdr.is_present('Record-Route') then
+    if KSR.hdr.is_present('Record-Route')>0 then
         if string.find(KSR.hdr.get_idx('Record-Route', 0), srcip) then
             KSR.sl.sl_send_reply(488, "Not Acceptable Here")
             KSR.x.exit()
