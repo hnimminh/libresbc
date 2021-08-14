@@ -234,7 +234,7 @@ def kaminstance(data):
             luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), layer=layer)
             with open(luafile, 'w') as lf: lf.write(luastream)
 
-            kamrun = Popen([kambin, '-S', '-M', '12', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
+            kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamrun.communicate())
             if stderr:
                 result = False
