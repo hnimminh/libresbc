@@ -32,7 +32,7 @@ function ksr_request_route()
 
     sanitize()
 
-    -- NAT KEEPALIVE SIP OPTION
+    --  NAT KEEPALIVE SIP OPTION
 	if KSR.is_OPTIONS() then
         if KSR.is_myself_ruri() and KSR.corex.has_ruri_user()<0 then
             KSR.sl.sl_send_reply(200, "Keepalive")
