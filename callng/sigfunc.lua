@@ -10,10 +10,14 @@
 require("callng.utilities")
 
 PATTERN = '^[%w_%.%-]+$'
+INJECTION = "[%-%=%#%'%%]"
 
 function authserect(domain, authuser)
+    if authuser:match(INJECTION) then
+        return -3
+    end
     if not authuser:match(PATTERN) or not domain:match(PATTERN) then
-        return -1
+        return -2
     end
     local a1hash = rdbconn:hget('access:dir:usr:'..domain..':'..authuser, 'a1hash')
     if a1hash then
@@ -21,7 +25,7 @@ function authserect(domain, authuser)
     else
         return 0
     end
-    return -2
+    return -1
 end
 
 function ipauth(ipaddr, domain)
