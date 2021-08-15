@@ -297,7 +297,7 @@ def basestartup():
     result = False
     try:
         logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
-        data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-111111111111'}
+        data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
 
         # fsinstance(data)
         nftupdate(data)
