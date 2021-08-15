@@ -275,16 +275,16 @@ function authenticate()
             if failcount >= AUTHFAILURE_THREDHOLD then
                 local useragent = KSR.kx.get_ua()
                 secpublish('authfailure', srcip, useragent, authuser, LAYER)
-                --start bruteforce
-                local hackcount = KSR.htable.sht_inc("bruteforce", srcip)
+                --start attackavoid
+                local hackcount = KSR.htable.sht_inc("attackavoid", srcip)
                 if hackcount <= 0 then
-                    KSR.htable.sht_seti("bruteforce", srcip, 1)
+                    KSR.htable.sht_seti("attackavoid", srcip, 1)
                     hackcount = 1
                 end
                 if hackcount >= BRUTEFORCE_THREDHOLD then
-                    secpublish('bruteforce', srcip, useragent, authuser, LAYER)
+                    secpublish('attackavoid', srcip, useragent, authuser, LAYER)
                 end
-                -- end bruteforce
+                -- end attackavoid
             end
         end
     end

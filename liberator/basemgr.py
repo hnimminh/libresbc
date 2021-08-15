@@ -448,7 +448,7 @@ class SecurityEventHandler(Thread):
         logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
         _kamiauthfailure = 'kami:authfailure'
-        _kamibruteforce  = 'kami:bruteforce'
+        _kamiattackavoid = 'kami:attackavoid'
         while True:
             try:
                 pubsub = rdbconn.pubsub()
@@ -461,8 +461,8 @@ class SecurityEventHandler(Thread):
                         srcip = data.get('srcip')
                         if portion == _kamiauthfailure:
                             nftsets('AuthFailure', srcip)
-                        elif portion == _kamibruteforce:
-                            nftsets('BruteForce', srcip)
+                        elif portion == _kamiattackavoid:
+                            nftsets('AttackAvoid', srcip)
                         else:
                             pass
             except redis.RedisError as e:
