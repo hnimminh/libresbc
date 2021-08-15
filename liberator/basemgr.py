@@ -19,7 +19,8 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 
-from configuration import (NODEID, CHANGE_CFG_CHANNEL, ESL_HOST, ESL_PORT, ESL_SECRET,
+from configuration import (NODEID, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
+                           ESL_HOST, ESL_PORT, ESL_SECRET,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
@@ -159,6 +160,25 @@ def nftupdate(data):
     finally:
         return result
 
+#---------------------------------------------------------------------------------
+
+@threaded
+def nftsets(setname, ip):
+    result = True
+    try:
+        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, '{'+ip+'}'], stdout=PIPE, stderr=PIPE)
+        _, stderr = bdecode(nftcmd.communicate())
+        if stderr:
+            result = False
+            stderr = stderr.replace('\n', '')
+            logify(f"module=liberator, space=basemgr, action=nftsets, error={stderr}")
+        else:
+            logify(f"module=liberator, space=basemgr, action=nftsets, setname={setname}, ip={ip}, result=success")
+    except Exception as e:
+        result = False
+        logify(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROXY MANAGE
@@ -410,6 +430,47 @@ class BaseEventHandler(Thread):
                         # firewall update
                         if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile]:
                             nftupdate(data)
+            except redis.RedisError as e:
+                time.sleep(5)
+            except Exception as e:
+                logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+                time.sleep(2)
+            finally:
+                if pubsub in locals():
+                    pubsub.close()
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# SECURIRY HANDLE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class SecurityEventHandler(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.stop = False
+        self.daemon = True
+        self.setName('SecurityEventHandler')
+
+    def run(self):
+        logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
+        # portions
+        _kamiauthfailure = 'kami:authfailure'
+        _kamibruteforce  = 'kami:bruteforce'
+        while True:
+            try:
+                pubsub = rdbconn.pubsub()
+                pubsub.subscribe([SECURITY_CHANNEL])
+                for message in pubsub.listen():
+                    msgtype = message.get("type")
+                    if msgtype == "message":
+                        data = json.loads(message.get("data"))
+                        portion = data.get('portion')
+                        srcip = data.get('srcip')
+                        if portion == _kamiauthfailure:
+                            nameset = 'AuthFailure'
+                            nftsets(nameset, srcip)
+                        elif portion == _kamibruteforce:
+                            pass
+                        else:
+                            pass
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:

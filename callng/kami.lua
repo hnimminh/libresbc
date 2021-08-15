@@ -105,11 +105,11 @@ function sanitize()
 	-- anti-flooding attack
 	if not KSR.is_myself_srcip() and not KSR.isflagset(SW_TRAFFIC_FLAG) then
 		if KSR.htable.sht_match_name("antiflooding", "eq", srcip) > 0 then
-			delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.banned', 'srcip', srcip, 'useragent', ua)
+			-- delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.banned', 'srcip', srcip, 'useragent', ua)
 			KSR.x.exit()
 		end
 		if KSR.pike.pike_check_req() < 0 then
-            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.detected', 'srcip', srcip, 'useragent', ua)
+            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', ua)
 			KSR.htable.sht_seti("antiflooding", srcip, 1)
 			KSR.x.exit()
 		end
