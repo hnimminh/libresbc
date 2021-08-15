@@ -28,8 +28,6 @@ LIBRE_USER_LOCATION = 'LIBREUSRLOC'
 --  MAIN BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'request', 'method', KSR.kx.get_method(), 'ru', KSR.pv.get("$ru"), 'callid', KSR.kx.get_callid())
-
     --  DISTINCT AND TAG TRAFFIC
     if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
         KSR.setflag(SW_TRAFFIC_FLAG)
@@ -102,7 +100,7 @@ end
 function sanitize()
     local srcip = KSR.kx.get_srcip()
     local ua = KSR.kx.get_ua()
-	-- anti-flooding attack
+	-- ANTI FLOODING
 	if not KSR.is_myself_srcip() and not KSR.isflagset(SW_TRAFFIC_FLAG) then
 		if KSR.htable.sht_match_name("antiflooding", "eq", srcip) > 0 then
 			-- delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.banned', 'srcip', srcip, 'useragent', ua)
@@ -121,7 +119,7 @@ function sanitize()
 			KSR.x.exit()
 		end
 	end
-	-- blacked list user agent (hack, pentest, ddos)
+	-- UA BLACKLIST
     local ua = KSR.kx.gete_ua()
     if string.find(ua, "friendly")
 		or string.find(ua, "sipsak")
