@@ -1,4 +1,0 @@
-<include>
-  <X-PRE-PROCESS cmd="set" data="fsxmlapi=http://127.0.0.1:8080/cfgapi/fsxml"/>
-  <X-PRE-PROCESS cmd="set" data="dblocation=/dev/shm"/>
-</include>

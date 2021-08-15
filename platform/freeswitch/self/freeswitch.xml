@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
-  <X-PRE-PROCESS cmd="include" data="vars.xml"/>
+  <X-PRE-PROCESS cmd="set" data="fsxmlapi=http://127.0.0.1:8080/cfgapi/fsxml"/>
+  <X-PRE-PROCESS cmd="set" data="dblocation=/dev/shm"/>
   <!-- BEGIN: CONFIGURATION SECTION -->
   <section name="configuration" description="Various Configuration">
     <!-- ACL ACCESS CONTROL LIST -->
