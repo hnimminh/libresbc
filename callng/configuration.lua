@@ -1,9 +1,9 @@
 --
 -- callng:configuration.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 --
 
@@ -28,7 +28,7 @@ BLOCK = 'block'
 JUMPS = 'jumps'
 ROUTE = 'route'
 EMPTYSTRING = ''
---- CDR 
+--- CDR
 CDRTTL = 3600
 
 --- SECURITY
@@ -39,3 +39,6 @@ SRPT_ENCRYPTION_SUITES = {'AES_CM_128_HMAC_SHA1_80', 'AES_CM_128_HMAC_SHA1_32'}
 
 --- LOG DIRECTORY
 LOGDIR = '{{logdir}}'
+
+-----------------------------------------------------------------------------------------------------
+SECURITY_CHANNEL = 'SECURITY_CHANNEL'

@@ -44,9 +44,8 @@ end
 
 
 function secpublish(srcip, useragent, authuser, layer)
-    local channel = 'kami:security'
-    local data = json.encode({portion='authfailure', srcip=srcip, useragent=useragent, authuser=authuser, layer=layer})
-    rdbconn:publish(channel, data)
-    logify('module', 'callng', 'space', 'kami', 'action', 'secpublish', 'channel', channel, 'data', data)
+    local data = json.encode({portion='kami:authfailure', srcip=srcip, useragent=useragent, authuser=authuser, layer=layer})
+    rdbconn:publish(SECURITY_CHANNEL, data)
+    logify('module', 'callng', 'space', 'kami', 'action', 'secpublish', 'channel', SECURITY_CHANNEL, 'data', data)
 end
 
