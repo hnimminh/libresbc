@@ -331,7 +331,7 @@ class BaseEventHandler(Thread):
         _netalias       = 'netalias'
         _acl            = 'acl'
         _inboundcnx     = 'inbound:intcon'
-        _outboundcnx    = 'inbound:intcon'
+        _outboundcnx    = 'outbound:intcon'
         _sipprofile     = 'sipprofile'
         _gateway        = 'gateways'
         _ngstartup      = 'ngstartup'
