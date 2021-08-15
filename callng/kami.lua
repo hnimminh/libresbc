@@ -113,9 +113,10 @@ function sanitize()
 		end
         local failcount = KSR.htable.sht_get("authfailure", srcip)
         if failcount and failcount >= AUTHFAILURE_THREDHOLD then
-            if failcount >= AUTHFAILURE_THREDHOLD+3 then
+            if failcount <= AUTHFAILURE_THREDHOLD+3 then
                 delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', ua, 'failcount', failcount)
-            else KSR.htable.sht_inc("authfailure", srcip) end
+                KSR.htable.sht_inc("authfailure", srcip)
+            end
 			KSR.x.exit()
 		end
 	end
