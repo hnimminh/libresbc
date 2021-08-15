@@ -163,10 +163,10 @@ def nftupdate(data):
 #---------------------------------------------------------------------------------
 
 @threaded
-def nftsets(setname, ip):
+def nftsets(setname, ip, bantime):
     result = True
     try:
-        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, '{'+ip+'}'], stdout=PIPE, stderr=PIPE)
+        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, f'{{{ip} timeout {bantime}s}}'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(nftcmd.communicate())
         if stderr:
             result = False
@@ -251,7 +251,7 @@ def kaminstance(data):
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
             luatemplate = _KAM.get_template("layer.j2.lua")
-            luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), layer=layer)
+            luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), kamcfgs=kamcfgs)
             with open(luafile, 'w') as lf: lf.write(luastream)
 
             kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
@@ -449,6 +449,7 @@ class SecurityEventHandler(Thread):
         # portions
         _kamiauthfailure = 'kami:authfailure'
         _kamiattackavoid = 'kami:attackavoid'
+        _kamiantiflooding = 'kami:antiflooding'
         while True:
             try:
                 pubsub = rdbconn.pubsub()
@@ -459,10 +460,13 @@ class SecurityEventHandler(Thread):
                         data = json.loads(message.get("data"))
                         portion = data.get('portion')
                         srcip = data.get('srcip')
+                        bantime = data.get('bantime')
                         if portion == _kamiauthfailure:
-                            nftsets('AuthFailure', srcip)
+                            nftsets('AuthFailure', srcip, bantime)
                         elif portion == _kamiattackavoid:
-                            nftsets('AttackAvoid', srcip)
+                            nftsets('AttackAvoid', srcip, bantime)
+                        elif portion == _kamiantiflooding:
+                            nftsets('AntiFlooding', srcip, bantime)
                         else:
                             pass
             except redis.RedisError as e:
