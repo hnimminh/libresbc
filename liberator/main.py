@@ -17,7 +17,7 @@ import uvicorn
 
 from utilities import logify, debugy
 from api import httpapi
-from basemgr import BaseEventHandler, basestartup
+from basemgr import BaseEventHandler, SecurityEventHandler, basestartup
 from cdr import CDRMaster
 
 #---------------------------------------------------------------------------------------------------------------------------
@@ -30,6 +30,8 @@ if __name__ == '__main__':
         basestartup()
         eventthead = BaseEventHandler()
         eventthead.start()
+        secthread = SecurityEventHandler()
+        secthread.start()
         # CDR HANDLER
         cdrthread = CDRMaster()
         cdrthread.start()
