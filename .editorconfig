@@ -20,7 +20,7 @@ insert_final_newline = true
 trim_trailing_whitespace = false
 indent_size = 2
 
-[.cfg]
+[{*.cfg, *.conf}]
 trim_trailing_whitespace = false
 indent_size = 4
 
