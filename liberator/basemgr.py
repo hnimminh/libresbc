@@ -334,14 +334,13 @@ class BaseEventHandler(Thread):
         _outboundcnx    = 'outbound:intcon'
         _sipprofile     = 'sipprofile'
         _gateway        = 'gateways'
-        _ngstartup      = 'ngstartup'
         _access         = 'access:service'
         _policy         = 'policy:domain'
         # listen events
         while True:
             try:
                 pubsub = rdbconn.pubsub()
-                pubsub.subscribe([CHANGE_CFG_CHANNEL, f'NG:STARTUP:{NODEID}'])
+                pubsub.subscribe([CHANGE_CFG_CHANNEL])
                 for message in pubsub.listen():
                     logify(f'module=liberator, space=basemgr, action=report, message={message}')
                     msgtype = message.get("type")
@@ -410,10 +409,6 @@ class BaseEventHandler(Thread):
                                 commands.append(f'sofia profile {sipprofile} rescan')
                             # reload xml & distributor
                             commands += ['reloadxml', 'distributor_ctl reload']
-                        elif portion == _ngstartup:
-                            #commands = ['global_setvar LIBRESBC_FS_STARTUP=COMPLETED']
-                            #eventvalue.update({'delay': commands})
-                            pass
                         elif portion == _access:
                             name = data.get('name')
                             _name = data.get('_name')
