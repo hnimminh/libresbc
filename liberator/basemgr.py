@@ -184,6 +184,7 @@ def nftsets(setname, ip, bantime):
 # PROXY MANAGE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _KAM = Environment(loader=FileSystemLoader('templates/kamcfg'))
+_KAMCONST = {'BRANCH_NATOUT_FLAG': 6, 'BRANCH_NATSIPPING_FLAG': 7, 'LIBRE_USER_LOCATION': 'LIBREUSRLOC'}
 
 @threaded
 def kaminstance(data):
@@ -247,11 +248,11 @@ def kaminstance(data):
 
             # configuration
             cfgtemplate = _KAM.get_template("layer.j2.cfg")
-            cfgstream = cfgtemplate.render(kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=NODEID)
+            cfgstream = cfgtemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=NODEID)
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
             luatemplate = _KAM.get_template("layer.j2.lua")
-            luastream = luatemplate.render(swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), kamcfgs=kamcfgs)
+            luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies))
             with open(luafile, 'w') as lf: lf.write(luastream)
 
             kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
