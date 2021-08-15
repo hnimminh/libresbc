@@ -326,7 +326,7 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=start")
+        logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
         _netalias       = 'netalias'
         _acl            = 'acl'
@@ -342,7 +342,7 @@ class BaseEventHandler(Thread):
                 pubsub = rdbconn.pubsub()
                 pubsub.subscribe([CHANGE_CFG_CHANNEL])
                 for message in pubsub.listen():
-                    logify(f'module=liberator, space=basemgr, action=report, message={message}')
+                    # logify(f'module=liberator, space=basemgr, action=report, message={message}')
                     msgtype = message.get("type")
                     if msgtype == "message":
                         data = json.loads(message.get("data"))
