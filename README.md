@@ -22,6 +22,8 @@
 <p align="left"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b></p>
 
 
+<p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt=""> </p>
+
 ## Table of Contents
 - [Why](#why)
 - [Architecture](#architecture)
@@ -45,6 +47,14 @@
 * Customisability
 * Capability
 * Community
+
+## Comming Soon
+- ✅ Access Layer
+- [x] Documentation
+- [] TLS/SSL with LetEncrypt support
+- [] MsTeam Direct Routing Intergaration
+- [] STIR/SHAKEN and Identity Assurance
+- [] Dashboard WebUI
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
