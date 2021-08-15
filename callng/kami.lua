@@ -102,8 +102,8 @@ function sanitize()
             -- ANTI FLOODING
             local floodcount = KSR.htable.sht_get("antiflooding", srcip)
             if floodcount then
-                if floodcount >= AUTHFLOODING_THRESHOLD and AUTHFLOODING_THRESHOLD > 0 then
-                    secpublish('antiflooding', srcip, AUTHFLOODING_BANTIME, LAYER, useragent, nil)
+                if floodcount >= AUTIFLOODING_THRESHOLD and AUTIFLOODING_THRESHOLD > 0 then
+                    secpublish('antiflooding', srcip, AUTIFLOODING_BANTIME, LAYER, useragent, nil)
                 end
                 KSR.x.exit()
             end
