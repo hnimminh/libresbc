@@ -49,8 +49,8 @@
 * Community
 
 ## Comming Soon
-- ✅ Access Layer
-- [x] Documentation
+- [ ] Documentation
+- [x] Access Layer
 - [ ] TLS/SSL with LetEncrypt support
 - [ ] MsTeam Direct Routing Intergaration
 - [ ] STIR/SHAKEN and Identity Assurance
