@@ -9,14 +9,6 @@
 
 require("callng.utilities")
 ---------------------------------------------------------------------------
-
-local function fire_startup_event()
-    local channel = 'NG:STARTUP:'..NODEID
-    local data = json.encode({portion='ngstartup', requestid='00000000-0000-0000-0000-000000000000'})
-    rdbconn:publish(channel, data)
-    logify('module', 'callng', 'space', 'event:startup', 'action', 'fire_startup_event', 'channel', channel, 'data', data)
-end
-
 local function clean_node_capacity()
     local PATTERN = 'realtime:capacity:*:'..NODEID
     local next, capacity_keys = unpack(rdbconn:scan(0, {match=PATTERN, count=SCAN_COUNT}))
@@ -52,7 +44,6 @@ local function main()
     -- CLEAN CAPACITY AS IT IS LONG-LIVE-TIME-ATTEMP
     -- luarun ~freeswitch.consoleLog('debug','callflow run on '.._VERSION)
     clean_node_capacity()
-    fire_startup_event()
     environment()
 end
 
