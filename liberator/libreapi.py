@@ -2964,6 +2964,24 @@ def list_access_domain_policy(response: Response):
         return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+class AntiFlooding(BaseModel):
+    sampling: int = Field(default=2, ge=1, le=300, description='sampling time unit (in second)')
+    density: int = Field(default=20, ge=1, le=3000, description='number of request that allow in sampling time, then will be ignore within window time')
+    window: int = Field(default=600, ge=300, le=1200, description='evaluated window time in second')
+    threshold: int = Field(default=10, ge=1, le=3600, description='number of authentication failure threshold that will be banned')
+    bantime: int = Field(default=600, ge=600, le=864000, description='firewall ban time in second')
+
+class AuthFailure(BaseModel):
+    window: int = Field(default=600, ge=300, le=1200, description='evaluated window time in second')
+    threshold: int = Field(default=10, ge=1, le=3600, description='number of authentication failure threshold that will be banned')
+    bantime: int = Field(default=900, ge=600, le=864000, description='firewall ban time in second')
+
+class AttackAvoid(BaseModel):
+    window: int = Field(default=18000, ge=3600, le=86400, description='evaluated window time in second')
+    threshold: int = Field(default=5, ge=1, le=3600, description='number of request threshold that will be banned')
+    bantime: int = Field(default=86400, ge=600, le=864000, description='firewall ban time in second')
+
 class AccessService(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of access service')
     desc: Optional[str] = Field(default='access service', max_length=64, description='description')
@@ -2975,6 +2993,9 @@ class AccessService(BaseModel):
     sip_port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True)
     sips_port: int = Field(default=5061, ge=0, le=65535, description='sip tls port', hidden_field=True)
     topology_hiding: Optional[str] = Field(description='topology hiding, you should never need to use', hidden_field=True)
+    antiflooding: Optional[AntiFlooding] = Field(description='antifloofing/ddos')
+    authfailure: AuthFailure = Field(description='authentication failure/bruteforce/intrusion detection')
+    attackavoid: AttackAvoid = Field(description='attack avoidance')
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
