@@ -99,22 +99,30 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function sanitize()
     local srcip = KSR.kx.get_srcip()
-    local ua = KSR.kx.get_ua()
-	-- ANTI FLOODING
+    local useragent = KSR.kx.get_ua()
+    -- RATE SECURITY
 	if not KSR.is_myself_srcip() and not KSR.isflagset(SW_TRAFFIC_FLAG) then
-		if KSR.htable.sht_match_name("antiflooding", "eq", srcip) > 0 then
-			-- delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flood.banned', 'srcip', srcip, 'useragent', ua)
-			KSR.x.exit()
-		end
-		if KSR.pike.pike_check_req() < 0 then
-            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', ua)
-			KSR.htable.sht_seti("antiflooding", srcip, 1)
-			KSR.x.exit()
-		end
+        if KSR.pike then
+            -- ANTI FLOODING
+            local floodcount = KSR.htable.sht_get("antiflooding", srcip)
+            if floodcount then
+                if floodcount >= AUTHFLOODING_THRESHOLD and AUTHFLOODING_THRESHOLD > 0 then
+                    secpublish('antiflooding', srcip, AUTHFLOODING_BANTIME, LAYER, useragent, nil)
+                end
+                KSR.x.exit()
+            end
+            if KSR.pike.pike_check_req() < 0 then
+                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', useragent)
+                if not floodcount then
+                    KSR.htable.sht_seti("antiflooding", srcip, 1)
+                end
+                KSR.x.exit()
+            end
+        end
         local failcount = KSR.htable.sht_get("authfailure", srcip)
-        if failcount and failcount >= AUTHFAILURE_THREDHOLD then
-            if failcount <= AUTHFAILURE_THREDHOLD+3 then
-                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', ua, 'failcount', failcount)
+        if failcount and failcount >= AUTHFAILURE_THRESHOLD then
+            if failcount <= AUTHFAILURE_THRESHOLD+3 then
+                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', useragent, 'failcount', failcount)
                 KSR.htable.sht_inc("authfailure", srcip)
             end
 			KSR.x.exit()
@@ -144,7 +152,7 @@ function sanitize()
 		KSR.x.exit()
 	end
 	if KSR.sanity.sanity_check(17895, 7)<0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'useragent', ua)
+		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'useragent', useragent)
 		KSR.x.exit()
 	end
     -- CVE-2018-8828 [Fixed Already]
@@ -272,17 +280,17 @@ function authenticate()
                 KSR.htable.sht_seti("authfailure", srcip, 1)
                 failcount = 1
             end
-            if failcount >= AUTHFAILURE_THREDHOLD then
+            if failcount >= AUTHFAILURE_THRESHOLD then
                 local useragent = KSR.kx.get_ua()
-                secpublish('authfailure', srcip, useragent, authuser, LAYER)
+                secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser)
                 --start attackavoid
-                local hackcount = KSR.htable.sht_inc("attackavoid", srcip)
-                if hackcount <= 0 then
+                local attackcount = KSR.htable.sht_inc("attackavoid", srcip)
+                if attackcount <= 0 then
                     KSR.htable.sht_seti("attackavoid", srcip, 1)
-                    hackcount = 1
+                    attackcount = 1
                 end
-                if hackcount >= BRUTEFORCE_THREDHOLD then
-                    secpublish('attackavoid', srcip, useragent, authuser, LAYER)
+                if attackcount >= ATTACKAVOID_THRESHOLD then
+                    secpublish('attackavoid', srcip, ATTACKAVOID_BANTIME, LAYER, useragent, authuser)
                 end
                 -- end attackavoid
             end
