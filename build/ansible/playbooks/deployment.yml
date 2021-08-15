@@ -11,7 +11,7 @@
     - role: platform
       tags: [platform]
     - role: libre
-      tags: [platform, application]
+      tags: [platform, application, libre]
     - role: nginx
       tags: [platform, application]
     - role: freeswitch
