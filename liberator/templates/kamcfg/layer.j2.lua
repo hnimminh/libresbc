@@ -5,8 +5,8 @@ B2BUA_LOOPBACK_IPADDRS = {{swipaddrs}}
 DOMAIN_POLICIES = json.decode('{{jsonpolicies}}')
 
 {%- if kamcfgs.antiflooding %}
-AUTHFLOODING_THRESHOLD = {{kamcfgs.antiflooding.threshold}}
-AUTHFLOODING_BANTIME = {{kamcfgs.antiflooding.bantime}}
+AUTIFLOODING_THRESHOLD = {{kamcfgs.antiflooding.threshold}}
+AUTIFLOODING_BANTIME = {{kamcfgs.antiflooding.bantime}}
 {%- endif %}
 AUTHFAILURE_THRESHOLD = {{kamcfgs.authfailure.threshold}}
 AUTHFAILURE_BANTIME = {{kamcfgs.authfailure.bantime}}
