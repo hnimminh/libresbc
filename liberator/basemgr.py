@@ -460,10 +460,9 @@ class SecurityEventHandler(Thread):
                         portion = data.get('portion')
                         srcip = data.get('srcip')
                         if portion == _kamiauthfailure:
-                            nameset = 'AuthFailure'
-                            nftsets(nameset, srcip)
+                            nftsets('AuthFailure', srcip)
                         elif portion == _kamibruteforce:
-                            pass
+                            nftsets('BruteForce', srcip)
                         else:
                             pass
             except redis.RedisError as e:

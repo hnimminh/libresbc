@@ -112,9 +112,9 @@ function sanitize()
 			KSR.x.exit()
 		end
         local failcount = KSR.htable.sht_get("authfailure", srcip)
-        if failcount and failcount >= 3 then
-            delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', ua, 'failcount', failcount)
-            if failcount >= 7 then KSR.htable.sht_seti("authfailure", srcip, 7)
+        if failcount and failcount >= AUTHFAILURE_THREDHOLD then
+            if failcount >= AUTHFAILURE_THREDHOLD+3 then
+                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', ua, 'failcount', failcount)
             else KSR.htable.sht_inc("authfailure", srcip) end
 			KSR.x.exit()
 		end
@@ -264,17 +264,26 @@ function authenticate()
             -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
         end
         -- BRUTEFORCE & INTRUSION PREVENTION
-        if code < 0 or authcheck < 0 then
+        if code <= 0 or authcheck <= 0 then
             local srcip = KSR.kx.get_srcip()
             local failcount = KSR.htable.sht_inc("authfailure", srcip)
             if failcount <= 0 then
                 KSR.htable.sht_seti("authfailure", srcip, 1)
                 failcount = 1
             end
-
-            if failcount >= 3 then
+            if failcount >= AUTHFAILURE_THREDHOLD then
                 local useragent = KSR.kx.get_ua()
-                secpublish(srcip, useragent, authuser, LAYER)
+                secpublish('authfailure', srcip, useragent, authuser, LAYER)
+                --start bruteforce
+                local hackcount = KSR.htable.sht_inc("bruteforce", srcip)
+                if hackcount <= 0 then
+                    KSR.htable.sht_seti("bruteforce", srcip, 1)
+                    hackcount = 1
+                end
+                if hackcount >= BRUTEFORCE_THREDHOLD then
+                    secpublish('bruteforce', srcip, useragent, authuser, LAYER)
+                end
+                -- end bruteforce
             end
         end
     end
