@@ -2820,7 +2820,7 @@ class Socket(BaseModel):
         force = kvs.pop('force', None)
         if not force:
             ip = kvs.get('ip')
-            if not IPv4Network('127.0.0.0/8').overlaps(IPv4Network(ip)):
+            if not IPv4Network(ip).is_loopback:
                 raise ValueError('ip must be loopback address only')
         return kvs
 
