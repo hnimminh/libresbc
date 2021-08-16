@@ -333,6 +333,11 @@ function ProxyThenSwitch()
     KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
     local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
 	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
+
+    -- APPEND X-HEADER
+    KSR.hdr.append('X-AUTH-ID: '..authuser..'@'..domain..'\r\n')
+    KSR.hdr.append('X-SOURCE-IP: '..KSR.kx.get_srcip()..'\r\n')
+
     -- KSR.dialog.dlg_manage()
 	RouteRelay()
 end
@@ -355,6 +360,10 @@ function SwitchThenProxy()
 			KSR.x.exit()
 		end
 	end
+
+    -- REMOVE X-HEADER
+    KSR.hdr.remove('X-USER-ID')
+
     -- KSR.dialog.dlg_manage()
 	RouteRelay()
 end
