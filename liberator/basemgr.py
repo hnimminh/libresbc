@@ -133,8 +133,8 @@ def nftupdate(data):
                                         'sipudpports': set([fieldjsonify(sip_port)]),
                                         'sip_ip': sip_ip,
                                         'rtp_ip': rtp_ip,
-                                        'farendrtpaddrs': stringify(farendrtpaddrs, ','),
-                                        'farendsipaddrs': stringify(farendsipaddrs, ',')}
+                                        'farendrtpaddrs': farendrtpaddrs,
+                                        'farendsipaddrs': farendsipaddrs}
 
         template = _NFT.get_template("nftables.j2.conf")
         stream = template.render(sipprofiles=sipprofiles, rtpportrange=rtpportrange)
@@ -270,7 +270,7 @@ def kaminstance(data):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PROXY MANAGE
+# B2BUA MANAGE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 @threaded
