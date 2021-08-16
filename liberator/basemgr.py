@@ -18,6 +18,7 @@ import os
 import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
+from ipaddress import IPv4Network
 
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
                            ESL_HOST, ESL_PORT, ESL_SECRET,
@@ -133,8 +134,8 @@ def nftupdate(data):
                                         'sipudpports': set([fieldjsonify(sip_port)]),
                                         'sip_ip': sip_ip,
                                         'rtp_ip': rtp_ip,
-                                        'farendrtpaddrs': farendrtpaddrs,
-                                        'farendsipaddrs': farendsipaddrs}
+                                        'farendrtpaddrs': [ip for ip in farendrtpaddrs if not IPv4Network(ip).is_loopback],
+                                        'farendsipaddrs': [ip for ip in farendsipaddrs if not IPv4Network(ip).is_loopback]}
 
         template = _NFT.get_template("nftables.j2.conf")
         stream = template.render(sipprofiles=sipprofiles, rtpportrange=rtpportrange)
