@@ -18,18 +18,18 @@
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 require("callng.sigfunc")
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
-TRANSACTION_NATSCRIPT_FLAG = 5
-SW_TRAFFIC_FLAG = 9
+TRANSACTION_NAT_SCRIPT_FLAG = 5
+SELFSW_TRAFFIC_SCRIPT_FLAG = 9
 -- ---------------------------------------------------------------------------------------------------------------------------------
 --  MAIN BLOCK - SIP REQUEST ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_request_route()
     --  DISTINCT AND TAG TRAFFIC
-    if ismeberof(B2BUA_LOOPBACK_IPADDRS, KSR.pv.get('$si')) then
-        KSR.setflag(SW_TRAFFIC_FLAG)
+    if ismeberof(SELFSW_IPADDRS, KSR.pv.get('$si')) then
+        KSR.setflag(SELFSW_TRAFFIC_SCRIPT_FLAG)
     end
-
-    sanitize()
+    -- CHECK
+    SecurityCheck()
 
     --  NAT KEEPALIVE SIP OPTION
 	if KSR.is_OPTIONS() then
@@ -38,17 +38,19 @@ function ksr_request_route()
             KSR.x.exit()
         end
 	end
+    -- NAT
+	NatHandle()
 
-	nathandle()
-
+    -- CANCEL
 	if KSR.is_CANCEL() then
 		if KSR.tm.t_check_trans()>0 then
-			ksr_route_relay()
+			RouteRelay()
 		end
 		return 1
 	end
 
-	withindlg()
+    -- IN DIALOG
+	WithinDialogProcess()
 
 	-- only initial requests (no To tag), handle retransmissions
 	if KSR.tmx.t_precheck_trans()>0 then
@@ -68,15 +70,15 @@ function ksr_request_route()
 
 	-- registrar service with user authentication
 	if KSR.is_REGISTER() then
-		registrar()
+		RegistrarService()
 	end
 
 	-- incoming call
 	if KSR.is_INVITE() then
-		if KSR.isflagset(SW_TRAFFIC_FLAG) then
-			call_from_switch()
+		if KSR.isflagset(SELFSW_TRAFFIC_SCRIPT_FLAG) then
+			SwitchThenProxy()
 		else
-			call_from_public()
+			ProxyThenSwitch()
 		end
 	end
 
@@ -93,11 +95,11 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 --  INITIAL SANITY SECURITY CHECK & POLICY
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function sanitize()
+function SecurityCheck()
     local srcip = KSR.kx.get_srcip()
     local useragent = KSR.kx.get_ua()
     -- RATE SECURITY
-	if not KSR.is_myself_srcip() and not KSR.isflagset(SW_TRAFFIC_FLAG) then
+	if not KSR.is_myself_srcip() and not KSR.isflagset(SELFSW_TRAFFIC_SCRIPT_FLAG) then
         if KSR.pike then
             -- ANTI FLOODING
             local floodcount = KSR.htable.sht_get("antiflooding", srcip)
@@ -175,8 +177,8 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- NAT DETECT AND FIX|ALIAS
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function nathandle()
-	if KSR.isflagset(SW_TRAFFIC_FLAG) then
+function NatHandle()
+	if KSR.isflagset(SELFSW_TRAFFIC_SCRIPT_FLAG) then
 		return 1
 	end
 	KSR.force_rport()
@@ -186,7 +188,7 @@ function nathandle()
 		elseif KSR.siputils.is_first_hop()>0 then
 			KSR.nathelper.set_contact_alias()
 		end
-		KSR.setflag(TRANSACTION_NATSCRIPT_FLAG)
+		KSR.setflag(TRANSACTION_NAT_SCRIPT_FLAG)
 	end
 	return 1
 end
@@ -197,7 +199,7 @@ end
 -- enable additional event routes for forwarded requests
 -- serial forking, RTP relaying handling, a.s.o.
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function ksr_route_relay()
+function RouteRelay()
     if not KSR.isdsturiset() then
 		KSR.nathelper.handle_ruri_alias()
 	end
@@ -214,25 +216,15 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- WITHIN DIALOG SIP MESSAGE HANDLING
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function withindlg()
+function WithinDialogProcess()
 	if KSR.siputils.has_totag()<0 then
 		return 1
 	end
 
-	--[[
-	if KSR.dialog.is_known_dlg()<0 then
-		if KSR.is_ACK() and KSR.tm.t_check_trans()>0 then
-			ksr_route_relay()
-			KSR.x.exit()
-		end
-		KSR.x.exit()
-	end
-    ]]--
-
 	-- sequential request withing a dialog should
 	-- take the path determined by record-routing
 	if KSR.rr.loose_route()>0 then
-		ksr_route_relay()
+		RouteRelay()
 		KSR.x.exit()
 	end
 
@@ -241,7 +233,7 @@ function withindlg()
 			-- no loose-route, but stateful ACK
 			-- must be an ACK after a 487
 			-- or e.g. 404 from upstream server
-			ksr_route_relay()
+			RouteRelay()
 			KSR.x.exit()
 		else
 			-- ACK without matching transaction ... ignore and discard
@@ -279,7 +271,6 @@ function authenticate()
             if failcount >= AUTHFAILURE_THRESHOLD then
                 local useragent = KSR.kx.get_ua()
                 secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser)
-                --start attackavoid
                 local attackcount = KSR.htable.sht_inc("attackavoid", srcip)
                 if attackcount <= 0 then
                     KSR.htable.sht_seti("attackavoid", srcip, 1)
@@ -288,7 +279,6 @@ function authenticate()
                 if attackcount >= ATTACKAVOID_THRESHOLD then
                     secpublish('attackavoid', srcip, ATTACKAVOID_BANTIME, LAYER, useragent, authuser)
                 end
-                -- end attackavoid
             end
         end
     end
@@ -313,16 +303,16 @@ end
 -- ---------------------------------------------------------------------------------------------------------------------------------
 -- REGISTRAR SERVICE
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function registrar()
+function RegistrarService()
     local _, domain, authuser = authenticate()
 
-	if KSR.isflagset(TRANSACTION_NATSCRIPT_FLAG) then
+	if KSR.isflagset(TRANSACTION_NAT_SCRIPT_FLAG) then
 		KSR.setbflag(BRANCH_NATOUT_FLAG)
 		KSR.setbflag(BRANCH_NATSIPPING_FLAG)
 	end
 
 	local aorsaved = KSR.registrar.save_uri(LIBRE_USER_LOCATION, "5", "sip:"..authuser.."@"..domain)
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'aorsaved', aorsaved)
+	-- delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -333,28 +323,28 @@ end
 
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- PUBLIC CALL REQUEST
+-- PROXY GOTO SWITCH
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function call_from_public()
+function ProxyThenSwitch()
     local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
-
+    delogify('module', 'callng', 'space', 'kami', 'action', 'uacincoming', 'domain', domain, 'authuser', authuser, 'callid', KSR.kx.get_callid())
     local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
     KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
     local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
 	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
     -- KSR.dialog.dlg_manage()
-	ksr_route_relay()
+	RouteRelay()
 end
 
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
--- SW CALL REQUEST
+-- SWITCH GOTO PROXY
 -- ---------------------------------------------------------------------------------------------------------------------------------
-function call_from_switch()
+function SwitchThenProxy()
     local sipuser = KSR.hdr.get('X-USER-ID')
 	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
-	delogify('module', 'callng', 'space', 'kami', 'action', 'swcall.report', 'state', state, 'callid', KSR.kx.get_callid())
+    delogify('module', 'callng', 'space', 'kami', 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
 	if state<0 then
 		KSR.tm.t_newtran()
 		if state==-1 or state==-3 then
@@ -366,7 +356,7 @@ function call_from_switch()
 		end
 	end
     -- KSR.dialog.dlg_manage()
-	ksr_route_relay()
+	RouteRelay()
 end
 
 
@@ -374,9 +364,7 @@ end
 -- SIP RESPONSE HANDLING - REPLY ROUTE
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function ksr_reply_route()
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'route.reply')
-    if not KSR.isflagset(SW_TRAFFIC_FLAG) then
-        -- if KSR.isflagset(TRANSACTION_NATSCRIPT_FLAG) then
+    if not KSR.isflagset(SELFSW_TRAFFIC_SCRIPT_FLAG) then
         if KSR.nathelper.nat_uac_test(23)>0 then
             if KSR.siputils.is_first_hop()>0 then
                 KSR.nathelper.set_contact_alias()
