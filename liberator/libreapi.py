@@ -2985,7 +2985,7 @@ class AttackAvoid(BaseModel):
 class AccessService(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of access service')
     desc: Optional[str] = Field(default='access service', max_length=64, description='description')
-    server_header: str = Field(default='AccessService', max_length=64, description='Server Header')
+    server_header: Optional[str] = Field(max_length=64, description='Server Header')
     trying_reason: str = Field(default='Trying', max_length=64, description='Trying Reason', hidden_field=True)
     natping_from: str = Field(default='sip:keepalive@libre.sbc', max_length=64, description='natping from', hidden_field=True)
     transports: List[TransportEnum] = Field(default=['udp', 'tcp'], min_items=1, max_items=3, description='list of bind transport protocol')
