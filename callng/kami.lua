@@ -269,7 +269,6 @@ function authenticate()
             end
             if failcount >= AUTHFAILURE_THRESHOLD then
                 local useragent = KSR.kx.get_ua()
-                secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser, failcount)
                 local attackcount = KSR.htable.sht_inc("attackavoid", srcip)
                 if attackcount <= 0 then
                     KSR.htable.sht_seti("attackavoid", srcip, 1)
@@ -277,7 +276,7 @@ function authenticate()
                 end
                 if attackcount >= ATTACKAVOID_THRESHOLD then
                     secpublish('attackavoid', srcip, ATTACKAVOID_BANTIME, LAYER, useragent, authuser, attackcount)
-                end
+                else secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser, failcount) end
             end
         end
     end
