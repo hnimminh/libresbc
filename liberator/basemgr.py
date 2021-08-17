@@ -137,8 +137,31 @@ def nftupdate(data):
                                         'farendrtpaddrs': [ip for ip in farendrtpaddrs if not IPv4Network(ip).is_loopback],
                                         'farendsipaddrs': [ip for ip in farendsipaddrs if not IPv4Network(ip).is_loopback]}
 
+        # ACCESS LAYERS
+        layernames = rdbconn.smembers('nameset:access:service')
+        accesslayers = dict()
+        for layername in layernames:
+            transports, sip_port, sips_port, sip_address, whiteips, blackips = rdbconn.hmget(f'access:service:{layername}', 'transports', 'sip_port',
+                                                                                               'sips_port', 'sip_address', 'whiteips', 'blackips')
+            whiteips = fieldjsonify(whiteips)
+            blackips = fieldjsonify(blackips)
+            if not whiteips: whiteips = {'0.0.0.0/0'}
+
+            transports = fieldjsonify(transports)
+            sipudpports = None
+            if 'udp' in transports: sipudpports = fieldjsonify(sip_port)
+            siptcpports = []
+            if 'tcp' in transports: siptcpports.append(fieldjsonify(sip_port))
+            if 'tls' in transports: siptcpports.append(fieldjsonify(sips_port))
+
+            accesslayers[layername] = {'whiteips': whiteips,
+                                       'blackips': blackips,
+                                       'sip_ip': netaliases[sip_address]['listen'],
+                                       'sipudpports': sipudpports,
+                                       'siptcpports': set(siptcpports)}
+        # RULE FILE
         template = _NFT.get_template("nftables.j2.conf")
-        stream = template.render(sipprofiles=sipprofiles, rtpportrange=rtpportrange)
+        stream = template.render(rtpportrange=rtpportrange, sipprofiles=sipprofiles, accesslayers=accesslayers)
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
 
@@ -425,7 +448,7 @@ class BaseEventHandler(Thread):
                             data.update({'commands': commands})
                             fssocket(data)
                         # firewall update
-                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile]:
+                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _access]:
                             nftupdate(data)
             except redis.RedisError as e:
                 time.sleep(5)
