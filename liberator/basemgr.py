@@ -131,7 +131,7 @@ def nftupdate(data):
             farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
 
             sipprofiles[profilename] = {'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
-                                        'sipudpports': set([fieldjsonify(sip_port)]),
+                                        'sipudpports': fieldjsonify(sip_port),
                                         'sip_ip': sip_ip,
                                         'rtp_ip': rtp_ip,
                                         'farendrtpaddrs': [ip for ip in farendrtpaddrs if not IPv4Network(ip).is_loopback],
