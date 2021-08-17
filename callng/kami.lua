@@ -5,15 +5,6 @@
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
 -- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
--- ------------------------------------------------------------------------------------------------------------------------------------------------
---
--- KSR - the object exporting Kamailio KEMI functions (app_lua module)
--- sr - the old object exporting Kamailio functions (app_lua_sr module)
---
--- Relevant Remarks:
---  * do not execute Lua 'exit' - that will kill Lua interpreter which is embedded in Kamailio, resulting in killing Kamailio
---  * use KSR.x.exit() to trigger the stop of executing the script
---  * KSR.drop() is only marking the SIP message for drop, but doesn't stop the execution of the script. Use KSR.x.exit() after it or KSR.x.drop()
 --
 -- ------------------------------------------------------------------------------------------------------------------------------------------------
 require("callng.sigfunc")
@@ -333,8 +324,8 @@ function ProxyThenSwitch()
 	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
 
     -- APPEND X-HEADER
-    KSR.hdr.append('X-AUTH-ID: '..authuser..'@'..domain..'\r\n')
-    KSR.hdr.append('X-SOURCE-IP: '..KSR.kx.get_srcip()..'\r\n')
+    KSR.hdr.append('X-ACCESS-AUTHID: '..authuser..'@'..domain..'\r\n')
+    KSR.hdr.append('X-ACCESS-SRCIP: '..KSR.kx.get_srcip()..'\r\n')
 
     -- KSR.dialog.dlg_manage()
 	RouteRelay()
@@ -345,7 +336,7 @@ end
 -- SWITCH GOTO PROXY
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function SwitchThenProxy()
-    local sipuser = KSR.hdr.get('X-USER-ID')
+    local sipuser = KSR.hdr.get('X-ACCESS-USERID')
 	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
     delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
 	if state<0 then
@@ -360,7 +351,7 @@ function SwitchThenProxy()
 	end
 
     -- REMOVE X-HEADER
-    KSR.hdr.remove('X-USER-ID')
+    KSR.hdr.remove('X-ACCESS-USERID')
 
     -- KSR.dialog.dlg_manage()
 	RouteRelay()

@@ -266,6 +266,10 @@ class CDRHandler(Thread):
             sip_network_port = self.details.get('sip_network_port')
             sip_local_network_addr = self.details.get('sip_local_network_addr')
             sip_req_uri = self.details.get('sip_req_uri')
+            # access
+            access_authid = self.details.get('access_authid')
+            access_srcip = self.details.get('access_srcip')
+            access_userid = self.details.get('access_userid')
             # transport
             transport = 'udp'
             if direction.lower() == 'inbound':
@@ -339,7 +343,9 @@ class CDRHandler(Thread):
                 'disposition': disposition,
                 'status': status,
             }
-
+            if access_authid: cdrdata['access_authid'] = access_authid
+            if access_srcip: cdrdata['access_srcip'] = access_srcip
+            if access_userid: cdrdata['access_userid'] = access_userid
         except Exception as e:
             logify(f"module=liberator, space=cdr, class=CDRHandler, action=refine, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
             cdrdata = {}

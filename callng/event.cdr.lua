@@ -52,6 +52,10 @@ local function cdrreport()
     local sip_redirected_to = event:getHeader("variable_sip_redirected_to")
     local rtp_has_crypto = event:getHeader("variable_rtp_has_crypto")
     --
+    local access_srcip = event:getHeader("variable_sip_h_X-ACCESS-SRCIP")
+    local access_authid = event:getHeader("variable_sip_h_X-ACCESS-AUTHID")
+    local access_userid = event:getHeader("variable_sip_h_X-ACCESS-USERID")
+    --
     cdr_details = {
         uuid=uuid,
         seshid=seshid,
