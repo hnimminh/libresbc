@@ -1,9 +1,9 @@
 #
 # liberator:cdr.py
-# 
+#
 # The Initial Developer of the Original Code is
 # Minh Minh <hnimminh at[@] outlook dot[.] com>
-# Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+# Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
 
@@ -23,7 +23,7 @@ from configuration import (_APPLICATION, _SWVERSION, NODEID, SWCODECS, CLUSTERS,
                            LOGDIR, HTTPCDR_ENDPOINTS)
 from utilities import logify, debugy
 
-REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, 
+REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=REDIS_TIMEOUT)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
@@ -110,7 +110,7 @@ SIP_RESPONSES = {
 
 SIP_DISPOSITIONS = {
     100: "TRYING",
-    180: 'RINGING', 
+    180: 'RINGING',
     181: 'FORWARDING',
     182: 'QUEUED',
     183: 'PROGRESS',
@@ -166,7 +166,7 @@ def fmtime(epochtime):
         epochtime = float(epochtime)
         if epochtime == 0: None
         else: return datetime.fromtimestamp(epochtime, tz=timezone.utc).isoformat()
-    except: 
+    except:
         return None
 
 
@@ -191,7 +191,7 @@ class CDRHandler(Thread):
         self.stop = False
         self.uuid = uuid
         self.details = details
-        Thread.__init__(self) 
+        Thread.__init__(self)
 
     def run(self):
         MAXRETRY = 5
@@ -208,12 +208,12 @@ class CDRHandler(Thread):
                 # data stored guarantee process
                 attempt += 1
                 if cdrsaved:
-                    if attempt > MAXRETRY-2: 
+                    if attempt > MAXRETRY-2:
                         logify(f"module=liberator, space=cdr, action=savehandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
                     break
                 else:
                     backoff = reebackoff(waiting, attempt)
-                    if attempt >= MAXRETRY-2: 
+                    if attempt >= MAXRETRY-2:
                         logify(f"module=liberator, space=cdr, action=savehandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
                     time.sleep(backoff)
 
@@ -227,12 +227,12 @@ class CDRHandler(Thread):
                 rcleaned = self.rclean()
                 attempt += 1
                 if rcleaned:
-                    if attempt > MAXRETRY-2: 
+                    if attempt > MAXRETRY-2:
                         logify(f"module=liberator, space=cdr, action=rdbhandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
                     break
                 else:
                     backoff = reebackoff(waiting, attempt)
-                    if attempt >= MAXRETRY-2: 
+                    if attempt >= MAXRETRY-2:
                         logify(f"module=liberator, space=cdr, action=rdbhandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
                     time.sleep(backoff)
 
@@ -273,8 +273,8 @@ class CDRHandler(Thread):
                 if sip_via_protocol: transport = sip_via_protocol
             else:
                 ruri_host, ruri_port, ruri_transport = parseruri(sip_req_uri)
-                if ruri_transport: transport = ruri_transport 
-            # media 
+                if ruri_transport: transport = ruri_transport
+            # media
             remote_media_ip = self.details.get('remote_media_ip')
             remote_media_port = self.details.get('remote_media_port')
             local_media_ip = self.details.get('local_media_ip')
@@ -307,10 +307,10 @@ class CDRHandler(Thread):
 
             cdrdata = {
                 'uuid': uuid,
-                'seshid': seshid, 
+                'seshid': seshid,
                 'direction': direction,
                 'sipprofile': sipprofile,
-                'context': context, 
+                'context': context,
                 'nodeid': nodeid,
                 'intconname': intconname,
                 'gateway': gateway,
@@ -344,7 +344,7 @@ class CDRHandler(Thread):
             logify(f"module=liberator, space=cdr, class=CDRHandler, action=refine, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
             cdrdata = {}
         finally:
-           self.cdrdata = cdrdata 
+           self.cdrdata = cdrdata
 
     def filesave(self):
         try:
@@ -397,7 +397,7 @@ class CDRMaster(Thread):
         self.stop = False
         Thread.__init__(self)
         self.setName('CDRMaster')
-    
+
     def run(self):
         logify(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
