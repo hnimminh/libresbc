@@ -150,7 +150,7 @@ function SecurityCheck()
 		KSR.x.exit()
 	end
 	if KSR.sanity.sanity_check(17895, 7)<0 then
-		delogify('module', 'callng', 'space', 'kami', 'action', 'malformed', 'srcip', srcip, 'useragent', useragent)
+		delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'malformed', 'srcip', srcip, 'useragent', useragent)
 		KSR.x.exit()
 	end
     -- CVE-2018-8828 [Fixed Already]
@@ -205,7 +205,7 @@ function RouteRelay()
 	end
     -- local alias = KSR.nathelper.handle_ruri_alias()
 	local relay = KSR.tm.t_relay()
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'relay', 'state', relay, 'alias', alias)
+	-- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'relay', 'state', relay, 'alias', alias)
 	if relay<0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -252,13 +252,13 @@ function authenticate()
     local authuser = KSR.kx.get_au()
     local callid = KSR.kx.get_callid()
     local authcheck = -9
-    -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
+    -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
     if domain and authuser then
         local code, a1hash = authserect(domain, authuser)
-        -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
+        -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
         if code == 1 then
             authcheck = KSR.auth.pv_auth_check(domain, a1hash, 21, 0)
-            -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
+            -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
         end
         -- BRUTEFORCE & INTRUSION PREVENTION
         if code <= 0 or authcheck <= 0 then
@@ -288,7 +288,7 @@ function authenticate()
     else
         return authcheck, domain, authuser
     end
-    -- delogify('module', 'callng', 'space', 'kami', 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'state', 'authorised')
+    -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'state', 'authorised')
 end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
@@ -312,7 +312,7 @@ function RegistrarService()
 	end
 
 	local aorsaved = KSR.registrar.save_uri(LIBRE_USER_LOCATION, "5", "sip:"..authuser.."@"..domain)
-	-- delogify('module', 'callng', 'space', 'kami', 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'aorsaved', aorsaved)
+	-- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'aorsaved', aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
 	end
