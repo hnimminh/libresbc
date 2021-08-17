@@ -1,14 +1,14 @@
 --
 -- callng:event.cdr.lua
--- 
+--
 -- The Initial Developer of the Original Code is
 -- Minh Minh <hnimminh at[@] outlook dot[.] com>
--- Portions created by the Initial Developer are Copyright (C) the Initial Developer. 
+-- Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 -- All Rights Reserved.
 --
-
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
 require("callng.utilities")
----------------------------------------------------------------------------
+-- ------------------------------------------------------------------------------------------------------------------------------------------------
 
 local function cdrreport()
     local uuid = event:getHeader("Unique-ID")
@@ -35,13 +35,13 @@ local function cdrreport()
     local sip_via_protocol = event:getHeader("variable_sip_via_protocol")
     local sip_req_uri = event:getHeader("variable_sip_req_uri") -- variable_sip_destination_url sip:84987654321@libre.io:5060;transport=udp
     --
-    local remote_media_ip = event:getHeader("variable_remote_media_ip") 
+    local remote_media_ip = event:getHeader("variable_remote_media_ip")
     local remote_media_port = event:getHeader("variable_remote_media_port")
     local local_media_ip = event:getHeader("variable_local_media_ip")
     local local_media_port = event:getHeader("variable_local_media_port")
     local advertised_media_ip = event:getHeader("variable_advertised_media_ip")
-    local read_codec = event:getHeader("variable_read_codec") 
-    local write_codec = event:getHeader("variable_write_codec") 
+    local read_codec = event:getHeader("variable_read_codec")
+    local write_codec = event:getHeader("variable_write_codec")
     --
     local hangup_disposition = event:getHeader('variable_sip_hangup_disposition')
     local hangup_cause = event:getHeader("variable_hangup_cause")
@@ -53,8 +53,8 @@ local function cdrreport()
     local rtp_has_crypto = event:getHeader("variable_rtp_has_crypto")
     --
     cdr_details = {
-        uuid=uuid, 
-        seshid=seshid, 
+        uuid=uuid,
+        seshid=seshid,
         direction=direction,
         sipprofile=sipprofile,
         context=context,
@@ -89,7 +89,10 @@ local function cdrreport()
         bridge_sip_hangup_cause=bridge_sip_hangup_cause,
         libre_sip_hangup_cause=libre_sip_hangup_cause,
         sip_redirected_to=sip_redirected_to,
-        rtp_has_crypto=rtp_has_crypto
+        rtp_has_crypto=rtp_has_crypto,
+        access_authid=access_authid,
+        access_srcip=access_srcip,
+        access_userid=access_userid
     }
 
     -- push raw cdr to redis, may use "event:serialize('json')" if needed
@@ -99,7 +102,7 @@ local function cdrreport()
             pipe:rpush('cdr:queue:new', uuid)
             pipe:setex('cdr:detail:'..uuid, CDRTTL, cdrjson)
         end)
-    else 
+    else
         filename = os.date("%Y-%m-%d")..'.cdr.raw.json'
         writefile(LOGDIR..'/cdr/'..filename, cdrjson)
         logify('module', 'callng', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdbtimeout', 'data', cdrjson, 'donext', 'writefile', 'filename', filename)
