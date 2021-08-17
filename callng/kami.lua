@@ -336,7 +336,14 @@ end
 -- SWITCH GOTO PROXY
 -- ---------------------------------------------------------------------------------------------------------------------------------
 function SwitchThenProxy()
-    local sipuser = KSR.hdr.get('X-ACCESS-USERID')
+    local sipuser
+    if KSR.hdr.is_present('X-ACCESS-USERID')>0 then
+        sipuser = KSR.hdr.get('X-ACCESS-USERID')
+        -- REMOVE X-HEADER
+        KSR.hdr.remove('X-ACCESS-USERID')
+    else
+        sipuser = KSR.kx.get_ruser()..'@'..DFTDOMAIN
+    end
 	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
     delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
 	if state<0 then
@@ -349,10 +356,6 @@ function SwitchThenProxy()
 			KSR.x.exit()
 		end
 	end
-
-    -- REMOVE X-HEADER
-    KSR.hdr.remove('X-ACCESS-USERID')
-
     -- KSR.dialog.dlg_manage()
 	RouteRelay()
 end

@@ -272,14 +272,16 @@ def kaminstance(data):
                                     'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
                 swipaddrs.add(dstsocket[1])
             kamcfgs.update({'policies': policies})
-
+            # default domain
+            if len(domains)==1: dftdomain = domains[0]
+            else: dftdomain = 'default.domain'
             # configuration
             cfgtemplate = _KAM.get_template("layer.j2.cfg")
             cfgstream = cfgtemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=NODEID)
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
             luatemplate = _KAM.get_template("layer.j2.lua")
-            luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies))
+            luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), dftdomain=dftdomain)
             with open(luafile, 'w') as lf: lf.write(luastream)
 
             kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)

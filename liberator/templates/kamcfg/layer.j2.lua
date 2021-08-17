@@ -3,6 +3,7 @@ json = require('json')
 LAYER = '{{layer}}'
 SELFSW_IPADDRS = {{swipaddrs}}
 DOMAIN_POLICIES = json.decode('{{jsonpolicies}}')
+DFTDOMAIN = '{{dftdomain}}'
 
 {%- if kamcfgs.antiflooding %}
 AUTIFLOODING_THRESHOLD = {{kamcfgs.antiflooding.threshold}}
