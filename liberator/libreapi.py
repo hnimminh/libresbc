@@ -2996,6 +2996,8 @@ class AccessService(BaseModel):
     antiflooding: Optional[AntiFlooding] = Field(description='antifloofing/ddos')
     authfailure: AuthFailure = Field(description='authentication failure/bruteforce/intrusion detection')
     attackavoid: AttackAvoid = Field(description='attack avoidance')
+    blackips: List[IPv4Network] = Field(default=[], max_items=1024, description='denied ip list')
+    whiteips: List[IPv4Network] = Field(default=[], max_items=1024 ,description='allowed ip list')
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
@@ -3011,6 +3013,10 @@ class AccessService(BaseModel):
             raise ValueError('nonexistent network alias')
         topology_hiding = kvs.pop('topology_hiding', None)
         if topology_hiding: kvs['topology_hiding'] = topology_hiding
+        blackips = kvs.get('blackips')
+        whiteips = kvs.get('whiteips')
+        if blackips and whiteips:
+            raise ValueError('only one of blackips/whiteips can be set')
         return kvs
 
 
