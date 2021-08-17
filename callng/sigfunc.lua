@@ -43,8 +43,8 @@ function ipauth(ipaddr, domain)
 end
 
 
-function secpublish(topic, srcip, bantime, layer, useragent, authuser)
-    local data = json.encode({portion='kami:'..topic, srcip=srcip, bantime=bantime, layer=layer, useragent=useragent, authuser=authuser})
+function secpublish(topic, srcip, bantime, layer, useragent, authuser, violated)
+    local data = json.encode({portion='kami:'..topic, srcip=srcip, bantime=bantime, layer=layer, useragent=useragent, authuser=authuser, violated=violated})
     rdbconn:publish(SECURITY_CHANNEL, data)
     logify('module', 'callng', 'space', 'kami', 'action', 'secpublish', 'channel', SECURITY_CHANNEL, 'data', data)
 end

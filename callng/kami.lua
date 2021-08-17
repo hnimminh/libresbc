@@ -105,12 +105,12 @@ function SecurityCheck()
             local floodcount = KSR.htable.sht_get("antiflooding", srcip)
             if floodcount then
                 if floodcount >= AUTIFLOODING_THRESHOLD and AUTIFLOODING_THRESHOLD > 0 then
-                    secpublish('antiflooding', srcip, AUTIFLOODING_BANTIME, LAYER, useragent, nil)
+                    secpublish('antiflooding', srcip, AUTIFLOODING_BANTIME, LAYER, useragent, nil, floodcount)
                 end
                 KSR.x.exit()
             end
             if KSR.pike.pike_check_req() < 0 then
-                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', useragent)
+                delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', useragent)
                 if not floodcount then
                     KSR.htable.sht_seti("antiflooding", srcip, 1)
                 end
@@ -120,7 +120,7 @@ function SecurityCheck()
         local failcount = KSR.htable.sht_get("authfailure", srcip)
         if failcount and failcount >= AUTHFAILURE_THRESHOLD then
             if failcount <= AUTHFAILURE_THRESHOLD+3 then
-                delogify('module', 'callng', 'space', 'kami', 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', useragent, 'failcount', failcount)
+                delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', useragent, 'failcount', failcount)
                 KSR.htable.sht_inc("authfailure", srcip)
             end
 			KSR.x.exit()
@@ -270,14 +270,14 @@ function authenticate()
             end
             if failcount >= AUTHFAILURE_THRESHOLD then
                 local useragent = KSR.kx.get_ua()
-                secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser)
+                secpublish('authfailure', srcip, AUTHFAILURE_BANTIME, LAYER, useragent, authuser, failcount)
                 local attackcount = KSR.htable.sht_inc("attackavoid", srcip)
                 if attackcount <= 0 then
                     KSR.htable.sht_seti("attackavoid", srcip, 1)
                     attackcount = 1
                 end
                 if attackcount >= ATTACKAVOID_THRESHOLD then
-                    secpublish('attackavoid', srcip, ATTACKAVOID_BANTIME, LAYER, useragent, authuser)
+                    secpublish('attackavoid', srcip, ATTACKAVOID_BANTIME, LAYER, useragent, authuser, attackcount)
                 end
             end
         end
@@ -328,7 +328,7 @@ end
 function ProxyThenSwitch()
     local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
-    delogify('module', 'callng', 'space', 'kami', 'action', 'uacincoming', 'domain', domain, 'authuser', authuser, 'callid', KSR.kx.get_callid())
+    delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uacincoming', 'domain', domain, 'authuser', authuser, 'callid', KSR.kx.get_callid())
     local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
     KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
     local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
@@ -349,7 +349,7 @@ end
 function SwitchThenProxy()
     local sipuser = KSR.hdr.get('X-USER-ID')
 	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
-    delogify('module', 'callng', 'space', 'kami', 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
+    delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
 	if state<0 then
 		KSR.tm.t_newtran()
 		if state==-1 or state==-3 then
