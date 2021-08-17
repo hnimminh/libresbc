@@ -137,7 +137,6 @@ function SecurityCheck()
 		or string.find(ua, "sipcli")
         or string.find(ua, "test")
 		or string.find(ua, "sipvicious") then
-		KSR.drop()
 		KSR.x.exit()
 	end
     -- SANITY TEST
