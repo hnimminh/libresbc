@@ -96,6 +96,7 @@ def fssocket(reqdata):
 # NETFILTER TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _NFT = Environment(loader=FileSystemLoader('templates/nft'))
+_DFTBANTIME = 900
 
 @threaded
 def nftupdate(data):
@@ -161,7 +162,7 @@ def nftupdate(data):
                                        'siptcpports': set(siptcpports)}
         # RULE FILE
         template = _NFT.get_template("nftables.j2.conf")
-        stream = template.render(rtpportrange=rtpportrange, sipprofiles=sipprofiles, accesslayers=accesslayers)
+        stream = template.render(rtpportrange=rtpportrange, sipprofiles=sipprofiles, accesslayers=accesslayers, dftbantime=_DFTBANTIME)
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
 
@@ -190,7 +191,9 @@ def nftupdate(data):
 def nftsets(setname, ip, bantime):
     result = True
     try:
-        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, f'{{{ip} timeout {bantime}s}}'], stdout=PIPE, stderr=PIPE)
+        if bantime == _DFTBANTIME: element = f'{{{ip}}}'
+        else: element = f'{{{ip} timeout {bantime}s}}'
+        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, element], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(nftcmd.communicate())
         if stderr:
             result = False
@@ -486,14 +489,8 @@ class SecurityEventHandler(Thread):
                         portion = data.get('portion')
                         srcip = data.get('srcip')
                         bantime = data.get('bantime')
-                        if portion == _kamiauthfailure:
-                            nftsets('AuthFailure', srcip, bantime)
-                        elif portion == _kamiattackavoid:
-                            nftsets('AttackAvoid', srcip, bantime)
-                        elif portion == _kamiantiflooding:
-                            nftsets('AntiFlooding', srcip, bantime)
-                        else:
-                            pass
+                        if portion and srcip and bantime:
+                            nftsets('TemporaryBlocks', srcip, bantime)
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
