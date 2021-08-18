@@ -1,8 +1,0 @@
----
-# handlers file for kamailio
-- name: restart kamailio
-  systemd:
-    name: kamailio
-    enabled: true
-    state: restarted
-    daemon_reload: true
