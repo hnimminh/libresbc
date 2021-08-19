@@ -52,50 +52,10 @@ def osdelete(filename):
         return False
     return True
 
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# B2BUA CONTROL
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-@threaded
-def fssocket(reqdata):
-    result, fs = True, None
-    try:
-        commands = reqdata.get('commands')
-        requestid = reqdata.get('requestid')
-        # connecting
-        fs = redfs.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET, timeout=10)
-        for _ in range(0,3):
-            try:
-                fs.connect()
-                if fs.connected: break
-            except:
-                delay = reqdata.get('delay')
-                if delay: time.sleep(delay)
-                else: time.sleep(5)
-        # send api commands
-        if commands and fs.connected:
-            for command in commands:
-                response = fs.send(f'api {command}')
-                if response:
-                    resultstr = response.data
-                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
-                        _result = True
-                    else:
-                        _result = False
-                        logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
-                    result = bool(result and _result)
-        logify(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
-    except Exception as e:
-        logify(f"module=liberator, space=basemgr, action=fssocket, reqdata={reqdata}, exception={e}, tracings={traceback.format_exc()}")
-    finally:
-        if fs and fs.connected: fs.stop()
-        return result
-
-
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # NETFILTER TABLE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_NFT = Environment(loader=FileSystemLoader('templates/nft'))
+_NFT = Environment(loader=FileSystemLoader('nft'))
 _DFTBANTIME = 900
 
 @threaded
@@ -207,10 +167,73 @@ def nftsets(setname, ip, bantime):
     finally:
         return result
 
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# B2BUA CONTROL
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+_FSXML = Environment(loader=FileSystemLoader('fsxml'))
+@threaded
+def fsinstance(data):
+    result = True
+    xmlfile = '/usr/local/etc/freeswitch/freeswitch.xml'
+    try:
+        xmltemplate = _FSXML.get_template("freeswitch.xml")
+        xmlstream = xmltemplate.render()
+        with open(xmlfile, 'w') as fsf: fsf.write(xmlstream)
+        fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
+        _, stderr = bdecode(fsrun.communicate())
+        if stderr and not stderr.endswith('Backgrounding.'):
+            result = False
+            stderr = stderr.replace('\n', '')
+            logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
+        else: logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, result=success")
+    except Exception as e:
+        result = False
+        logify(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+
+@threaded
+def fssocket(data):
+    result, fs = True, None
+    try:
+        commands = data.get('commands')
+        requestid = data.get('requestid')
+        # connecting
+        fs = redfs.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET, timeout=10)
+        for _ in range(0,3):
+            try:
+                fs.connect()
+                if fs.connected: break
+            except:
+                delay = data.get('delay')
+                if delay: time.sleep(delay)
+                else: time.sleep(5)
+        # send api commands
+        if commands and fs.connected:
+            for command in commands:
+                response = fs.send(f'api {command}')
+                if response:
+                    resultstr = response.data
+                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
+                        _result = True
+                    else:
+                        _result = False
+                        logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+                    result = bool(result and _result)
+        logify(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
+    except Exception as e:
+        logify(f"module=liberator, space=basemgr, action=fssocket, data={data}, exception={e}, tracings={traceback.format_exc()}")
+    finally:
+        if fs and fs.connected: fs.stop()
+        return result
+
+
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PROXY MANAGE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_KAM = Environment(loader=FileSystemLoader('templates/kamcfg'))
+_KAM = Environment(loader=FileSystemLoader('kamcfg'))
 _KAMCONST = {'BRANCH_NATOUT_FLAG': 6, 'BRANCH_NATSIPPING_FLAG': 7, 'LIBRE_USER_LOCATION': 'LIBREUSRLOC'}
 
 @threaded
@@ -299,27 +322,6 @@ def kaminstance(data):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# B2BUA MANAGE
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-@threaded
-def fsinstance(data=None):
-    result = True
-    try:
-        fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
-        _, stderr = bdecode(fsrun.communicate())
-        if stderr:
-            result = False
-            stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
-        else: logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, result=success")
-    except Exception as e:
-        result = False
-        logify(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
@@ -328,8 +330,7 @@ def basestartup():
     try:
         logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
-
-        # fsinstance(data)
+        fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
         for layer in layers:
