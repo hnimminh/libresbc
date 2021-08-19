@@ -1,5 +1,5 @@
 [Unit]
-Description=Liberator - Configuring and Stabilizing Daemon
+Description=Liberator - LibreSBC Master Daemon
 After=network.target
 Before=freeswitch.service
 
