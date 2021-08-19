@@ -14,10 +14,6 @@
       tags: [platform, application, libre]
     - role: nginx
       tags: [platform, application]
-    - role: freeswitch
-      tags: [platform, application]
-    - role: kamailio
-      tags: [platform]
     - role: nftables
       tags: [platform, application]
     - role: captagent
