@@ -30,10 +30,10 @@
     - src: "{{sourcedir}}/liberator/configuration.py"
       dest: "{{destinationdir}}/liberator/configuration.py"
       mode: "0754"
-    - src: "{{sourcedir}}/platform/libre/system/systemd/liberator.service"
-      dest: "{{destinationdir}}/platform/libre/system/systemd/liberator.service"
+    - src: "{{sourcedir}}/platform/libre/systemd/liberator.service"
+      dest: "{{destinationdir}}/platform/libre/systemd/liberator.service"
       mode: "0644"
-#   - src: "{{sourcedir}}/platform/libre/system/sbin/liberator.sh"
+#   - src: "{{sourcedir}}/platform/libre/sbin/liberator.sh"
 #     dest: /usr/local/sbin/liberator.sh
 #     mode: 0754
 
@@ -44,12 +44,12 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/libre/system/systemd/liberator.service"
+    - src: "{{destinationdir}}/platform/libre/systemd/liberator.service"
       dest: /etc/systemd/system/liberator.service
 
-- name: handle liberator daemon 
-  debug: 
+- name: handle liberator daemon
+  debug:
     msg: "liberator will be restarted"
   changed_when: firedaemon != "idempotent"
-  notify: 
+  notify:
     - restart liberator

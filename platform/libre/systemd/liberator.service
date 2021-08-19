@@ -20,7 +20,7 @@ Restart=always
 RestartSec=10s
 
 LimitSTACK=infinity
-LimitNOFILE=65536
+LimitNOFILE=1048576
 LimitCORE=infinity
 LimitDATA=infinity
 LimitFSIZE=infinity

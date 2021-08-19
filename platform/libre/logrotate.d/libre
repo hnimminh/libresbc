@@ -1,0 +1,46 @@
+{{logdir}}/*.log {
+	rotate 60
+	daily
+	missingok
+	compress
+	delaycompress
+	copytruncate
+	sharedscripts
+	postrotate
+        # reload rsyslog >/dev/null 2>&1 || true
+		/bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+	endscript
+}
+
+/var/log/kamailio/kamailio.log {
+    daily
+    size 100M
+    nodateext
+    missingok
+    notifempty
+    rotate 60
+    maxage 5
+    create
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        /bin/kill -HUP `cat /var/run/rsyslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
+
+/var/log/freeswitch/*.log {
+    daily
+    rotate 60
+	missingok
+    nocreate
+	copytruncate
+    compress
+    delaycompress
+    sharedscripts
+    su freeswitch freeswitch
+    postrotate
+		#/usr/bin/fscli -x 'fsctl send_sighup' > /dev/null 2> /dev/null
+        /bin/kill -HUP `cat /var/run/freeswitch/freeswitch.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
