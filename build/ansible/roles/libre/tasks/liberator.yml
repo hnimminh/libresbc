@@ -16,7 +16,7 @@
 
 - name: Install specified python requirements
   pip:
-    requirements: "{{destinationdir}}/liberator/requirements.pip3"
+    requirements: "{{destinationdir}}/liberator/requirements.txt"
     executable: pip3
 
 - name: Update liberator templating-file

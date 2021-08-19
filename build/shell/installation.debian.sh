@@ -125,7 +125,7 @@ make altinstall
 ln -snf /usr/local/bin/python3.8 /usr/bin/python3
 ln -snf /usr/local/bin/pip3.8 /usr/bin/pip3
 
-pip3 install --user -r /opt/libresbc/run/liberator/requirements.pip3
+pip3 install --user -r /opt/libresbc/run/liberator/requirements.txt
 #------------------------------------------------------------------------------------------------------------
 #                   NGINX
 #------------------------------------------------------------------------------------------------------------
