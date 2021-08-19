@@ -12,6 +12,6 @@ redis==3.5.2
 contextvars==2.4
 schedule==0.6.0
 schedule==0.6.0
-cryptography==3.2.1
+cryptography==3.3.2
 redfs
 validators==0.18.2
