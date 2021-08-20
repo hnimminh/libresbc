@@ -32,7 +32,7 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 cfgrouter = APIRouter()
 
 # template location
-fstpl = Jinja2Templates(directory="fsxml")
+fstpl = Jinja2Templates(directory="fscfg/xml")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @cfgrouter.get("/cfgapi/fsxml/switch", include_in_schema=False)
