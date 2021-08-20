@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<document type="captagent_module/xml">
+  <module name="socket_pcap" description="HEP Socket" serial="2014010402">
+    <profile name="socketspcap_sip" description="HEP Socket" enable="true" serial="2014010402">
+      <settings>
+        <param name="dev" value="any"/>
+        <param name="promisc" value="true"/>
+        <param name="reasm" value="false"/>
+        <param name="websocket-detection" value="false"/>
+        <param name="tcpdefrag" value="false"/>
+        <param name="capture-plan" value="sip_capture_plan.cfg"/>
+        <param name="filter">
+            <value>portrange 5000-6000</value>
+        </param>
+      </settings>
+    </profile>
+  </module>
+</document>

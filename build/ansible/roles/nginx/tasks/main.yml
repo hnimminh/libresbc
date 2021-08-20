@@ -1,7 +1,7 @@
 ---
-- name: Create directory {{destinationdir}}/platform/nginx in target host
+- name: Create directory {{destinationdir}}/thirdparty/nginx in target host
   file:
-    path: "{{destinationdir}}/platform/nginx"
+    path: "{{destinationdir}}/thirdparty/nginx"
     owner: root
     group: root
     mode: 0644
@@ -9,13 +9,13 @@
 
 - name: Copy nginx role source to target host
   synchronize:
-    src: "{{sourcedir}}/platform/nginx/"
-    dest: "{{destinationdir}}/platform/nginx/"
+    src: "{{sourcedir}}/thirdparty/nginx/"
+    dest: "{{destinationdir}}/thirdparty/nginx/"
 
 - name: Update nginx templating-configuration
   template:
-    src: "{{sourcedir}}/platform/nginx/libresbc.conf"
-    dest: "{{destinationdir}}/platform/nginx/libresbc.conf"
+    src: "{{sourcedir}}/thirdparty/nginx/libresbc.conf"
+    dest: "{{destinationdir}}/thirdparty/nginx/libresbc.conf"
     owner: root
     group: root
     mode: 0644
@@ -27,12 +27,12 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/platform/nginx"
+    - src: "{{destinationdir}}/thirdparty/nginx"
       dest: /etc/nginx
 
-- name: handle nginx daemon 
-  debug: 
+- name: handle nginx daemon
+  debug:
     msg: "nginx will be restarted"
   changed_when: firedaemon != "idempotent"
-  notify: 
+  notify:
     - restart nginx

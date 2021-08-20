@@ -22,11 +22,11 @@
     group: root
     mode: "{{item.mode}}"
   with_items:
-    - src: "{{sourcedir}}/liberator/platform/rsyslog.d/libre.conf"
-      dest: "{{destinationdir}}/liberator/platform/rsyslog.d/libre.conf"
+    - src: "{{sourcedir}}/liberator/system/rsyslog.d/libre.conf"
+      dest: "{{destinationdir}}/liberator/system/rsyslog.d/libre.conf"
       mode: "0644"
-    - src: "{{sourcedir}}/liberator/platform/logrotate.d/libre"
-      dest: "{{destinationdir}}/liberator/platform/logrotate.d/libre"
+    - src: "{{sourcedir}}/liberator/system/logrotate.d/libre"
+      dest: "{{destinationdir}}/liberator/system/logrotate.d/libre"
       mode: "0644"
   vars:
     rsyslogvar:
@@ -40,9 +40,9 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/liberator/platform/rsyslog.d/libre.conf"
+    - src: "{{destinationdir}}/liberator/system/rsyslog.d/libre.conf"
       dest: /etc/rsyslog.d/libre.conf
-    - src: "{{destinationdir}}/liberator/platform/logrotate.d/libre"
+    - src: "{{destinationdir}}/liberator/system/logrotate.d/libre"
       dest: /etc/logrotate.d/libre
 
 - name: Install specified python requirements
@@ -61,10 +61,10 @@
     - src: "{{sourcedir}}/liberator/configuration.py"
       dest: "{{destinationdir}}/liberator/configuration.py"
       mode: "0754"
-    - src: "{{sourcedir}}/liberator/platform/systemd/liberator.service"
-      dest: "{{destinationdir}}/liberator/platform/systemd/liberator.service"
+    - src: "{{sourcedir}}/liberator/system/systemd/liberator.service"
+      dest: "{{destinationdir}}/liberator/system/systemd/liberator.service"
       mode: "0644"
-#   - src: "{{sourcedir}}/liberator/platform/sbin/liberator.sh"
+#   - src: "{{sourcedir}}/liberator/system/sbin/liberator.sh"
 #     dest: /usr/local/sbin/liberator.sh
 #     mode: 0754
 
@@ -75,7 +75,7 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/liberator/platform/systemd/liberator.service"
+    - src: "{{destinationdir}}/liberator/system/systemd/liberator.service"
       dest: /etc/systemd/system/liberator.service
 
 - name: handle liberator daemon

@@ -1,0 +1,18 @@
+[Unit]
+Description=SIP HOMER CaptAgent 
+After=network.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/captagent/sbin/captagent -d -f /usr/local/captagent/etc/captagent/captagent.xml
+ExecStopPost=/bin/rm -f /var/run/captagent.pid
+RemainAfterExit=no
+Restart=always
+RestartSec=5s
+MemoryLimit=268435456
+#MemoryAccounting=true
+#MemoryHigh=256M
+#MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
