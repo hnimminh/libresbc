@@ -38,7 +38,7 @@ VIOLATED_BLOCK_TIME = 60*ROLLING_WINDOW_TIME           --- if violate block 6000
 SRPT_ENCRYPTION_SUITES = {'AES_CM_128_HMAC_SHA1_80', 'AES_CM_128_HMAC_SHA1_32'}
 
 --- LOG DIRECTORY
-LOGDIR = '{{logdir}}'
+LOGDIR = '/var/log/libresbc'
 
 -----------------------------------------------------------------------------------------------------
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'

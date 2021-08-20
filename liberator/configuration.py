@@ -53,7 +53,7 @@ ESL_SECRET = '{{callengine.secret}}'
 DEFAULT_PASSWORD = '{{callengine.sipsecret}}'
 
 # LOG DIRECTORY
-LOGDIR = '{{logdir}}'
+LOGDIR = '/var/log/libresbc'
 
 #-----------------------------------------------------------------------------------------------------
 # HTTPCDR DATA

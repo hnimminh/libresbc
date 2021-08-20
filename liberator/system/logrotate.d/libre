@@ -1,4 +1,4 @@
-{{logdir}}/*.log {
+/var/log/libresbc/*.log {
 	rotate 60
 	daily
 	missingok
