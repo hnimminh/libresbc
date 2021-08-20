@@ -1,5 +1,5 @@
 [Unit]
-Description=Liberator - LibreSBC Master Daemon
+Description=Liberator - Libre Master Daemon
 After=network.target
 Before=freeswitch.service
 
