@@ -1,4 +1,4 @@
-
+---
 - name: Add an Apt signing key for freeswitch
   apt_key:
     url: https://files.freeswitch.org/repo/deb/debian-release/fsstretch-archive-keyring.asc
@@ -29,7 +29,7 @@
     dest: /usr/local/src/freeswitch-1.10.6.tar.gz
     checksum: md5:371b3001bf0871bbf8666e1f1c2d5e1f
 
-- name: Unarchive tar the freeswitch release 
+- name: Unarchive tar the freeswitch release
   unarchive:
     src: /usr/local/src/freeswitch-1.10.6.tar.gz
     dest: /usr/local/src
@@ -43,6 +43,35 @@
     group: root
     mode: 0644
 
+- name: Install Extra FreeSWITCH packages for AMR
+  apt:
+    pkg:
+      - libopencore-amrwb-dev
+      - libopencore-amrwb0
+      - libopencore-amrwb0-dbg
+      - libvo-amrwbenc-dev
+      - libvo-amrwbenc0
+      - vo-amrwbenc-dbg
+      - libopencore-amrnb-dev
+      - libopencore-amrnb0
+      - libopencore-amrnb0-dbg
+    state: latest
+
+- name: copy AMR LIB to source
+  copy:
+    src: '{{item.src}}'
+    dest: '{{item.dst}}'
+    remote_src: yes
+  with_items:
+    - src: /usr/include/opencore-amrwb/dec_if.h
+      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amrwb/dec_if.h
+    - src: /usr/include/vo-amrwbenc/enc_if.h
+      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amrwb/enc_if.h
+    - src: /usr/include/opencore-amrnb/interf_enc.h
+      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amr/interf_enc.h
+    - src: /usr/include/opencore-amrnb/interf_dec.h
+      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amr/interf_dec.h
+
 - name: build freeswitch
   shell: ./bootstrap.sh -j && ./configure -C --prefix=/usr/local --with-rundir=/run/freeswitch --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl && make && make install
   args:
@@ -54,9 +83,33 @@
     path: /usr/local/etc/freeswitch
     state: absent
 
+- name: Create a directory if it does not exist
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0755'
+  with_items:
+    - /var/run/freeswitch
+    - /usr/local/etc/freeswitch
+    - /var/log/kamailio
+
 - name: Symbolic cli tool
   file:
     src: "/usr/local/bin/fs_cli"
     dest: "/usr/bin/fscli"
     state: link
     force: true
+
+# G729
+- name: Git clone bcg729
+  git:
+    repo: https://github.com/xadhoom/mod_bcg729.git
+    dest: /usr/local/src/mod_bcg729
+    recursive: no
+    clone: yes
+
+- name: build bcg729
+  shell: sed -i 's/^FS_INCLUDES=.*/FS_INCLUDES=\/usr\/local\/include\/freeswitch/' Makefile && sed -i 's/^FS_MODULES=.*/FS_MODULES=\/usr\/local\/lib\/freeswitch\/mod/' Makefile && make && make install
+  args:
+    executable: /bin/bash
+    chdir: /usr/local/src/mod_bcg729
