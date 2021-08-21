@@ -1,0 +1,47 @@
+---
+- name: Run the equivalent of "apt-get update" as a separate step
+  apt:
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Install Extra Kamailio packages
+  apt:
+    pkg:
+      - libssl-dev
+      - libcurl4-openssl-dev
+      - libxml2-dev
+      - libpcre3-dev
+    state: latest
+
+- name: Download kamailio source code and checksum
+  get_url:
+    url: https://www.kamailio.org/pub/kamailio/latest-5.5.x/src/kamailio-5.5.1_src.tar.gz
+    dest: /usr/local/src/kamailio-5.5.1_src.tar.gz
+    checksum: md5:14ca94eae17d0950924fbe0429bded32
+
+- name: Unarchive tar the freeswitch release
+  unarchive:
+    src: /usr/local/src/kamailio-5.5.1_src.tar.gz
+    dest: /usr/local/src
+    remote_src: yes
+
+- name: build kamailio
+  shell: make include_modules="jsonrpcs outbound ndb_redis regex utils tls" && make && make install
+  args:
+    executable: /bin/bash
+    chdir: /usr/local/src/kamailio-5.5.1
+
+- name: Delete default configuration folder
+  file:
+    path: /usr/local/etc/kamailio
+    state: absent
+
+- name: Create a directory if it does not exist
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0755'
+  with_items:
+    - /var/run/kamailio
+    - /usr/local/etc/kamailio
+    - /var/log/kamailio
