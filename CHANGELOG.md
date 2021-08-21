@@ -17,6 +17,10 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - codec AMR-NB, AMR-WB
 - media profile with dtmf mode, media mode(proxy,bypass,transcode), codec negotiation algo (generous, greedy, scrooge), VAD, CNG
 - support distribution algorithm
+- Access Layer
+- Access Layer Security: Intrudent detecion, Brute Force Prevention, Antiflooding
+- Multiple domain - default domain
+- Socket indicator
 
 ### Changed
 - ansible role convention
