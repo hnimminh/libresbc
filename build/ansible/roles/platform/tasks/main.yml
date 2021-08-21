@@ -1,8 +1,23 @@
 - name: os update
-  include_tasks: debian.yml
+  import_tasks: debian.yml
+  tags: [platform, debian]
 
 - name: performance tuning
-  include_tasks: tuning.yml
+  import_tasks: tuning.yml
+  tags: [platform, tuning]
 
 - name: freeswitch installation
-  include_tasks: freeswitch.yml
+  import_tasks: freeswitch.yml
+  tags: [platform, freeswitch]
+
+- name: kamailio installation
+  import_tasks: kamailio.yml
+  tags: [platform, kamailio]
+
+- name: nginx installation
+  import_tasks: nginx.yml
+  tags: [platform, nginx]
+
+- name: redis installation
+  import_tasks: redis.yml
+  tags: [platform, redis]
