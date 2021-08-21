@@ -1,0 +1,37 @@
+- name: Run the equivalent of "apt-get update" as a separate step
+  apt:
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Install Extra Nginx packages
+  apt:
+    pkg:
+      - nginx
+    state: latest
+
+- name: Delete default configuration folder
+  file:
+    path: /etc/nginx
+    state: absent
+
+- name: Create a directory if it does not exist
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0744'
+  with_items:
+    - /etc/systemd/system/nginx.service.d
+    - /etc/nginx
+
+- name: fix nginx bug https://bugs.launchpad.net/ubuntu/+source/nginx/+bug/1581864
+  shell: /bin/printf "[Service]\nExecStartPost=/bin/sleep 0.1\n" | sudo tee /etc/systemd/system/nginx.service.d/override.conf
+  args:
+    executable: /bin/bash
+
+- name: restart nginx
+  systemd:
+    name: nginx
+    enabled: true
+    state: restarted
+    daemon_reload: true
+...
