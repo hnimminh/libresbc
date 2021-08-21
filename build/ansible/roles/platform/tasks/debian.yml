@@ -4,7 +4,7 @@
   ignore_errors: true
 
 - name: Update apt-cache
-  apt: update_cache=yes 
+  apt: update_cache=yes
 
 - name: Update all packages to their latest version
   apt:
@@ -21,28 +21,29 @@
     name: "{{timezone}}"
 
 # change hostname
-- name: Change hostname {{ansible_hostname}} to {{nodename|lower}}
+- name: Change hostname {{ansible_hostname}} to {{nodeid|lower}}
   hostname:
-    name: "{{nodename | lower}}"
-  
+    name: "{{nodeid | lower}}"
+
 # https://github.com/ansible/ansible/issues/19176
 - name: set hostname - workaround
   replace:
     path: /etc/hosts
     regexp: ^127.0.1.1(.*){{ansible_hostname}}(.*)$
-    replace: 127.0.1.1\1{{nodename|lower}}\2
+    replace: 127.0.1.1\1{{nodeid|lower}}\2
     backup: yes
 
-
 - name: Install essential packages
-  apt: 
-    pkg: 
+  apt:
+    pkg:
       - lsb-release
       - build-essential
-      - g++ 
-      - g++-8 
-      - gcc 
+      - g++
+      - g++-8
+      - gcc
       - gcc-8
+      - flex
+      - bison
       - libtool
       - autoconf
       - make
@@ -59,9 +60,13 @@
       - lsof
       - nftables
       - rsync
-      - python3-pip 
-      - python3 
+      - chrony
+      - python3-pip
+      - python3
       - python3-dev
+      - liblua5.2-dev
+      - lua5.2
+      - luarocks
     state: latest
 
 - name: Remove useless packages from the cache
@@ -91,7 +96,12 @@
   ignore_errors: true
 
 - name: make source directory writeable
-  file: 
-    path: /usr/local/src 
-    state: directory 
+  file:
+    path: /usr/local/src
+    state: directory
     mode: 0764
+
+- name: build change default editor
+  shell: update-alternatives --set editor /usr/bin/vim.basic
+  args:
+    executable: /bin/bash
