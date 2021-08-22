@@ -16,9 +16,9 @@
     upgrade: dist
 
 # set timezone
-- name: Set timezone to {{timezone}}
+- name: Set timezone to {{timezone|default(UTC)}}
   timezone:
-    name: "{{timezone}}"
+    name: "{{timezone|default(UTC)}}"
 
 # change hostname
 - name: Change hostname {{ansible_hostname}} to {{nodeid|lower}}
