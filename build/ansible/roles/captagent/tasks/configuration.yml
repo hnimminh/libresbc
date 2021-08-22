@@ -36,7 +36,7 @@
 - name: handle restart captagent daemon
   debug:
     msg: "captagent will be restarted"
-  changed_when: firedaemon != "idempotent"
+  changed_when: true
   notify:
     - restart captagent
   when:

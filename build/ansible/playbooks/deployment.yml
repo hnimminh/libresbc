@@ -5,18 +5,15 @@
 
   vars:
     destinationdir: "{{libredir}}/{{version}}"
-    firedaemon: restarted
 
   roles:
     - role: platform
-      tags: [platform]
     - role: libre
-      tags: [platform, application, libre]
+      tags: [platform, libre]
     - role: nginx
       tags: [platform, application]
     - role: nftables
       tags: [platform, application]
     - role: captagent
-      tags: [platform, application]
-    - role: syslog
-      tags: [platform, application]
+      tags: [third-party]
+

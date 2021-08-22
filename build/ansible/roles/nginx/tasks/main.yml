@@ -33,6 +33,6 @@
 - name: handle nginx daemon
   debug:
     msg: "nginx will be restarted"
-  changed_when: firedaemon != "idempotent"
+  changed_when: true
   notify:
     - restart nginx
