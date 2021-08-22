@@ -36,7 +36,7 @@ if __name__ == '__main__':
         cdrthread = CDRMaster()
         cdrthread.start()
         # HTTP API
-        uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, access_log=False, reload=True )
+        uvicorn.run('api:httpapi', host='127.0.0.1', port=8080, workers=4, access_log=False)
     except Exception as e:
         logify(f'module=liberator, space=main, exception: {e}, traceback: {traceback.format_exc()}')
     finally:
