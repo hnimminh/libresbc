@@ -44,6 +44,10 @@
       dest: /etc/rsyslog.d/libre.conf
     - src: "{{destinationdir}}/liberator/system/logrotate.d/libre"
       dest: /etc/logrotate.d/libre
+  changed_when: true
+  notify:
+    - reload logrotate
+    - restart rsyslog
 
 - name: Install specified python requirements
   pip:
