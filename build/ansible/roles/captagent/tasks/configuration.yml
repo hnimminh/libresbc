@@ -1,0 +1,44 @@
+---
+- name: Create directory {{destinationdir}}/third-party/captagent in target host
+  file:
+    path: "{{destinationdir}}/third-party/captagent"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+
+- name: Copy captagent role source to target host
+  synchronize:
+    src: "{{sourcedir}}/third-party/captagent/"
+    dest: "{{destinationdir}}/third-party/captagent/"
+
+- name: Update captagent templating-configuration
+  template:
+    src: "{{sourcedir}}/third-party/captagent/self/transport_hep.xml"
+    dest: "{{destinationdir}}/third-party/captagent/self/transport_hep.xml"
+    owner: root
+    group: root
+    mode: 0644
+  when:
+    - homer is defined
+    - homer != None
+
+- name: Symbolic link for captagent service
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{destinationdir}}/third-party/captagent"
+      dest: /usr/local/captagent/etc/captagent
+
+- name: handle restart captagent daemon
+  debug:
+    msg: "captagent will be restarted"
+  changed_when: firedaemon != "idempotent"
+  notify:
+    - restart captagent
+  when:
+    - homer is defined
+    - homer != None

@@ -1,0 +1,48 @@
+---
+- name: Run the equivalent of "apt-get update" as a separate step
+  apt:
+    update_cache: yes
+  ignore_errors: yes
+
+- name: Download captagent source code and checksum
+  get_url:
+    url: https://github.com/sipcapture/captagent/archive/6.3.1.tar.gz
+    dest: /usr/local/src/captagent-6.3.1.tar.gz
+    checksum: md5:7be6408eac5ec94d7c4bd22a5aaa3dcc
+
+- name: Unarchive tar the captagent release
+  unarchive:
+    src: /usr/local/src/captagent-6.3.1.tar.gz
+    dest: /usr/local/src
+    remote_src: yes
+
+- name: Install Extra FreeSWITCH packages for AMR
+  apt:
+    pkg:
+      - libexpat-dev
+      - libpcap-dev
+      - libjson-c-dev
+      - libtool
+      - libgcrypt-dev
+      - libuv1-dev
+      - libpcre3-dev
+      - libfl-dev
+    state: latest
+
+- name: build captagent
+  shell: ./build.sh && ./configure --enable-compression --enable-ipv6 --enable-pcre --enable-ssl --enable-tls && make && make install
+  args:
+    executable: /bin/bash
+    chdir: /usr/local/src/captagent-6.3.1
+
+- name: Delete default captagent folder
+  file:
+    path: /usr/local/captagent/etc/captagent
+    state: absent
+
+- name: Create a directory if it does not exist
+  file:
+    path: /usr/local/captagent/etc/captagent
+    state: directory
+    mode: '0755'
+
