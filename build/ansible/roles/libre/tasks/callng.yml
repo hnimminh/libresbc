@@ -27,6 +27,12 @@
 #    mode: '0754'
 #  with_items: "{{ nglua.files }}"
 
+- name: install lua pkgs
+  shell: /bin/sh requirement.sh
+  args:
+    executable: /bin/bash
+    chdir: "{{destinationdir}}/callng"
+
 - name: Update callng templating-file of configuration
   template:
     src: "{{sourcedir}}/callng/configuration.lua"
