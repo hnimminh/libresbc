@@ -20,8 +20,7 @@ import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import IPv4Network
 
-from configuration import (NODEID, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
-                           ESL_HOST, ESL_PORT, ESL_SECRET,
+from configuration import (NODEID, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
@@ -30,8 +29,7 @@ REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS
                                                      decode_responses=True, max_connections=5, timeout=REDIS_TIMEOUT)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 
-LIBRESBC_ENGINE_STARTUP = False
-
+ESL_SECRET = randomstr(16)
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -171,15 +169,19 @@ def nftsets(setname, ip, bantime):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # B2BUA CONTROL
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_FSXML = Environment(loader=FileSystemLoader('fscfg/xml'))
+_FSXML = Environment(loader=FileSystemLoader('fscfg'))
 @threaded
 def fsinstance(data):
     result = True
     xmlfile = '/usr/local/etc/freeswitch/freeswitch.xml'
+    clifile = '/etc/fs_cli.conf'
     try:
-        xmltemplate = _FSXML.get_template("freeswitch.xml")
-        xmlstream = xmltemplate.render()
+        xmltemplate = _FSXML.get_template("xml/freeswitch.xml")
+        xmlstream = xmltemplate.render(eslhost=ESL_HOST, eslport=ESL_PORT, eslpassword=ESL_SECRET)
         with open(xmlfile, 'w') as fsf: fsf.write(xmlstream)
+        clitemplate = _FSXML.get_template("etc/fs_cli.conf")
+        clistream = clitemplate.render(secret=ESL_SECRET)
+        with open(clifile, 'w') as clif: clif.write(clistream)
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
         if stderr and not stderr.endswith('Backgrounding.'):
@@ -196,7 +198,7 @@ def fsinstance(data):
 
 @threaded
 def fssocket(data):
-    result, fs = True, None
+    result, fs = False, None
     try:
         commands = data.get('commands')
         requestid = data.get('requestid')
@@ -212,6 +214,7 @@ def fssocket(data):
                 else: time.sleep(5)
         # send api commands
         if commands and fs.connected:
+            result = True
             for command in commands:
                 response = fs.send(f'api {command}')
                 if response:

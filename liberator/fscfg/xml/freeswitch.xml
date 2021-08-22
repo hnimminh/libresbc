@@ -30,7 +30,9 @@
     <configuration name="event_socket.conf" description="Socket Client">
       <settings>
         <param name="nat-map" value="false"/>
-        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/event-socket"/>
+        <param name="listen-ip" value="{{eslhost}}"/>
+        <param name="listen-port" value="{{eslport}}"/>
+        <param name="password" value="{{eslpassword}}"/>
       </settings>
     </configuration>
     <!--- LOGFILE -->
@@ -42,7 +44,7 @@
         <profile name="default">
           <settings>
             <!-- At this length in bytes rotate the log file (0 for never) -->
-            <param name="rollover" value="104857600"/> 
+            <param name="rollover" value="104857600"/>
             	<!-- Maximum number of log files to keep before wrapping -->
               <!-- If this parameter is enabled, the log filenames will not include a date stamp -->
               <param name="maximum-rotate" value="32"/>
@@ -66,7 +68,7 @@
         <hook event="CUSTOM" subclass="sofia::register_failure" script="callng/event.unauth.lua"/>
       </settings>
     </configuration>
-    <!--- MODULES -->  
+    <!--- MODULES -->
     <configuration name="modules.conf" description="Modules">
       <modules>
         <load module="mod_console"/>
@@ -87,13 +89,13 @@
         <load module="mod_flite"/>
       </modules>
     </configuration>
-    <!--- CODECS --> 
+    <!--- CODECS -->
     <configuration name="amr.conf">
       <settings>
-        <param name="default-bitrate" value="7"/> 
+        <param name="default-bitrate" value="7"/>
         <param name="volte" value="1"/>
         <param name="adjust-bitrate" value="0"/>
-        <param name="force-oa" value="0"/> 
+        <param name="force-oa" value="0"/>
       </settings>
     </configuration>
     <configuration name="amrwb.conf">
@@ -119,7 +121,7 @@
         <param name="adjust-bitrate" value="1"/>
       </settings>
     </configuration>
-    <!--- SOFIA SIP -->  
+    <!--- SOFIA SIP -->
     <configuration name="sofia.conf" description="sofia Endpoint">
       <global_settings>
         <param name="log-level" value="0"/>

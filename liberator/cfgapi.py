@@ -17,16 +17,17 @@ from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_,
-                           ESL_HOST, ESL_PORT, ESL_SECRET, DEFAULT_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-
-from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify
+from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
 from basemgr import fssocket
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=5)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
+
+# dynamic default sip passwd
+SIP_DFTPASSWORD = randomstr(20)
 
 # api router declaration
 cfgrouter = APIRouter()
@@ -45,20 +46,6 @@ def switch(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logify(f"module=liberator, space=cfgapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-
-@cfgrouter.get("/cfgapi/fsxml/event-socket", include_in_schema=False)
-def esl(request: Request, response: Response):
-    try:
-        result = fstpl.TemplateResponse("event-socket.j2.xml",
-                                            {"request": request, "host": ESL_HOST, "port": ESL_PORT, "password": ESL_SECRET},
-                                            media_type="application/xml")
-        response.status_code = 200
-    except Exception as e:
-        response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=event-socket, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -242,7 +229,7 @@ def directory(request: Request, response: Response):
             ringready = fieldjsonify(detail[5])
 
             if authscheme=='IP':
-                password = DEFAULT_PASSWORD
+                password = SIP_DFTPASSWORD
                 cidrs = sipaddrs
             elif authscheme=='DIGEST':
                 password = secret
