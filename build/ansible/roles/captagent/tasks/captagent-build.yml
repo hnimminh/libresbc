@@ -4,19 +4,19 @@
     update_cache: yes
   ignore_errors: yes
 
-- name: Download captagent source code and checksum
+- name: Download CaptAgent source code and checksum
   get_url:
     url: https://github.com/sipcapture/captagent/archive/6.3.1.tar.gz
     dest: /usr/local/src/captagent-6.3.1.tar.gz
     checksum: md5:7be6408eac5ec94d7c4bd22a5aaa3dcc
 
-- name: Unarchive tar the captagent release
+- name: Unarchive tar the CaptAgent release
   unarchive:
     src: /usr/local/src/captagent-6.3.1.tar.gz
     dest: /usr/local/src
     remote_src: yes
 
-- name: Install Extra FreeSWITCH packages for AMR
+- name: Install Extra CaptAgent packages for AMR
   apt:
     pkg:
       - libexpat-dev
@@ -29,13 +29,13 @@
       - libfl-dev
     state: latest
 
-- name: build captagent
+- name: build CaptAgent
   shell: ./build.sh && ./configure --enable-compression --enable-ipv6 --enable-pcre --enable-ssl --enable-tls && make && make install
   args:
     executable: /bin/bash
     chdir: /usr/local/src/captagent-6.3.1
 
-- name: Delete default captagent folder
+- name: Delete default CaptAgent config folder
   file:
     path: /usr/local/captagent/etc/captagent
     state: absent
