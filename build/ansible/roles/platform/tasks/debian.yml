@@ -42,8 +42,6 @@
       - g++-8
       - gcc
       - gcc-8
-      - flex
-      - bison
       - libtool
       - autoconf
       - make
