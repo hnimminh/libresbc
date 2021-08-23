@@ -146,8 +146,7 @@ wget https://www.kamailio.org/pub/kamailio/latest-5.5.x/src/kamailio-5.5.1_src.t
 tar -xvzf kamailio-5.5.1_src.tar.gz
 cd kamailio-5.5.1
 apt-get install git gcc g++ flex bison make autoconf libssl-dev libcurl4-openssl-dev libxml2-dev libpcre3-dev libhiredis-dev
-make include_modules="jsonrpcs outbound ndb_redis regex utils tls"
-
+make include_modules="jsonrpcs outbound ndb_redis regex utils tls" cfg
 make all
 make install
 mkdir /var/run/kamailio
