@@ -1,3 +1,3 @@
 #!/bin/sh
-cd {{destinationdir}}/liberator
-/usr/bin/python3 {{destinationdir}}/liberator/main.py &
+cd {{dstdir}}/liberator
+/usr/bin/python3 {{dstdir}}/liberator/main.py &

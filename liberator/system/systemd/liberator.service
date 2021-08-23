@@ -7,8 +7,8 @@ Before=freeswitch.service
 Type=simple
 User=root
 Group=root
-WorkingDirectory={{destinationdir}}/liberator
-ExecStart=/usr/bin/python3 {{destinationdir}}/liberator/main.py
+WorkingDirectory={{dstdir}}/liberator
+ExecStart=/usr/bin/python3 {{dstdir}}/liberator/main.py
 
 SyslogIdentifier=libresbc
 SyslogFacility=5

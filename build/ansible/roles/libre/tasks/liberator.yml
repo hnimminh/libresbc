@@ -1,7 +1,7 @@
 ---
-- name: Create directory {{destinationdir}}/liberator in target host
+- name: Create directory {{dstdir}}/liberator in target host
   file:
-    path: "{{destinationdir}}/liberator"
+    path: "{{dstdir}}/liberator"
     owner: root
     group: root
     mode: 0644
@@ -9,8 +9,8 @@
 
 - name: Copy liberator role source to target host
   synchronize:
-    src: "{{sourcedir}}/liberator/"
-    dest: "{{destinationdir}}/liberator/"
+    src: "{{srcdir}}/liberator/"
+    dest: "{{dstdir}}/liberator/"
     rsync_opts:
       - "--exclude=*.pyc"
 
@@ -22,11 +22,11 @@
     group: root
     mode: "{{item.mode}}"
   with_items:
-    - src: "{{sourcedir}}/liberator/system/rsyslog.d/libre.conf"
-      dest: "{{destinationdir}}/liberator/system/rsyslog.d/libre.conf"
+    - src: "{{srcdir}}/liberator/system/rsyslog.d/libre.conf"
+      dest: "{{dstdir}}/liberator/system/rsyslog.d/libre.conf"
       mode: "0644"
-    - src: "{{sourcedir}}/liberator/system/logrotate.d/libre"
-      dest: "{{destinationdir}}/liberator/system/logrotate.d/libre"
+    - src: "{{srcdir}}/liberator/system/logrotate.d/libre"
+      dest: "{{dstdir}}/liberator/system/logrotate.d/libre"
       mode: "0644"
   vars:
     rsyslogvar:
@@ -40,9 +40,9 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/liberator/system/rsyslog.d/libre.conf"
+    - src: "{{dstdir}}/liberator/system/rsyslog.d/libre.conf"
       dest: /etc/rsyslog.d/libre.conf
-    - src: "{{destinationdir}}/liberator/system/logrotate.d/libre"
+    - src: "{{dstdir}}/liberator/system/logrotate.d/libre"
       dest: /etc/logrotate.d/libre
   changed_when: true
   notify:
@@ -51,7 +51,7 @@
 
 - name: Install specified python requirements
   pip:
-    requirements: "{{destinationdir}}/liberator/requirements.txt"
+    requirements: "{{dstdir}}/liberator/requirements.txt"
     executable: pip3
 
 - name: Update liberator templating-file
@@ -62,13 +62,13 @@
     group: root
     mode: "{{item.mode}}"
   with_items:
-    - src: "{{sourcedir}}/liberator/configuration.py"
-      dest: "{{destinationdir}}/liberator/configuration.py"
+    - src: "{{srcdir}}/liberator/configuration.py"
+      dest: "{{dstdir}}/liberator/configuration.py"
       mode: "0754"
-    - src: "{{sourcedir}}/liberator/system/systemd/liberator.service"
-      dest: "{{destinationdir}}/liberator/system/systemd/liberator.service"
+    - src: "{{srcdir}}/liberator/system/systemd/liberator.service"
+      dest: "{{dstdir}}/liberator/system/systemd/liberator.service"
       mode: "0644"
-#   - src: "{{sourcedir}}/liberator/system/sbin/liberator.sh"
+#   - src: "{{srcdir}}/liberator/system/sbin/liberator.sh"
 #     dest: /usr/local/sbin/liberator.sh
 #     mode: 0754
 
@@ -79,7 +79,7 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/liberator/system/systemd/liberator.service"
+    - src: "{{dstdir}}/liberator/system/systemd/liberator.service"
       dest: /etc/systemd/system/liberator.service
 
 - name: handle liberator daemon

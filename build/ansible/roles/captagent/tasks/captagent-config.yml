@@ -1,7 +1,7 @@
 ---
-- name: Create directory {{destinationdir}}/third-party/captagent in target host
+- name: Create directory {{dstdir}}/third-party/captagent in target host
   file:
-    path: "{{destinationdir}}/third-party/captagent"
+    path: "{{dstdir}}/third-party/captagent"
     owner: root
     group: root
     mode: 0644
@@ -9,13 +9,13 @@
 
 - name: Copy captagent role source to target host
   synchronize:
-    src: "{{sourcedir}}/third-party/captagent/"
-    dest: "{{destinationdir}}/third-party/captagent/"
+    src: "{{srcdir}}/third-party/captagent/"
+    dest: "{{dstdir}}/third-party/captagent/"
 
 - name: Update captagent templating-configuration
   template:
-    src: "{{sourcedir}}/third-party/captagent/self/transport_hep.xml"
-    dest: "{{destinationdir}}/third-party/captagent/self/transport_hep.xml"
+    src: "{{srcdir}}/third-party/captagent/self/transport_hep.xml"
+    dest: "{{dstdir}}/third-party/captagent/self/transport_hep.xml"
     owner: root
     group: root
     mode: 0644
@@ -30,7 +30,7 @@
     force: true
     state: link
   with_items:
-    - src: "{{destinationdir}}/third-party/captagent"
+    - src: "{{dstdir}}/third-party/captagent"
       dest: /usr/local/captagent/etc/captagent
 
 - name: handle restart captagent daemon

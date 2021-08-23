@@ -11,8 +11,8 @@
 #      GLOBAL CONFIGURATION FILES
 #-----------------------------------------------------------------------------------------------------
 _APPLICATION = 'LIBRESBC'
-_SWVERSION = '0.5.5'
 _DESCRIPTION = 'Open Source Session Border Controller for Large-Scale Voice Infrastructures'
+_SWVERSION = '{{version}}'
 #-----------------------------------------------------------------------------------------------------
 # REDIS ENDPOINT
 #-----------------------------------------------------------------------------------------------------

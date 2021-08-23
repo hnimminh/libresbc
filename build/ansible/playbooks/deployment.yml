@@ -1,19 +1,19 @@
-- name: CODE DEPLOYEMENT LIBRESBC
+- name: LibreSBC Deployment
   hosts: all
   gather_facts: true
   become: true
 
   vars:
-    destinationdir: "{{libredir}}/{{version}}"
+    version: '0.5.6'
+    srcdir: '{{inventory_dir|dirname|dirname|dirname|dirname}}'
+    dstdir: /opt/libresbc/{{version}}
 
   roles:
     - role: platform
     - role: libre
       tags: [platform, libre]
     - role: nginx
-      tags: [platform, application]
     - role: nftables
-      tags: [platform, application]
+      tags: [platform, firewall]
     - role: captagent
-      tags: [third-party]
 
