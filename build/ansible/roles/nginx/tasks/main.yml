@@ -1,38 +1,7 @@
----
-- name: Create directory {{destinationdir}}/third-party/nginx in target host
-  file:
-    path: "{{destinationdir}}/third-party/nginx"
-    owner: root
-    group: root
-    mode: 0644
-    state: directory
+- name: nginx installation
+  import_tasks: nginx-install.yml
+  tags: [third-party, nginx-install]
 
-- name: Copy nginx role source to target host
-  synchronize:
-    src: "{{sourcedir}}/third-party/nginx/"
-    dest: "{{destinationdir}}/third-party/nginx/"
-
-- name: Update nginx templating-configuration
-  template:
-    src: "{{sourcedir}}/third-party/nginx/libresbc.conf"
-    dest: "{{destinationdir}}/third-party/nginx/libresbc.conf"
-    owner: root
-    group: root
-    mode: 0644
-
-- name: Symbolic link for nginx service
-  file:
-    src: "{{item.src}}"
-    dest: "{{item.dest}}"
-    force: true
-    state: link
-  with_items:
-    - src: "{{destinationdir}}/third-party/nginx"
-      dest: /etc/nginx
-
-- name: handle nginx daemon
-  debug:
-    msg: "nginx will be restarted"
-  changed_when: true
-  notify:
-    - restart nginx
+- name: nginx configuration
+  import_tasks: nginx-config.yml
+  tags: [third-party, nginx-config]

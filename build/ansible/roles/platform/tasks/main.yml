@@ -14,10 +14,6 @@
   import_tasks: kamailio.yml
   tags: [platform, kamailio]
 
-- name: nginx installation
-  import_tasks: nginx.yml
-  tags: [platform, nginx]
-
 - name: redis installation
   import_tasks: redis.yml
   tags: [platform, redis]
