@@ -148,21 +148,27 @@ def nftupdate(data):
         return result
 
 #---------------------------------------------------------------------------------
-
+_nftdelimiter_ = ', '
 @threaded
-def nftsets(setname, ip, bantime):
+def nftsets(setname, ops, srcips, bantime=None):
     result = True
     try:
-        if bantime == _DFTBANTIME: element = f'{{{ip}}}'
-        else: element = f'{{{ip} timeout {bantime}s}}'
-        nftcmd = Popen(['/usr/sbin/nft', 'add', 'element', 'inet', 'LIBREFW', setname, element], stdout=PIPE, stderr=PIPE)
+        if bantime:
+            if bantime == _DFTBANTIME: element = f'{{ {stringify(srcips, _nftdelimiter_)} }}'
+            else:
+                _es = [f'{srcip} timeout {bantime}s' for srcip in srcips]
+                element = f'{{ {stringify(_es, _nftdelimiter_)} }}'
+        else:
+            element = f'{{ {stringify(srcips, _nftdelimiter_)} }}'
+
+        nftcmd = Popen(['/usr/sbin/nft', ops, 'element', 'inet', 'LIBREFW', setname, element], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(nftcmd.communicate())
         if stderr:
             result = False
             stderr = stderr.replace('\n', '')
             logify(f"module=liberator, space=basemgr, action=nftsets, error={stderr}")
         else:
-            logify(f"module=liberator, space=basemgr, action=nftsets, setname={setname}, ip={ip}, result=success")
+            logify(f"module=liberator, space=basemgr, action=nftsets, ops={ops}, setname={setname}, srcips={srcips}, result=success")
     except Exception as e:
         result = False
         logify(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
@@ -488,6 +494,8 @@ class SecurityEventHandler(Thread):
         _kamiauthfailure = 'kami:authfailure'
         _kamiattackavoid = 'kami:attackavoid'
         _kamiantiflooding = 'kami:antiflooding'
+        _apiwhiteset = 'api:whiteset'
+        _apiblackset = 'api:blackset'
         while True:
             try:
                 pubsub = rdbconn.pubsub()
@@ -497,10 +505,15 @@ class SecurityEventHandler(Thread):
                     if msgtype == "message":
                         data = json.loads(message.get("data"))
                         portion = data.get('portion')
-                        srcip = data.get('srcip')
-                        bantime = data.get('bantime')
-                        if portion and srcip and bantime:
-                            nftsets('TemporaryBlocks', srcip, bantime)
+                        srcips = data.get('srcips')
+                        ops = 'delete' if data.get('_flag') else 'add'
+                        if srcips and portion in [_kamiauthfailure, _kamiattackavoid, _kamiantiflooding]:
+                            bantime = data.get('bantime')
+                            nftsets('TemporaryBlocks', ops, srcips, bantime)
+                        if srcips and portion==_apiwhiteset:
+                            nftsets('WhiteHole', ops, srcips)
+                        if srcips and portion==_apiblackset:
+                            nftsets('BlackHole', ops, srcips)
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
