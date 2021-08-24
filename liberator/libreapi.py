@@ -22,7 +22,7 @@ from ipaddress import IPv4Address, IPv4Network
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
-from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL,
+from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
                            NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
@@ -331,6 +331,49 @@ def list_netalias(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=list_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# SYSTEMWIDE FIREWALL IP WHITE/BLACK
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@librerouter.patch("/libreapi/base/firewall/{nameset}", status_code=200)
+def update_fwset(reqbody: List[IPv4Address], response: Response, nameset: str=Path(..., regex='^whiteset|blackset$')):
+    requestid=get_request_uuid()
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        name_key = f'firewall:{nameset}'
+        ipaddrs = jsonable_encoder(reqbody)
+        _ipaddrs = rdbconn.smembers(name_key)
+
+        remlist = list(set(_ipaddrs) - set(ipaddrs))
+        addlist = list(set(ipaddrs) - set(_ipaddrs))
+        for ipaddr in remlist:
+            pipe.srem(name_key, ipaddr)
+        for ipaddr in addlist:
+            pipe.sadd(name_key, ipaddr)
+        pipe.execute()
+        rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': remlist}))
+        rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': addlist}))
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=update_fwset, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+@librerouter.get("/libreapi/base/firewall", status_code=200)
+def get_fwset(response: Response):
+    result = None
+    try:
+        whiteset = list(rdbconn.smembers('firewall:whiteset'))
+        blackset = list(rdbconn.smembers('firewall:blackset'))
+        result = {'whiteset': whiteset, 'blackset': blackset}
+        response.status_code = 200
+    except Exception as e:
+        response.status_code, result = 500, None
+        logify(f"module=liberator, space=libreapi, action=get_fwset, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
