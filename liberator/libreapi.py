@@ -354,8 +354,8 @@ def update_fwset(reqbody: List[IPv4Address], response: Response, nameset: str=Pa
         for ipaddr in addlist:
             pipe.sadd(name_key, ipaddr)
         pipe.execute()
-        rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': remlist}))
-        rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': addlist}))
+        if remlist: rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': remlist, '_flag': True}))
+        if addlist: rdbconn.publish(SECURITY_CHANNEL, json.dumps({'portion': f'api:{nameset}', 'srcips': addlist}))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
