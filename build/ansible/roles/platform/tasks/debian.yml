@@ -33,6 +33,14 @@
     replace: 127.0.1.1\1{{nodeid|lower}}\2
     backup: yes
 
+- name: Remove unused packages
+  apt:
+    pkg:
+      - ntp
+      - iptables
+    state: absent
+  ignore_errors: true
+
 - name: Install essential packages
   apt:
     pkg:
@@ -67,23 +75,6 @@
       - luarocks
     state: latest
 
-- name: Remove useless packages from the cache
-  apt:
-    autoclean: yes
-
-- name: Remove dependencies that are no longer required
-  apt:
-    autoremove: yes
-
-- name: Disable and stop ntp
-  systemd:
-    name: ntp
-    enabled: false
-    state: stopped
-    masked: false
-    no_block: false
-  ignore_errors: true
-
 - name: Enable and start chronyd
   systemd:
     name: chronyd
@@ -92,6 +83,14 @@
     masked: false
     no_block: false
   ignore_errors: true
+
+- name: Remove useless packages from the cache
+  apt:
+    autoclean: yes
+
+- name: Remove dependencies that are no longer required
+  apt:
+    autoremove: yes
 
 - name: make source directory writeable
   file:
