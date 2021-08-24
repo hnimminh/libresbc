@@ -1,4 +1,4 @@
 
 {% if firewalls %}{% for firewall in firewalls %}
-{{firewall.transport}} dport { {{firewall.destports|join(',')}} } ip saddr { {{firewall.sourceips|join(',')}} } counter accept
+{{firewall.transport}} dport { {{firewall.destports|join(',')}} } ip saddr { {{firewall.sourceips|join(',')}} } {% if firewall.srcports %} {{firewall.transport}} sport { {{firewall.srcports|join(',')}} } {% endif %} counter accept
 {% endfor %}{% endif %}
