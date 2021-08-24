@@ -62,6 +62,9 @@ def nftupdate(data):
     try:
         requestid = data.get('requestid')
         pipe = rdbconn.pipeline()
+        # FIREWARESET
+        whiteset = rdbconn.smembers(f'firewall:whiteset')
+        blackset = rdbconn.smembers(f'firewall:blackset')
         # RTP PORTRANGE
         rtpportrange = list(map(fieldjsonify ,rdbconn.hmget('cluster:attributes', 'rtp_start_port', 'rtp_end_port')))
         # NETALIAS
@@ -120,7 +123,8 @@ def nftupdate(data):
                                        'siptcpports': set(siptcpports)}
         # RULE FILE
         template = _NFT.get_template("nftables.j2.conf")
-        stream = template.render(rtpportrange=rtpportrange, sipprofiles=sipprofiles, accesslayers=accesslayers, dftbantime=_DFTBANTIME)
+        stream = template.render(whiteset=whiteset, blackset=blackset, rtpportrange=rtpportrange, sipprofiles=sipprofiles,
+                                 accesslayers=accesslayers, dftbantime=_DFTBANTIME)
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
 
