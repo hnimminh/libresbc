@@ -1828,7 +1828,7 @@ class OutboundInterconnection(BaseModel):
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
-    privacy: List[PrivacyEnum] = Field(default=['auto'], min_items=1, max_item=3, description='callerid header mechanism: rpid, pid, none')
+    privacy: List[PrivacyEnum] = Field(default=['auto'], min_items=1, max_item=3, description='privacy header')
     cid_type: Optional[CallerIDType] = Field(default='auto', description='callerid header mechanism: rpid, pid, none')
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
@@ -3015,7 +3015,7 @@ class AntiFlooding(BaseModel):
     sampling: int = Field(default=2, ge=1, le=300, description='sampling time unit (in second)')
     density: int = Field(default=20, ge=1, le=3000, description='number of request that allow in sampling time, then will be ignore within window time')
     window: int = Field(default=600, ge=300, le=1200, description='evaluated window time in second')
-    threshold: int = Field(default=10, ge=1, le=3600, description='number of authentication failure threshold that will be banned')
+    threshold: int = Field(default=10, ge=1, le=3600, description='number of failure threshold that will be banned')
     bantime: int = Field(default=600, ge=600, le=864000, description='firewall ban time in second')
 
 class AuthFailure(BaseModel):
