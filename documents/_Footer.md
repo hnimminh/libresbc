@@ -1,1 +1,0 @@
-<p align="right"><i>Make with ❤️ in Saigon 🇻🇳<i/></p>
