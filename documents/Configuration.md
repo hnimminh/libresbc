@@ -22,16 +22,16 @@ Here is some question that might help you design you solution with LibreSBC.
   * [[Inbound]]: Inbound Traffic Connection
   * [[Outbound]]: Outbound Traffic Connection
   * [[Gateway]]: Inbound Traffic Connection
-* [[Class]]: Service Class
+* Class: Service Class
   * [[Media]]: Media Service include: Transcoding, Codec selection, media proxy ..
   * [[PreAnswer (Early Media)]]: Ringtone, Announcement ..
   * [[Translation Rules]]: Party Number translation: callerid number, callerid name, destination number
   * [[Capacity]]: rate limit, concurrent call, call per second, traffic shaping
   * [[Manipulation]]: SIP header normalize and manipulation. engine variable modify ..
-  * [[Base]]
+* Base
   * [[Access Control]]: Network define function
   * [[Network Alias]]: Network Address declaration
-  * [[Cluster]]: Cluster Configuration ..
+* [[Cluster]]: Cluster Configuration ..
 * [[Routing]]
 
 ## Rest API
