@@ -9,6 +9,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
 
+## [v0.5.6] - 2021-08-26
 ### Added
 - maninpualation class api
 - inbound normalization and outbound manipulation
@@ -21,6 +22,8 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Access Layer Security: Intrudent detecion, Brute Force Prevention, Antiflooding
 - Multiple domain - default domain
 - Socket indicator
+- Firewall Whitelist/Blacklist
+- Document update
 
 ### Changed
 - ansible role convention
