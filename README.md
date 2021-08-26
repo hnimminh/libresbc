@@ -22,7 +22,37 @@
 <p align="left"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b><br></p>
 
 
+<br>
+
+<h2>Contributing</h2>
+All kinds of contributions are very welcome and appreciated !
+
+If you want to contribute time to LibreSBC then here's a list of suggestions to get you started :
+
+1. Star the project.
+2. Help people in the [issues](https://github.com/hnimminh/libresbc/issues) by sharing your knowledge and experience.
+3. Find and report issues.
+4. Submit PRs to help solve issues or add features.
+5. Influence the future of LibreSBC with feature requests.
+
+
+**You can also contribute money to help secure LibreSBC's future.**
+
+<p align="center">
+  <a href="https://www.paypal.com/paypalme/hnimminh" target="_blank">
+    <img src="https://user-images.githubusercontent.com/58973699/130890970-ad7f3be3-42c4-4a21-8e28-27dda9c603e3.png" height="54" alt="Paypal">
+  </a>
+  <a href="https://www.patreon.com/hnimminh" target="_blank">
+    <img src="https://user-images.githubusercontent.com/58973699/121804772-32781280-cc72-11eb-8707-29200197649d.png" height="54" alt="Patreon">
+  </a>
+</p>
+
+---
+<br>
 <p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt=""> </p>
+
+---
+<br>
 
 ## Table of Contents
 - [Why](#why)
@@ -39,8 +69,8 @@
 - [Deployment](#deployment)
 - [Performance Test](#performance-test)
 - [License](#license)
-- [Contributing](#contributing)
 
+<br>
 
 ## Why
 * Freedom
@@ -48,8 +78,8 @@
 * Capability
 * Community
 
-## Comming Soon
-- [ ] Documentation
+## Upcomming Features
+- [x] Documentation
 - [x] Access Layer
 - [ ] TLS/SSL with LetEncrypt support
 - [ ] MsTeam Direct Routing Intergaration
@@ -138,25 +168,3 @@ Support to intergrate with 3rd-party system or customer function easily
 ## License
 [MIT](./LICENSE)
 
-## Contributing
-All kinds of contributions are very welcome and appreciated !
-
-If you want to contribute time to LibreSBC then here's a list of suggestions to get you started :
-
-1. Star the project.
-2. Help people in the [issues](https://github.com/hnimminh/libresbc/issues) by sharing your knowledge and experience.
-3. Find and report issues.
-4. Submit PRs to help solve issues or add features.
-5. Influence the future of LibreSBC with feature requests.
-
-
-**You can also contribute money to help secure LibreSBC's future.**
-
-<p align="center">
-  <a href="https://www.paypal.com/paypalme/hnimminh" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/121781097-7238ee80-cbcd-11eb-8f48-1f473d61b6a5.png" height="60" alt="Paypla">
-  </a>
-  <a href="https://www.patreon.com/hnimminh" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/121804772-32781280-cc72-11eb-8707-29200197649d.png" height="56" alt="Paypla">
-  </a>
-</p>
