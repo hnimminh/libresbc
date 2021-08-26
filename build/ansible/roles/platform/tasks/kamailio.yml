@@ -17,7 +17,7 @@
 
 - name: Download kamailio source code and checksum
   get_url:
-    url: https://www.kamailio.org/pub/kamailio/latest-5.5.x/src/kamailio-5.5.1_src.tar.gz
+    url: https://kamailio.org/pub/kamailio/5.5.1/src/kamailio-5.5.1_src.tar.gz
     dest: /usr/local/src/kamailio-5.5.1_src.tar.gz
     checksum: md5:14ca94eae17d0950924fbe0429bded32
 
