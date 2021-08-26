@@ -47,11 +47,9 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
   </a>
 </p>
 
----
 <br>
 <p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt=""> </p>
 
----
 <br>
 
 ## Table of Contents
@@ -152,9 +150,6 @@ Support to intergrate with 3rd-party system or customer function easily
 
 ## Discussions
 [Discussions](https://github.com/hnimminh/libresbc/discussions)
-
-## Deployment
-[Installation & Configuration](https://github.com/hnimminh/libresbc/wiki/Installation)
 
 ## Performance Test
 * System Under Test
