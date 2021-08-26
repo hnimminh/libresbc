@@ -318,10 +318,11 @@ function ProxyThenSwitch()
     local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
     delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uacincoming', 'domain', domain, 'authuser', authuser, 'callid', KSR.kx.get_callid())
+    -- ENFORCE DEST[$du] SOCKET[$fs]
     local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
     KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
     local srcsocket = DOMAIN_POLICIES[domain]['srcsocket']
-	KSR.pv.sets('$fs', srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
+    KSR.corex.set_send_socket(srcsocket.transport.. ':'..srcsocket.ip..':'..srcsocket.port)
 
     -- APPEND X-HEADER
     KSR.hdr.append('X-ACCESS-AUTHID: '..authuser..'@'..domain..'\r\n')
