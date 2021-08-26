@@ -9,7 +9,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
 
-## [v0.5.6] - 2021-08-26
+## [v0.5.7] - 2021-08-26
 ### Added
 - maninpualation class api
 - inbound normalization and outbound manipulation
@@ -34,6 +34,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ### Fixed
 - Fix unintended field for gateways update
+- Fix nft empty ruleset
 
 ## [v0.3.0] - 2021-06-12
 
