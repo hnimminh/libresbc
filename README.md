@@ -29,11 +29,10 @@ All kinds of contributions are very welcome and appreciated !
 
 If you want to contribute time to LibreSBC then here's a list of suggestions to get you started :
 
-1. Star the project.
+1. Star 🌟 the project.
 2. Help people in the [issues](https://github.com/hnimminh/libresbc/issues) by sharing your knowledge and experience.
 3. Find and report issues.
-4. Submit PRs to help solve issues or add features.
-5. Influence the future of LibreSBC with feature requests.
+4. Influence the future of LibreSBC with feature requests.
 
 
 **You can also contribute money to help secure LibreSBC's future.**
