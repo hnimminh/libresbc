@@ -82,6 +82,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 - [ ] MsTeam Direct Routing Intergaration
 - [ ] STIR/SHAKEN and Identity Assurance
 - [ ] Dashboard WebUI
+- [ ] Self-Organizing Autonomous Clustering
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
