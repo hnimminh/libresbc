@@ -70,10 +70,10 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 <br>
 
 ## Why
-* Freedom
-* Customisability
-* Capability
-* Community
+* Free & Open: It's free and always free for everyone
+* Comunity & Majoirity: Standing on the shoulders of giants, Kamailio and FreeSWITCH
+* Customisability: Make it do what you want
+* Capability: Carrier-grade 
 
 ## Upcomming Features
 - [x] Documentation
