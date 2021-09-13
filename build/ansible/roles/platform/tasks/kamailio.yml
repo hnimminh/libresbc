@@ -28,7 +28,7 @@
     remote_src: yes
 
 - name: build kamailio
-  shell: make cfg && make include_modules="jsonrpcs outbound ndb_redis regex utils tls" cfg && make all && make install
+  shell: make cfg && make include_modules="jsonrpcs outbound ndb_redis regex utils tls app_lua app_lua_sr" cfg && make all && make install
   args:
     executable: /bin/bash
     chdir: /usr/local/src/kamailio-5.5.1
