@@ -649,7 +649,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile create
-        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'create', 'sipprofile': name, 'requestid': requestid}))
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'create', 'sipprofile': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -706,11 +706,12 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
             pipe.delete(_name_key)
             pipe.srem(f'nameset:sipprofile', identifier)
             pipe.sadd(f'nameset:sipprofile', name)
-            pipe.rename(f'farendsipaddrs:in:{identifier}', f'farendsipaddrs:in:{name}')
+            if rdbconn.exists(f'farendsipaddrs:in:{identifier}'):
+                pipe.rename(f'farendsipaddrs:in:{identifier}', f'farendsipaddrs:in:{name}')
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile update
-        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'requestid': requestid}))
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
@@ -732,7 +733,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         _local_network_acl = rdbconn.hget(_name_key, 'local_network_acl')
         _sip_address = rdbconn.hget(_name_key, 'sip_address')
         _rtp_address = rdbconn.hget(_name_key, 'rtp_address')
-        _realm = rdbconn.hget('realm')
+        _realm = rdbconn.hget(_name_key, 'realm')
         if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
@@ -743,7 +744,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
         # fire-event sip profile delete
-        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sipprofile', 'action': 'delete', '_sipprofile': identifier, 'requestid': requestid}))
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'delete', '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")

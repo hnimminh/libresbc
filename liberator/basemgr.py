@@ -372,16 +372,16 @@ class BaseEventHandler(Thread):
     def run(self):
         logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
-        _cluster        = 'cluster'
-        _netalias       = 'netalias'
-        _acl            = 'acl'
-        _inboundcnx     = 'inbound:intcon'
-        _outboundcnx    = 'outbound:intcon'
-        _sipprofile     = 'sipprofile'
-        _sofiagw        = 'sofiagw'
-        _access         = 'access:service'
-        _policy         = 'policy:domain'
-        _cfgapisip      = 'cfgapi:sip'
+        _CLUSTER_   = 'cluster'
+        _NETALIAS_  = 'netalias'
+        _ACL_       = 'acl'
+        _INCNX_     = 'inbound:intcon'
+        _OUTCNX_    = 'outbound:intcon'
+        _SOFIASIP_  = 'sofiasip'
+        _SOFIAGW_   = 'sofiagw'
+        _ACCESS_    = 'access:service'
+        _POLICY_    = 'policy:domain'
+        _CFGAPISIP_ = 'cfgapi:sip'
         # listen events
         while True:
             try:
@@ -396,12 +396,12 @@ class BaseEventHandler(Thread):
                         requestid = data.get('requestid')
                         # specify event
                         commands = list()
-                        if portion == _netalias:
+                        if portion == _NETALIAS_:
                             sipprofiles = data.get('sipprofiles')
                             for sipprofile in sipprofiles:
                                 commands.append(f'sofia profile {sipprofile} restart')
                             commands.append('reloadxml')
-                        elif portion == _acl:
+                        elif portion == _ACL_:
                             name = data.get('name')
                             _name = data.get('_name')
                             if name != _name:
@@ -409,9 +409,9 @@ class BaseEventHandler(Thread):
                                 for sipprofile in sipprofiles:
                                     commands.append(f'sofia profile {sipprofile} rescan')
                             commands.append('reloadacl')
-                        elif portion == _inboundcnx:
+                        elif portion == _INCNX_:
                             commands = ['reloadacl']
-                        elif portion == _sipprofile:
+                        elif portion == _SOFIASIP_:
                             action = data.get('action')
                             sipprofile = data.get('sipprofile')
                             _sipprofile = data.get('_sipprofile')
@@ -421,14 +421,14 @@ class BaseEventHandler(Thread):
                                 commands = [f'sofia profile {_sipprofile} stop', 'reloadxml']
                             elif action=='update':
                                 if sipprofile == _sipprofile:
-                                    commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
+                                    commands = [f'sofia profile {sipprofile} restart', 'reloadxml']
                                 else:
                                     commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
-                        elif portion == _sofiagw:
+                        elif portion == _SOFIAGW_:
                             sipprofile = data.get('sipprofile')
                             _gateway = data.get('_gateway')
                             commands = [f'sofia profile {sipprofile} killgw {_gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']
-                        elif portion == _outboundcnx:
+                        elif portion == _OUTCNX_:
                             action = data.get('action')
                             sipprofile = data.get('sipprofile')
                             _sipprofile = data.get('_sipprofile')
@@ -455,14 +455,14 @@ class BaseEventHandler(Thread):
                                 commands.append(f'sofia profile {sipprofile} rescan')
                             # reload xml & distributor
                             commands += ['reloadxml', 'distributor_ctl reload']
-                        elif portion == _access:
+                        elif portion == _ACCESS_:
                             name = data.get('name')
                             _name = data.get('_name')
                             kaminstance({'layer': name, '_layer': _name, 'requestid': requestid})
-                        elif portion == _policy:
+                        elif portion == _POLICY_:
                             layer = data.get('layer')
                             kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
-                        elif portion in [_cluster, _cfgapisip]:
+                        elif portion in [_CLUSTER_, _CFGAPISIP_]:
                             fsgvars = data.get('fsgvars')
                             commands = [f'global_setvar {fsgvar}' for fsgvar in fsgvars]
                         else:
@@ -472,7 +472,7 @@ class BaseEventHandler(Thread):
                             data.update({'commands': commands})
                             fssocket(data)
                         # firewall update
-                        if portion in [_netalias, _acl, _inboundcnx, _outboundcnx, _sipprofile, _access]:
+                        if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_, _ACCESS_]:
                             nftupdate(data)
             except redis.RedisError as e:
                 time.sleep(5)
