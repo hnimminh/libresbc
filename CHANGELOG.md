@@ -11,13 +11,13 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [v0.5.7] - 2021-08-26
 ### Added
-- maninpualation class api
-- inbound normalization and outbound manipulation
-- add realm for routing vars
-- unlimited/bypass capacity check (lower-bound>=-1)
-- codec AMR-NB, AMR-WB
-- media profile with dtmf mode, media mode(proxy,bypass,transcode), codec negotiation algo (generous, greedy, scrooge), VAD, CNG
-- support distribution algorithm
+- Maninpualation class api
+- Inbound normalization and outbound manipulation
+- Add realm for routing vars
+- Unlimited/bypass capacity check (lower-bound>=-1)
+- Codec AMR-NB, AMR-WB
+- Media profile with dtmf mode, media mode(proxy,bypass,transcode), codec negotiation algo (generous, greedy, scrooge), VAD, CNG
+- Support distribution algorithm
 - Access Layer
 - Access Layer Security: Intrudent detecion, Brute Force Prevention, Antiflooding
 - Multiple domain - default domain
