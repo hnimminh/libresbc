@@ -20,7 +20,7 @@ import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import IPv4Network
 
-from configuration import (NODEID, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
+from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
 from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
@@ -372,6 +372,7 @@ class BaseEventHandler(Thread):
     def run(self):
         logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
+        _cluster        = 'cluster'
         _netalias       = 'netalias'
         _acl            = 'acl'
         _inboundcnx     = 'inbound:intcon'
@@ -380,11 +381,12 @@ class BaseEventHandler(Thread):
         _gateway        = 'gateways'
         _access         = 'access:service'
         _policy         = 'policy:domain'
+        _cfgapisip      = 'cfgapi:sip'
         # listen events
         while True:
             try:
                 pubsub = rdbconn.pubsub()
-                pubsub.subscribe([CHANGE_CFG_CHANNEL])
+                pubsub.subscribe([CHANGE_CFG_CHANNEL, NODEID_CHANNEL])
                 for message in pubsub.listen():
                     # logify(f'module=liberator, space=basemgr, action=report, message={message}')
                     msgtype = message.get("type")
@@ -460,6 +462,9 @@ class BaseEventHandler(Thread):
                         elif portion == _policy:
                             layer = data.get('layer')
                             kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
+                        elif portion in [_cluster, _cfgapisip]:
+                            fsgvars = data.get('fsgvars')
+                            commands = [f'global_setvar {fsgvar}' for fsgvar in fsgvars]
                         else:
                             pass
                         # execute esl commands

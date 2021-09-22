@@ -26,7 +26,6 @@ from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CH
                            NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
-from basemgr import fssocket
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -131,6 +130,7 @@ class ClusterModel(BaseModel):
 @librerouter.put("/libreapi/cluster", status_code=200)
 def update_cluster(reqbody: ClusterModel, response: Response):
     result = None
+    requestid=get_request_uuid()
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
@@ -157,12 +157,12 @@ def update_cluster(reqbody: ClusterModel, response: Response):
             'max_concurrent_calls': max_concurrent_calls,
             'max_calls_per_second': max_calls_per_second
         })
-        # set cluster member to fsvar
-        fssocket({'commands': [f'global_setvar CLUSTERMEMBERS={stringify(members,__COMMA__)}'], 'requestid': get_request_uuid()})
+        # fire-event cluster member to fsvar
+        rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'cluster', 'action': 'update', 'fsgvars': [f'CLUSTERMEMBERS={stringify(members,__COMMA__)}'], 'requestid': requestid}))
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=change_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logify(f"module=liberator, space=libreapi, action=change_cluster, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 

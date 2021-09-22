@@ -16,10 +16,9 @@ import redis
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_,
+from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
-from basemgr import fssocket
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -123,7 +122,7 @@ def distributor(request: Request, response: Response):
 def sip(request: Request, response: Response):
     try:
         pipe = rdbconn.pipeline()
-        fscommands = list()
+        fsgvars = list()
         # get netalias
         netaliasnames = rdbconn.smembers('nameset:netalias')
         for netaliasname in netaliasnames:
@@ -151,7 +150,7 @@ def sip(request: Request, response: Response):
             sipdetail.update({'sip_ip': sip_ip, 'ext_sip_ip': ext_sip_ip, 'rtp_ip': rtp_ip, 'ext_rtp_ip': ext_rtp_ip})
             sipprofiles.update({profilename: sipdetail})
             # prepare vars
-            fscommands.append(f'global_setvar {profilename}:advertising={ext_sip_ip}')
+            fsgvars.append(f'{profilename}:advertising={ext_sip_ip}')
 
         # get the mapping siprofile name and interconnection name
         # {profilename1: [intconname,...], profilename2: [intconname,...]}
@@ -182,7 +181,7 @@ def sip(request: Request, response: Response):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        fssocket({'delay': 30, 'commands': fscommands, 'requestid': get_request_uuid()})
+        rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
