@@ -1672,7 +1672,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         if intconname:
             sipprofile = rdbconn.hget(f'intcon:out:{intconname}', 'sipprofile')
         if sipprofile:
-            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'gateway', 'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'requestid': requestid}))
+            rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiagw', 'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
         logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")

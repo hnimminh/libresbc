@@ -9,6 +9,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
 - Fix #30 Inconsistent socket secret 
+- Fix #31 Gateway not reload if previous reloaded
 
 ## [v0.5.7] - 2021-08-26
 ### Added

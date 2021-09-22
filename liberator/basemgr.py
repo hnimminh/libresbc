@@ -378,7 +378,7 @@ class BaseEventHandler(Thread):
         _inboundcnx     = 'inbound:intcon'
         _outboundcnx    = 'outbound:intcon'
         _sipprofile     = 'sipprofile'
-        _gateway        = 'gateways'
+        _sofiagw        = 'sofiagw'
         _access         = 'access:service'
         _policy         = 'policy:domain'
         _cfgapisip      = 'cfgapi:sip'
@@ -424,7 +424,7 @@ class BaseEventHandler(Thread):
                                     commands = [f'sofia profile {sipprofile} rescan', 'reloadxml']
                                 else:
                                     commands = [f'sofia profile {_sipprofile} stop', f'sofia profile {sipprofile} start' , 'reloadxml']
-                        elif portion == _gateway:
+                        elif portion == _sofiagw:
                             sipprofile = data.get('sipprofile')
                             _gateway = data.get('_gateway')
                             commands = [f'sofia profile {sipprofile} killgw {_gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']
