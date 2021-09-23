@@ -47,6 +47,7 @@ routes     |`map` | Route Map Object. Applicable only action is `route`.
 
 ### Routes Map Object
 The `routes` may be used by both table (applicable with `route`) and record (applicable with `jumps` & `route`), it is quite simple but flexible enough for load sharing and refer to use another routing schema in particular condition.
+
 Parameter    | Category           | Description                     
 :---         |:---                |:---                             
 primary         |`string` `required` |`outbound interconnection` `routing-table` <br/>The primary route

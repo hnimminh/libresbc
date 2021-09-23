@@ -28,6 +28,7 @@ SBCs allow different parts of a network to communicate and share data with each 
 > * Firewall handle the network function on for layer 2-4 only
 > 
 > Below is table of function comparison
+>
 > Function | Firewall | Proxy | SBC
 > :--- | :---: | :---: | :---:
 > Layer 2-4 Packet Filtering | ✅ | ✅ | ✅

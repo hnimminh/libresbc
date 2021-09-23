@@ -31,6 +31,7 @@ whiteips|`list`|allowed ip list
 domains|`list`|list of policy domain
 
 **Antiflooding Map**
+
 Parameter  | Category           | Description                     
 :---       |:---                |:---            
 sampling|`int`|sampling time unit (in second)
@@ -40,6 +41,7 @@ threshold|`int`|number of flooding threshold that will be banned
 bantime|`int`|firewall ban time in second
 
 **Authfailure Map**
+
 Parameter  | Category           | Description                     
 :---       |:---                |:---            
 window|`int`|evaluated window time in second
@@ -47,6 +49,7 @@ threshold|`int`|number of authentication failure threshold that will be banned
 bantime|`int`|firewall ban time in second
 
 **Attackavoid Map**
+
 Parameter  | Category           | Description                     
 :---       |:---                |:---            
 window|`int`|evaluated window time in second
