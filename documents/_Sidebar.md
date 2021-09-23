@@ -19,6 +19,7 @@
   * [[Routing]]
   * [[Security]]
   * [[Cluster]]
+* [[Configuration Examples]]
 * [[Architecture|Home#architecture]]
 * [[FAQ|Home#frequent-asked-questions]]
 * [[Experiment]]
