@@ -1,5 +1,5 @@
         {%- for intconname, gateways in interconnections.items() %}
-        <list name="{{intconname}}" total-weight="{{gateways.values()|sum}}">
+        <list name="{{intconname}}">
           {%- for gateway, weight in gateways.items() %}
           <node name="{{gateway}}" weight="{{weight}}"/>
           {%- endfor %}

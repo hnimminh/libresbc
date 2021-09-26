@@ -14,6 +14,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Change access username pattern [a-zA-Z]+ to [a-zA-Z0-9]+
 - Fix #33 Nil type value if cidtype and not farend
 - Fix missing module for kamailio build from source
+- Remove total weight distributor #24
 
 ## [v0.5.7] - 2021-08-26
 ### Added
