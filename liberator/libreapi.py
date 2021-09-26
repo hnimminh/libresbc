@@ -1848,6 +1848,7 @@ class OutboundInterconnection(BaseModel):
         sipprofile = values.get('sipprofile')
         distribution = values.get('distribution')
         gateways = values.get('gateways')
+        totalweight = 0
         for gateway in gateways:
             gwname = gateway.get('name')
             # check if gateways is existing
@@ -1864,6 +1865,11 @@ class OutboundInterconnection(BaseModel):
 
             if distribution != WEIGHTBASE:
                 gateway['weight'] = 1
+
+            totalweight += gateway['weight']
+
+        if totalweight <= 0:
+            raise ValueError('total weight of gateways must be greater than zero')
 
         privacy = values.get('privacy')
         privacilen = len(privacy)

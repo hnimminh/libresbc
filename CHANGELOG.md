@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix #33 Nil type value if cidtype and not farend
 - Fix missing module for kamailio build from source
 - Remove total weight distributor #24
+- Fix #25 no handle zero weight gateways/distributor
 
 ## [v0.5.7] - 2021-08-26
 ### Added
