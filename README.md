@@ -9,11 +9,15 @@
   <a href="https://github.com/hnimminh/libresbc/commits/master" target="_blank">
     <img src="https://badgen.net/github/last-commit/hnimminh/libresbc?icon=github" alt="">
   </a>
-  <a href="LICENSE.md" target="_blank">
-    <img src="https://badgen.net/badge/license/MIT/blue" alt="">
-  </a>
   <a href="https://github.com/hnimminh/libresbc/releases" target="_blank">
     <img src="https://badgen.net/github/tag/hnimminh/libresbc" alt="">
+  </a>
+    <a href="LICENSE.md" target="_blank">
+    <img src="https://badgen.net/badge/license/MIT/ffd700" alt="">
+  </a>
+  <a href="#" target="_blank">
+    <img src="https://img.shields.io/badge/clone-22/week-00afd7?style=plastic&logo=GitHubActions">
+    <img src="https://img.shields.io/badge/view-1415/week-d70000?style=plastic&logo=monkeytie">
   </a>
 </p>
 
