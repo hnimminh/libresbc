@@ -53,6 +53,7 @@ schema.field_schema = field_schema
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PATTERN
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
+_ID_ = r'^[a-zA-Z0-9][a-zA-Z0-9_]+$'
 _SRNAME_ = r'^_[a-zA-Z0-9_]+$'
 _REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9_\-+#*@]*$'
@@ -3235,7 +3236,7 @@ class NetDirectory(BaseModel):
 
 class UserDirectory(BaseModel):
     domain: str = Field(description='user domain')
-    id: str = Field(regex=_NAME_, max_length=16, description='user identifier')
+    id: str = Field(regex=_ID_, max_length=16, description='user identifier')
     secret: str = Field(min_length=8, max_length=32, description='password of digest auth for inbound')
     @root_validator
     def user_directory_validation(cls, kvs):
@@ -3286,7 +3287,7 @@ def update_access_directory_user(reqbody: UserDirectory, response: Response):
         return result
 
 @librerouter.delete("/libreapi/access/directory/user/{domain}/{id}", status_code=200)
-def delete_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id:str=Path(..., regex=_NAME_)):
+def delete_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id: str=Path(..., regex=_ID_)):
     result = None
     try:
         _name_key = f'access:dir:usr:{domain}:{id}'
@@ -3301,7 +3302,7 @@ def delete_access_directory_user(response: Response, domain: str=Path(..., regex
         return result
 
 @librerouter.get("/libreapi/access/directory/user/{domain}/{id}", status_code=200)
-def detail_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id:str=Path(..., regex=_NAME_)):
+def detail_access_directory_user(response: Response, domain: str=Path(..., regex=_REALM_), id: str=Path(..., regex=_ID_)):
     result = None
     try:
         _name_key = f'access:dir:usr:{domain}:{id}'
