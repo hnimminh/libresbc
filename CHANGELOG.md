@@ -12,6 +12,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix #31 Gateway not reload if previous reloaded
 - Fix #32 Consolidate sip profile
 - Change access username pattern [a-zA-Z]+ to [a-zA-Z0-9]+
+- Fix #33 Nil type value if cidtype and not farend
 
 ## [v0.5.7] - 2021-08-26
 ### Added

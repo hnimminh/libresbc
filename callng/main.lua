@@ -164,9 +164,12 @@ local function main()
             if cidtype~='none' then
                 local sipadip = freeswitch.getGlobalVariable(_sipprofile..':advertising')
                 if not sipadip then sipadip = freeswitch.getGlobalVariable('hostname') end
-                InLeg:execute("export", "nolocal:sip_from_display="..InLeg:getVariable("sip_from_display"))
-                InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..InLeg:getVariable("sip_from_user").."@"..sipadip..">")
-                InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..InLeg:getVariable("sip_to_user").."@"..gwproxy..":"..gwport..";transport="..gwtransport..">")
+                local sip_from_display = InLeg:getVariable("sip_from_display")
+                if sip_from_display then InLeg:execute("export", "nolocal:sip_from_display="..sip_from_display) end
+                local sip_from_user = InLeg:getVariable("sip_from_user")
+                if sip_from_user then InLeg:execute("export", "nolocal:sip_invite_from_uri=<sip:"..sip_from_user.."@"..sipadip..">") end
+                local sip_to_user = InLeg:getVariable("sip_to_user")
+                if sip_to_user then InLeg:execute("export", "nolocal:sip_invite_to_uri=<sip:"..sip_to_user.."@"..gwproxy..":"..gwport..";transport="..gwtransport..">") end
             end
             -- media negotiation - secure
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
