@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+
+## [v0.5.8] - 2021-09-26
 - Fix #30 Inconsistent socket secret 
 - Fix #31 Gateway not reload if previous reloaded
 - Fix #32 Consolidate sip profile
