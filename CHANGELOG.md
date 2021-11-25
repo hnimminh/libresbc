@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+- Fix #36 missing cmake for mod_g729
+- Add self logo images
 
 ## [v0.5.8] - 2021-09-26
 - Fix #30 Inconsistent socket secret 
