@@ -11,6 +11,9 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix #36 missing cmake for mod_g729
 - Add self logo images
 - Ansible lineinfile instead of shell sed #37
+- Fix Captagent role misorder #40
+- Fix Python pip3 install task missing package #41
+- Enhance Deployment role
 
 ## [v0.5.8] - 2021-09-26
 - Fix #30 Inconsistent socket secret 
