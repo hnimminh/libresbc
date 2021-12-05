@@ -1,8 +1,10 @@
 ---
 # liberator service
 - name: deploy liberator
-  include_tasks: "liberator.yml"
+  import_tasks: "liberator.yml"
+  tags: [libre, liberator]
 
 # callng scripts
 - name: deploy callng
-  include_tasks: "callng.yml"
+  import_tasks: "callng.yml"
+  tags: [libre, callng]

@@ -48,7 +48,7 @@ sbcs:
 
 ### 5. Deployment
 ```bash
-ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,firewall"
+ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent"
 ```
 
 <br><br>

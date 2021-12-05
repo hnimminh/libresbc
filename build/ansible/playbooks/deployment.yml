@@ -11,9 +11,8 @@
   roles:
     - role: platform
     - role: libre
-      tags: [platform, libre]
     - role: nginx
     - role: nftables
-      tags: [platform, firewall]
+      tags: [platform, libre, firewall]
     - role: captagent
 
