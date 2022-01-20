@@ -14,6 +14,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix Captagent role misorder #40
 - Fix Python pip3 install task missing package #41
 - Enhance Deployment role
+- API CORS #43
 
 ## [v0.5.8] - 2021-09-26
 - Fix #30 Inconsistent socket secret 

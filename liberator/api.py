@@ -13,6 +13,7 @@ import syslog
 import traceback
 
 from fastapi import FastAPI, Request, Response, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from configuration import _APPLICATION, _SWVERSION, _DESCRIPTION
 from utilities import logify, debugy, _request_uuid_ctx_var, get_request_uuid
@@ -21,6 +22,8 @@ from cfgapi import cfgrouter
 
 #---------------------------------------------------------------------------------------------------------------------------
 httpapi = FastAPI(title=_APPLICATION, version=_SWVERSION, description=_DESCRIPTION, docs_url=None, redoc_url='/apidocs')
+httpapi.add_middleware(
+    CORSMiddleware, allow_credentials=True, allow_origins=['*'], allow_methods=['*'], allow_headers=['*'],)
 #---------------------------------------------------------------------------------------------------------------------------
 # MIDDLEWARE
 #---------------------------------------------------------------------------------------------------------------------------
