@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix Python pip3 install task missing package #41
 - Enhance Deployment role
 - API CORS #43
+- Fix #51 [Deployement] FreeSWITCH require SignalWise PATs
 
 ## [v0.5.8] - 2021-09-26
 - Fix #30 Inconsistent socket secret 

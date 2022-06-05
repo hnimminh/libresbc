@@ -36,6 +36,7 @@ vault_password_file = <ansible-vault-secret-file>
 ```
 vi inventories/production/hosts.yml
 ```
+
 ```yaml
 sbcs:
   hosts:
@@ -49,6 +50,14 @@ sbcs:
 ### 5. Deployment
 ```bash
 ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent"
+```
+
+#### Note:
+* Since 2022, [SignalWire Personal Access Tokens (PAT)s](https://freeswitch.org/confluence/display/FREESWITCH/HOWTO+Create+a+SignalWire+Personal+Access+Token) are required to access FreeSWITCH install packages
+* Once you register and get _**SignalWire Personal Access Tokens**_, you will need to declate ansible extra varible to install FreeSWITCH (when you run ansible-playbook with tag _platform_ or _freeswitch_)
+* Example:
+```bash
+ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent" -e "signalwire_pat_token=Your-SignalWire-Personal-Access-Tokens"
 ```
 
 <br><br>
