@@ -553,6 +553,12 @@ class ContextEnum(str, Enum):
     carrier = "carrier"
     access = "access"
 
+class AddressDetect(str, Enum):
+    autonat = "autonat"
+    host = "host"
+    stun = "stun"
+    none = "none"
+
 class DtmfType(str, Enum):
     rfc2833 = "rfc2833"
     info = "info"
@@ -564,6 +570,7 @@ class SIPProfileModel(BaseModel):
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
     sdp_user: str = Field(default='LibreSBC', max_length=64, description='username with the o= and s= fields in SDP body')
     local_network_acl: str = Field(default='rfc1918.auto', description='set the local network that refer from predefined acl')
+    addrdetect: AddressDetect = Field(default='autonat', description='Mechanism to detect & advertise IP address SBC behide the NAT')
     enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
     ignore_183nosdp: bool = Field(default=True, description='Just ignore SIP 183 without SDP body')
     sip_options_respond_503_on_busy: bool = Field(default=True, description='response 503 when system is in heavy load')
