@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+- Update Dev Env
+- Unhandling loopback source when sbc under NAT #55
+- Support configurable address detection #56
 
+ 
 ## [v0.5.9] - 2022-07-26
 - Fix #36 missing cmake for mod_g729
 - Add self logo images

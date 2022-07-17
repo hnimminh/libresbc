@@ -94,8 +94,8 @@
             {#- <!-- SERVER BINDING --> #}
             <param name="rtp-ip" value="{{sipprofile.rtp_ip }}"/>
             <param name="sip-ip" value="{{sipprofile.sip_ip }}"/>
-            <param name="ext-rtp-ip" value="autonat:{{sipprofile.ext_rtp_ip}}"/>
-            <param name="ext-sip-ip" value="autonat:{{sipprofile.ext_sip_ip}}"/>
+            <param name="ext-rtp-ip" value="{% if sipprofile.addrdetect!='none' %}{{sipprofile.addrdetect}}:{% endif %}{{sipprofile.ext_rtp_ip}}"/>
+            <param name="ext-sip-ip" value="{% if sipprofile.addrdetect!='none' %}{{sipprofile.addrdetect}}:{% endif %}{{sipprofile.ext_sip_ip}}"/>
             <param name="sip-port" value="{{sipprofile.sip_port}}"/>
             {%- if sipprofile.tls %}
             <param name="tls" value="{{sipprofile.tls|lower}}"/>
