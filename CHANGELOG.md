@@ -11,6 +11,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Update Dev Env
 - Unhandling loopback source when sbc under NAT #55
 - Support configurable address detection #56
+- Unix Socket RDB
 
  
 ## [v0.5.9] - 2022-07-26

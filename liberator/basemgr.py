@@ -335,6 +335,24 @@ def kaminstance(data):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# RDB UNIX SOCKET INSTANCE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+@threaded
+def rdbinstance():
+    try:
+        logify(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
+        rdbrun = Popen(['/usr/bin/redis-server', '--port', '0', '--pidfile', RDB_PIDFILE, '--unixsocket', RDB_USOCKET, '--unixsocketperm', '755',
+                        '--dbfilename', 'libresbc.rdb', '--dir', ETCDIR, '--loglevel', 'warning'])
+        _, stderr = bdecode(rdbrun.communicate())
+        if stderr:
+            logify(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
+        else:
+            logify(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, result=success")
+    except Exception as e:
+        logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
