@@ -9,6 +9,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
 - Update Dev Env
+- Unhandling loopback source when sbc under NAT #55
 
  
 ## [v0.5.9] - 2022-07-26

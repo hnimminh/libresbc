@@ -8,6 +8,9 @@
     <configuration name="acl.conf" description="Network Lists">
       <network-lists>
         <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/acl"/>
+        <list name="loopback.auto" default="deny">
+          <node type="allow" cidr="127.0.0.1/32"/>
+       </list>
       </network-lists>
     </configuration>
     <!-- CONSOLE LOGGER -->
