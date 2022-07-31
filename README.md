@@ -23,7 +23,7 @@
 
 <h1 align="center">LibreSBC</h1>
 <h2 align="center">The Open Source Session Border Controller</h2>
-<p align="left"><b>LibreSBC is a open-source Session Border Controller provide robust security, simplified interoperability, advanced session management, high performance, scale of carrier-grade and reliability for voice over IP (VoIP) infrastructures. LibreSBC designed to typically deployed at the network edge, the demarcation points (borders) among networks/environments.</b><br></p>
+<p align="left"><b>LibreSBC is an open-source Session Border Controller that provides robust security, simplified interoperability, advanced session management, high performance, highly reliable and carrier grade for voice over IP (VoIP) transport. LibreSBC is designed to be deployed at the network edge, to protext at the demarcation points (borders) facilitate session normalization, hide topologies, perform packet switching operations and handle packet switching tasks.</b><br></p>
 
 
 <br>
@@ -74,77 +74,77 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 <br>
 
 ## Why
-* Free & Open: It's free and always free for everyone
-* Comunity & Majoirity: Standing on the shoulders of giants, Kamailio and FreeSWITCH
-* Customisability: Make it do what you want
-* Capability: Carrier-grade 
+* Free & Open source: It's open source and always free for everyone
+* Backed By a Proven and Solid Community: Standing on the shoulders of giants, Kamailio and FreeSWITCH
+* Customizable: Make it your solution. 
+* Capable:Scalable, robust and carrier grade software SBC.
 
 ## Upcomming Features
 - [x] Documentation
 - [x] Access Layer
 - [ ] TLS/SSL with LetEncrypt support
-- [ ] MsTeam Direct Routing Intergaration
+- [ ] MsTeam Direct Routing Integrations
 - [ ] STIR/SHAKEN and Identity Assurance
 - [ ] Dashboard WebUI
-- [ ] Self-Organizing Autonomous Clustering
+- [ ]Clustered Containerization
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
 
 ## Functions
-SBCs commonly maintain full session state and offer the following functions:
+Session Management, Packet Switching, Session Normalization, B2BUA:
 
 ### Connectivity & Compatibility
-Allow multiple networks to communicate through the use of a variety of techniques such as:
-* Advanced [NAT](https://en.wikipedia.org/wiki/Network_address_translation) Traversal Capabilities
-* [SIP](https://en.wikipedia.org/wiki/Session_Initiation_Protocol) normalization, SIP message and header manipulation
-* Call Party Translatation
+SIP and Media Transport via:
+* Advanced [NAT](https://en.wikipedia.org/wiki/Network_address_translation)Traversal.
+* [SIP](https://en.wikipedia.org/wiki/Session_Initiation_Protocol) normalization, body and header fixup. 
+* Caller/Calling Party ID Management
 * [VPN](https://en.wikipedia.org/wiki/Virtual_private_network) connectivity
-* Protocol translations between [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol), [TCP](https://en.wikipedia.org/wiki/Transmission_Control_Protocol) & [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security)
-* Powerful built-in routing engine.
-* Allowing control routing by 3rd-party software via [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
-* Dynamic Load Balancing, Failover, Distribution
+* Session Interop and State Manager [UDP](https://en.wikipedia.org/wiki/User_Datagram_Protocol), [TCP](https://en.wikipedia.org/wiki/Transmission_Control_Protocol) & [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security)
+* SIP Routing via a proven engine.
+* API Integrations for extensibility [HTTP](https://en.wikipedia.org/wiki/Hypertext_Transfer_Protocol)
+* Highly reliable with load balancing, High Availability, with failover.
 
 ### Security:
-Protect the network and other devices from:
-* Malicious attacks such as a denial-of-service attack ([DoS](https://en.wikipedia.org/wiki/Denial-of-service_attack)) or distributed DoS
-* Toll fraud via rogue media streams
-* SIP Malformed Packet Protection
-* Topology hiding by back to back user agent ([B2BUA](https://en.wikipedia.org/wiki/Back-to-back_user_agent))
-* Encryption of signaling (via TLS) and media ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol))
-* Access Control List
-* Auto Control Network Firewall
-* SIP Firewall Level
+Enterprise Security Features:
+* Denial of Service protection ([DoS](https://en.wikipedia.org/wiki/Denial-of-service_attack)) 
+* Media Anchoring and RTP/SRTP Session Management
+* Malformed Setup Protections
+* Active Call Ferrying with B2BUA and Topology hiding/Fixup ([B2BUA](https://en.wikipedia.org/wiki/Back-to-back_user_agent))
+* Secure RTP with encryption/State Management ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol))
+* IP Blacklisting
+* Fail2Ban and Auto Blocking Policies
+* Advanced SIP Policy Management
 
 ### Quality of service 
-The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network and prioritization of flows is usually implemented by the SBC. It can include such functions as:
-* Resource allocation
-* [Rate limiting](https://en.wikipedia.org/wiki/Call_volume_(telecommunications)) include call per second (cps), concurrent calls (concurency)
-* Traffic Optimization by [token bucket](https://en.wikipedia.org/wiki/Token_bucket) and [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket)
+The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) Packet Prioritization:
+* Bandwidth Reservation and Priority Routing
+* [Rate limiting](https://en.wikipedia.org/wiki/Call_volume_(telecommunications)) and Costing by weight/distance/Route.
+* Route Optimization  [token bucket](https://en.wikipedia.org/wiki/Token_bucket) and [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket)
 * [ToS](https://en.wikipedia.org/wiki/Type_of_service)/[DSCP](https://en.wikipedia.org/wiki/Differentiated_services) bit setting
 
 ### Media services
-Offer border-based media control and services such as:
+Session Media Handling:
 * Media encoding/decoding ([SRTP](https://en.wikipedia.org/wiki/Secure_Real-time_Transport_Protocol)/[RTP](https://en.wikipedia.org/wiki/Real-time_Transport_Protocol))
 * [DTMF](https://en.wikipedia.org/wiki/Dual-tone_multi-frequency_signaling) relay and interworking include In-Band Signaling (touch tones), Out-of-Band Signaling ([RFC2833](https://www.ietf.org/rfc/rfc2833.txt)) and SIP INFO Method
 * Media Codec transcoding: [G711A/U](https://en.wikipedia.org/wiki/G.711), [G729](https://en.wikipedia.org/wiki/G.729), [OPUS](https://en.wikipedia.org/wiki/Opus_(audio_format)), [AMR](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_audio_codec), [G.722.2 AMR-WB](https://en.wikipedia.org/wiki/Adaptive_Multi-Rate_Wideband)
 * Tones and announcements (Early Media)
-* Data and fax interworking
-* Support multiple Media mode: Proxy, Bypass, Transcode
+* T.38 Support for FoIP (Fax-Over-IP)
+* Proxy/Flow/Policy based transport
 * Voice Activity Detection [VAD](https://en.wikipedia.org/wiki/Voice_activity_detection)
 * Confort Noise Generation [CNG](https://en.wikipedia.org/wiki/Comfort_noise)
 
-### Intergration
-Support to intergrate with 3rd-party system or customer function easily
-* Flexible JSON for Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to HTTP API, enabling customized/3rd-party usage such as databases, data analysis or billing purpose. 
-* Customization routing mechanism via HTTP API
-* Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/) 
-* [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) and/or [Prometheus](https://prometheus.io/) monitoring
+### Integrations
+3rd party integrations via API for extensibility
+* Billing and CDR via HTTP(S) API using JSON standards([CDR](https://en.wikipedia.org/wiki/Call_detail_record))
+* Standards Based API
+* MOS Scoring and SIP Capture via Homer [Homer](https://sipcapture.org/) 
+* [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) and/or [Prometheus](https://prometheus.io/) SNMP Monitoring
 
 ### High Avaibility
 * [Distributed System](https://en.wikipedia.org/wiki/Distributed_computing)
-* Active-Active [Cluster](https://en.wikipedia.org/wiki/Computer_cluster) Concept
-* Healthcheck and Failure Autodetection
+* High Availability w/ Active-Active [Cluster](https://en.wikipedia.org/wiki/Computer_cluster) Cluster.
+* Heartbeat checks and Dead Host Detection
 
 ## Documents
 [Wiki](https://github.com/hnimminh/libresbc/wiki)
@@ -156,13 +156,15 @@ Support to intergrate with 3rd-party system or customer function easily
 [Discussions](https://github.com/hnimminh/libresbc/discussions)
 
 ## Performance Test
-* System Under Test
+* System Specifications 
   * OS: Debian 4.19.132-1 x86_64 (10.6)
   * CPU: Intel(R) Xeon(R) CPU X5670  @ 2.93GHz
   * RAM: 8GB; SSD: 128GB
-* Result:
-  * 50 call per second, 1000 concurent call
-  * Used Memory: 1730M, CPU Load: 26%, Call Duration: 600 seconds
+* Benchmark Results:
+  * 50 call per second (setup), 1000 concurent call
+  * Memory Utilization: 1730M
+   * CPU Load: 26%
+   * Call Duration: 600 seconds
 
 ## License
 [MIT](./LICENSE)
