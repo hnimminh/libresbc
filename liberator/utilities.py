@@ -65,6 +65,7 @@ def fieldredisify(data):
 
 
 def redishash(data: dict) -> dict:
+    """ type safe for redishash but mutable value in dict """
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, bool):
@@ -104,6 +105,7 @@ def fieldjsonify(data):
 
 
 def jsonhash(data: dict) -> dict:
+    """ type safe for json but mutable value in dict. no matter new assign """
     if isinstance(data, dict):
         for key, value in data.items():
             if isinstance(value, str):
