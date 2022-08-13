@@ -13,6 +13,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Support configurable address detection #56
 - Unix Socket RDB
 - Improper name for intecon:out #64
+- Swaping Auth realm updating sipprofile #65
 
  
 ## [v0.5.9] - 2022-07-26

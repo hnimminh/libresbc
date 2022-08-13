@@ -688,7 +688,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
-        realm = _data.get('realm')
+        realm = data.get('realm')
         if _local_network_acl not in _BUILTIN_ACLS_: pipe.srem(f'engagement:base:acl:{_local_network_acl}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_sip_address}', _name_key)
         pipe.srem(f'engagement:base:netalias:{_rtp_address}', _name_key)
