@@ -2483,8 +2483,8 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
 
         data = jsonable_encoder(reqbody)
-        pipe.hmset(name_key, redishash(data))
         routes = data.get('routes')
+        pipe.hmset(name_key, redishash(data))
         if routes:
             for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
@@ -2522,10 +2522,10 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
 
         data = jsonable_encoder(reqbody)
-        pipe.hmset(name_key, redishash(data))
         routes = data.get('routes')
+        pipe.hmset(name_key, redishash(data))
         if routes:
-            for route in _routes[:2]:
+            for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
         # remove unintended field
         for field in _data:
