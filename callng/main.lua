@@ -73,7 +73,7 @@ local function main()
         end
         --------------------------------------------------------------------
         -- inbound normalization
-        normalize(LegIn, NgVars)
+        normalize(InLeg, NgVars)
         --------------------------------------------------------------------
 
         -- routing

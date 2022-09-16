@@ -14,6 +14,8 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Unix Socket RDB
 - Improper name for intecon:out #64
 - Swaping Auth realm updating sipprofile #65
+- Inbound unaware/validate manipulation rule #67
+- Null Leg Normalize #68
 
  
 ## [v0.5.9] - 2022-07-26
