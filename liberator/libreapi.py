@@ -2165,7 +2165,7 @@ class InboundInterconnection(BaseModel):
     _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
     _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
     _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_translation)
+    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _existentrouting = validator('routing')(check_existent_routing)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
