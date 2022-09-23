@@ -16,6 +16,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Swaping Auth realm updating sipprofile #65
 - Inbound unaware/validate manipulation rule #67
 - Null Leg Normalize #68
+- Enable Local CDR (nice json)
 
  
 ## [v0.5.9] - 2022-07-26

@@ -20,7 +20,7 @@ import redis
 
 from configuration import (_APPLICATION, _SWVERSION, NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, REDIS_TIMEOUT,
-                           LOGDIR, HTTPCDR_ENDPOINTS)
+                           LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE)
 from utilities import logify, debugy
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -203,7 +203,8 @@ class CDRHandler(Thread):
             cdrsaved = True; waiting = 5; attempt = 0
             while attempt < MAXRETRY and not self.stop:
                 # primary task to save cdr
-                if HTTPCDR_ENDPOINTS: cdrsaved = self.httpsave()
+                if HTTPCDR_ENDPOINTS:
+                    cdrsaved = self.httpsave()
 
                 # data stored guarantee process
                 attempt += 1
@@ -218,7 +219,7 @@ class CDRHandler(Thread):
                     time.sleep(backoff)
 
             # save cdr to local file
-            if not cdrsaved:
+            if (not cdrsaved) or DISKCDR_ENABLE:
                 self.filesave()
 
             # post process after saving the cdr, clean cdr on redis

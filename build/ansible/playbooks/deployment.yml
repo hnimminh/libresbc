@@ -4,7 +4,7 @@
   become: true
 
   vars:
-    version: '0.5.9'
+    version: '0.5.10-a'
     srcdir: '{{inventory_dir|dirname|dirname|dirname|dirname}}'
     dstdir: /opt/libresbc/{{version}}
 

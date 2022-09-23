@@ -12,7 +12,7 @@
 #-----------------------------------------------------------------------------------------------------
 _APPLICATION = 'LIBRESBC'
 _DESCRIPTION = 'Open Source Session Border Controller for Large-Scale Voice Infrastructures'
-_SWVERSION = '0.5.9'
+_SWVERSION = '0.5.10-a'
 #-----------------------------------------------------------------------------------------------------
 # LIBRE
 #-----------------------------------------------------------------------------------------------------
@@ -66,3 +66,4 @@ ESL_PORT = 8021
 # HTTPCDR DATA
 #-----------------------------------------------------------------------------------------------------
 HTTPCDR_ENDPOINTS = {{httpcdr.endpoints if httpcdr else 'None'}}
+DISKCDR_ENABLE = {% if diskcdr is defined %}{{ 'True' if diskcdr else 'False'}}{% else %}False{% endif %}
