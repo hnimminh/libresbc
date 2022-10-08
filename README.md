@@ -45,9 +45,12 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
   <a href="https://www.paypal.com/paypalme/hnimminh" target="_blank">
     <img src="https://user-images.githubusercontent.com/58973699/130890970-ad7f3be3-42c4-4a21-8e28-27dda9c603e3.png" height="54" alt="Paypal">
   </a>
-  <a href="https://www.patreon.com/hnimminh" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/121804772-32781280-cc72-11eb-8707-29200197649d.png" height="54" alt="Patreon">
-  </a>
+</p>
+<br>
+<p align="center"> 
+  <img width="100px" src="https://raw.githubusercontent.com/hnimminh/hnimminh/master/bc.png">
+  <br><strong>BITCOIN</strong>
+  <br>1MNjpx5Jy9KUxx2gt5qVmExruehgPi3dQX
 </p>
 
 <br>
