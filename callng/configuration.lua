@@ -27,6 +27,7 @@ QUERY = 'query'
 BLOCK = 'block'
 JUMPS = 'jumps'
 ROUTE = 'route'
+HTTPR = 'httpr'
 EMPTYSTRING = ''
 --- CDR
 CDRTTL = 3600
