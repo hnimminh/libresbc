@@ -62,6 +62,7 @@ _QUERY = 'query'
 _BLOCK = 'block'
 _JUMPS = 'jumps'
 _ROUTE = 'route'
+_HTTPR = 'httpr'
 # reserved for value empty string
 __DEFAULT_ENTRY__ = '__DEFAULT_ENTRY__'
 __EMPTY_STRING__ = ''
@@ -2426,7 +2427,8 @@ class RoutingTableActionEnum(str, Enum):
     query = _QUERY
     route = _ROUTE
     block = _BLOCK
-    # request: reseved routing with http api
+    httpr = _HTTPR
+
 class RoutingVariableEnum(str, Enum):
     cidnumber = 'cidnumber'
     cidname = 'cidname'
@@ -2438,7 +2440,7 @@ class RoutingTableModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of routing table')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: Optional[List[str]] = Field(min_items=1, max_items=5, description='sip variable for routing base, eg: cidnumber, cidname, dstnumber, intconname, realm')
-    action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
+    action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection; {_HTTPR} - find nexthop by HTTP GET')
     routes: Optional[RouteModel] = Field(description='route model data')
     # validation
     @root_validator()
@@ -2463,8 +2465,15 @@ class RoutingTableModel(BaseModel):
             variables = values.get('variables')
             if not variables:
                 raise ValueError(f'{_QUERY} action require at variables param')
-            else:
-                values['variables'] = variables[:1]
+            values['variables'] = variables[:1]
+        elif action==_HTTPR:
+            variables = values.get('variables')
+            if not variables:
+                raise ValueError(f'{_QUERY} action require at variables param')
+            routes = values.get('routes')
+            if not routes:
+                raise ValueError(f'{_ROUTE} action require at routes param')
+            values['routes'] = routes.get('primary')
         else:
             values.pop('routes', None)
             values.pop('variables', None)
@@ -2485,7 +2494,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         data = jsonable_encoder(reqbody)
         routes = data.get('routes')
         pipe.hmset(name_key, redishash(data))
-        if routes:
+        if routes and isinstance(routes, list):
             for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
         pipe.execute()
@@ -2517,14 +2526,14 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         _routes = _data.get('routes')
         # transaction block
         pipe.multi()
-        if _routes:
+        if _routes and isinstance(_routes, list):
             for _route in _routes[:2]:
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
 
         data = jsonable_encoder(reqbody)
         routes = data.get('routes')
         pipe.hmset(name_key, redishash(data))
-        if routes:
+        if routes and isinstance(routes, list):
             for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
         # remove unintended field
@@ -2572,7 +2581,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
                     response.status_code, result = 400, {'error': 'routing table in used'}; return
         # get current data
         _routes = fieldjsonify(rdbconn.hget(_name_key, 'routes'))
-        if _routes:
+        if _routes and isinstance(_routes, list):
             for _route in _routes[:2]:
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
         pipe.delete(_engaged_key)
@@ -2596,7 +2605,10 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         data = jsonhash(rdbconn.hgetall(_name_key))
         _routes = data.get('routes')
         if _routes:
-            data['routes'] = {'primary': _routes[0], 'secondary': _routes[1], 'load': int(_routes[2])}
+            if isinstance(_routes, list):
+                data['routes'] = {'primary': _routes[0], 'secondary': _routes[1], 'load': int(_routes[2])}
+            else:
+                data['routes'] = {'primary': _routes, 'secondary': _routes, 'load': 100}
 
         # get records
         pipe = rdbconn.pipeline()

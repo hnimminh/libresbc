@@ -511,6 +511,41 @@ function pchoice(a, b, p)
     else return b, a end
 end
 
+
+-- HTTP REQUEST
+local function httprequest(method, url, payload, headers)
+    local http
+    if startswith(url, "https") then
+        http = require("ssl.https")
+    else
+        http = require("socket.http")
+    end
+    http.TIMEOUT = 5
+
+    local body = {}
+    local ltn12 = require("ltn12")
+    local result, code, headers, status = http.request{
+        url = url,
+        method = method,
+        headers = headers,
+        source = ltn12.source.string(payload),
+        sink = ltn12.sink.table(body)
+    }
+
+    return result, code, headers, status, body
+end
+
+local function httproute(url, query)
+    local p, s
+    local res, code, _, _, body = httprequest("GET", url..'?'..query, nil, {["x-nodeid"] = NODEID})
+    if res==nil or code~=200 then
+        logify('module', 'callng', 'space', 'callfunc', 'action', 'httproute', 'url', url, 'query', query, 'error', code)
+    else
+        p, s = unpack(json.decode(table.concat(body)))
+    end
+    return p, s
+end
+
 ---------------------------------------------------------------------------------------------------------------------------------------------
 
 function routing_query(tablename, routingdata)
@@ -578,6 +613,16 @@ function routing_query(tablename, routingdata)
                     end
                 end
             end
+        elseif schema_action == HTTPR then
+            local variables = schema.variables
+            local params = {}
+            for i=1, #variables do
+                local variable = variables[i]
+                arrayinsert(params, variable..'='..routingdata[variable])
+            end
+            local query = join(params, '&')
+            primary, secondary = httproute(schema.routes, query)
+            return primary, secondary, {'routing.via.http'}
         else
             return nil, nil, routingrules
         end
