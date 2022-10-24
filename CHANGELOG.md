@@ -18,6 +18,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Null Leg Normalize #68
 - Enable Local CDR (nice json)
 - Support Call Routing via HTTP API
+- Example for CDR convertion json-csv
 
  
 ## [v0.5.9] - 2022-07-26
