@@ -101,7 +101,6 @@
   with_items:
     - /var/run/freeswitch
     - /usr/local/etc/freeswitch
-    - /var/log/kamailio
 
 - name: Symbolic cli tool
   file:

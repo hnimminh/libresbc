@@ -54,6 +54,14 @@
     requirements: "{{dstdir}}/liberator/requirements.txt"
     executable: pip3
 
+- name: Create a directory if it does not exist
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0755'
+  with_items:
+    - /var/log/libresbc/cdr
+
 - name: Update liberator templating-file
   template:
     src: "{{item.src}}"
