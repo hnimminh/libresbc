@@ -98,6 +98,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 - [Roadmap](#roadmap)
 - [Discussions](#discussions)
 - [Community](#community)
+- [Who use LibreSBC](#who-use-libresbc)
 - [Performance Test](#performance-test)
 - [License](#license)
 
@@ -188,6 +189,12 @@ Please go to [Wiki](https://github.com/hnimminh/libresbc/wiki)
 ## Community
 * LibreSBC has an initial community on the [slack](https://librertc.slack.com/)
 
+## Who use LibreSBC
+On my awareness, here is the list of them
+* [Orange](https://www.orange.com/)
+* [LinkMobility](https://www.linkmobility.com/)
+* [YourPhone](http://youph.one/)
+* [ShiblySolution](http://www.shiblysolution.com/)
 
 ## Performance Test
 * System Under Test
