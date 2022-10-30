@@ -54,6 +54,32 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 </p>
 
 <br>
+
+## Sponsors
+
+*Special thanks to*
+
+<div align="center"><table cellpadding="5"><tbody align="center">
+  <tr>
+    <td>
+      <a href="#">
+      <img src="https://user-images.githubusercontent.com/58973699/198862008-3fd45e93-b8ea-4768-ba26-bc81bb925127.png" width="180" alt="Youph.one"><br/>
+      <b>Your app, enterprise-ready.</b><br/>
+      <sup>call center in you hand</sup>
+      </a>
+    </td>
+    <td>
+      <a href="https://bit.ly/awesome-go-keygen">
+      <img src="https://user-images.githubusercontent.com/58973699/198830637-3ceb8588-6a3c-46a0-8b7b-d33bfbe6bb14.png" width="130" alt="keygen"><br/>
+      <b>Leading integrations & services</b><br/>
+      <sup>marked its flagship in South-East Asia.</sup>
+      </a>
+    </td>
+  </tr>
+</tbody></table></div>
+<br>
+
+<br>
 <p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt=""> </p>
 
 <br>
