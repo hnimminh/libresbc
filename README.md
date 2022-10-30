@@ -63,14 +63,14 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
   <tr>
     <td>
       <a href="#">
-      <img src="https://user-images.githubusercontent.com/58973699/198862008-3fd45e93-b8ea-4768-ba26-bc81bb925127.png" width="180" alt="Youph.one"><br/>
+      <img src="https://user-images.githubusercontent.com/58973699/198862008-3fd45e93-b8ea-4768-ba26-bc81bb925127.png" width="172" alt="Youph.one"><br/>
       <b>Your app, enterprise-ready.</b><br/>
       <sup>call center in you hand</sup>
       </a>
     </td>
     <td>
       <a href="https://bit.ly/awesome-go-keygen">
-      <img src="https://user-images.githubusercontent.com/58973699/198830637-3ceb8588-6a3c-46a0-8b7b-d33bfbe6bb14.png" width="130" alt="keygen"><br/>
+      <img src="https://user-images.githubusercontent.com/58973699/198830637-3ceb8588-6a3c-46a0-8b7b-d33bfbe6bb14.png" width="128" alt="keygen"><br/>
       <b>Leading integrations & services</b><br/>
       <sup>marked its flagship in South-East Asia.</sup>
       </a>
@@ -80,8 +80,8 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 <br>
 
 <br>
-<p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt=""> </p>
-
+<p align="center"> <img width="960px" src="https://user-images.githubusercontent.com/58973699/129482983-111fef1a-fa46-450f-b6ed-e8166bc49c15.png" alt="">
+</p>
 <br>
 
 ## Table of Contents
@@ -96,7 +96,8 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
   - [High Avaibility](#high-avaibility)
 - [Documents](#documents)
 - [Roadmap](#roadmap)
-- [Deployment](#deployment)
+- [Discussions](#discussions)
+- [Community](#community)
 - [Performance Test](#performance-test)
 - [License](#license)
 
@@ -176,14 +177,17 @@ Support to intergrate with 3rd-party system or customer function easily
 * Healthcheck and Failure Autodetection
 
 ## Documents
-[Wiki](https://github.com/hnimminh/libresbc/wiki)
+Please go to [Wiki](https://github.com/hnimminh/libresbc/wiki)
 
 ## Roadmap
 [Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
 
 ## Discussions
-* [Discussions](https://github.com/hnimminh/libresbc/discussions)
-* [Slack](https://librertc.slack.com/)
+* Let development [Discuss](https://github.com/hnimminh/libresbc/discussions)
+
+## Community
+* LibreSBC has an initial community on the [slack](https://librertc.slack.com/)
+
 
 ## Performance Test
 * System Under Test
