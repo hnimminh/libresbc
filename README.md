@@ -182,7 +182,8 @@ Support to intergrate with 3rd-party system or customer function easily
 [Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
 
 ## Discussions
-[Discussions](https://github.com/hnimminh/libresbc/discussions)
+* [Discussions](https://github.com/hnimminh/libresbc/discussions)
+* [Slack](https://librertc.slack.com/)
 
 ## Performance Test
 * System Under Test
