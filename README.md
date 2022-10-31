@@ -191,10 +191,10 @@ Please go to [Wiki](https://github.com/hnimminh/libresbc/wiki)
 
 ## Who use LibreSBC
 On my awareness, here is the list of them
+* [Youphone](http://youph.one/)
+* [ShiblySolution](http://www.shiblysolution.com/)
 * [Orange](https://www.orange.com/)
 * [LinkMobility](https://www.linkmobility.com/)
-* [YourPhone](http://youph.one/)
-* [ShiblySolution](http://www.shiblysolution.com/)
 
 ## Performance Test
 * System Under Test
