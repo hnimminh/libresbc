@@ -19,6 +19,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Enable Local CDR (nice json)
 - Support Call Routing via HTTP API
 - Example for CDR convertion json-csv
+- Support customize CDR file name and interval
 
  
 ## [v0.5.9] - 2022-07-26

@@ -66,4 +66,10 @@ ESL_PORT = 8021
 # HTTPCDR DATA
 #-----------------------------------------------------------------------------------------------------
 HTTPCDR_ENDPOINTS = {{httpcdr.endpoints if httpcdr else 'None'}}
-DISKCDR_ENABLE = {% if diskcdr is defined %}{{ 'True' if diskcdr else 'False'}}{% else %}False{% endif %}
+#-----------------------------------------------------------------------------------------------------
+# CDR FILE
+#-----------------------------------------------------------------------------------------------------
+DISKCDR_ENABLE = {% if diskcdr is defined %}{{ 'True' if diskcdr else 'False'}}{% else %}False{% endif +%}
+CDRFNAME_INTERVAL = {% if cdrfilename is defined %}{{cdrfilename.interval}} {% else %}None{% endif +%}
+CDRFNAME_FMT = {% if cdrfilename is defined %}'{{cdrfilename.namefmt}}'{% else %}'%Y-%m-%d.cdr.nice'{% endif +%}
+

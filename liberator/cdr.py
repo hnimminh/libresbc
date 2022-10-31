@@ -20,7 +20,7 @@ import redis
 
 from configuration import (_APPLICATION, _SWVERSION, NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, REDIS_TIMEOUT,
-                           LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE)
+                           LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE, CDRFNAME_INTERVAL, CDRFNAME_FMT)
 from utilities import logify, debugy
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -185,6 +185,23 @@ def parseruri(ruri):
         host, port = netparts[1].split(';transport=')[0].split(':')
     finally:
         return host, port, transport
+
+
+def timefmtwrap():
+    def default():
+        return f'{date.today().strftime(CDRFNAME_FMT)}'
+
+    def custom():
+        current = datetime.now()
+        thisone = current.replace(minute=CDRFNAME_INTERVAL*(current.minute//CDRFNAME_INTERVAL))
+        return thisone.strftime(CDRFNAME_FMT)
+
+    if CDRFNAME_INTERVAL:
+        return custom
+    return default
+
+cdrtimestamp = timefmtwrap()
+
 
 class CDRHandler(Thread):
     def __init__(self, uuid, details):
@@ -355,7 +372,7 @@ class CDRHandler(Thread):
 
     def filesave(self):
         try:
-            filename = f'{date.today().strftime("%Y-%m-%d")}.cdr.nice.json'
+            filename = f'{cdrtimestamp()}.json'
             cdrjson = json.dumps(self.details)
             logify(f"module=liberator, space=cdr, action=filesave, nodeid={NODEID}, data={cdrjson}, filename={filename}")
             with open(f'{LOGDIR}/cdr/{filename}', "a") as jsonfile:
