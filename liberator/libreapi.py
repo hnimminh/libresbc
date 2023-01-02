@@ -2715,7 +2715,7 @@ class RoutingRecordModel(BaseModel):
             raise ValueError('nonexistent routing table')
 
         if action==_BLOCK:
-            values.pop('routes', None)
+            values['routes'] = [action]
         if action in [_JUMPS, _ROUTE]:
             routes = values.get('routes')
             if not routes:
