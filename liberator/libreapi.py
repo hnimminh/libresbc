@@ -2343,6 +2343,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
 
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _sipprofile = _data.get('sipprofile')
+        _routing = _data.get('routing')
         _nodes = _data.get('nodes')
         _media_class = _data.get('media_class')
         _preanswer_class = _data.get('preanswer_class')
@@ -2352,6 +2353,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         _sipaddrs = _data.get('sipaddrs')
 
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
+        pipe.srem(f'engagement:routing:table:{_routing}', _nameid)
         for node in _nodes: pipe.srem(f'engagement:node:{node}', _nameid)
         pipe.srem(f'engagement:class:media:{_media_class}', _nameid)
         if _preanswer_class:
