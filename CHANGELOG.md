@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+
+## [v0.6.0] - 2023-04-08
 - Update Dev Env
 - Unhandling loopback source when sbc under NAT #55
 - Support configurable address detection #56
@@ -23,6 +25,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix routing block action invalid data #82
 - Unable to delete unengaged routing table #80
 - Support ignore ealry media to preanswer class #91
+- Upgrate lib starlette==0.14.2 -> 0.25.0, redis==3.5.2 -> 4.4.4
 
 
 ## [v0.5.9] - 2022-07-26
