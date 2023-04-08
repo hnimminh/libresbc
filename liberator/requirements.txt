@@ -6,7 +6,7 @@ uvicorn==0.11.7
 starlette==0.14.2
 Jinja2==3.0.1
 aiofiles==0.5.0
-redis==3.5.2
+redis==4.4.4
 contextvars==2.4
 schedule==0.6.0
 redfs
