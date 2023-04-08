@@ -815,10 +815,11 @@ class PreAnswerTypeEnum(str, Enum):
     tone = 'tone'
     media = 'media'
     speak = 'speak'
+    signal = 'signal'
 
 class PreAnswerStream(BaseModel):
     type: PreAnswerTypeEnum = Field(default='tone', description='media type: tone - tone script follow ITU-T Recommendation E.180, media - filename (fullpath) of audio file, speak - text to speak')
-    stream: str = Field(min_length=8, max_length=511, description='stream data follow the media type')
+    stream: str = Field(min_length=4, max_length=511, description='stream data follow the media type')
     # will do validate yet in next release
     @root_validator()
     def preanswer_stream_agreement(cls, stream):

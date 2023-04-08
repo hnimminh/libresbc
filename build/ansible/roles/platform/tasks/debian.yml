@@ -103,3 +103,4 @@
   shell: update-alternatives --set editor /usr/bin/vim.basic
   args:
     executable: /bin/bash
+  ignore_errors: true
