@@ -220,7 +220,7 @@ function earlyMediaProcess(name, DxLeg)
         elseif streamtype == 'speak' then
             DxLeg:execute('speak', 'flite|slt|'..streamdata)
         elseif streamtype == 'signal' then
-            if ({'true', 'false', 'ring_ready'}, streamdata) then
+            if ismeberof({'true', 'false', 'ring_ready'}, streamdata) then
                 DxLeg:setVariable("ignore_early_media", streamdata)
             end
         else end
