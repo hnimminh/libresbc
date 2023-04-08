@@ -34,6 +34,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Upgrate lib starlette==0.14.2 -> 0.25.0, redis==3.5.2 -> 4.4.4
 - Version fastapi starlette agreement 
 - Fix missing function early-media
+- Upgrate lib starlette==0.14.2 -> 0.25.0, redis==3.5.2 -> 4.4.4
 
 
 ## [v0.5.9] - 2022-07-26
