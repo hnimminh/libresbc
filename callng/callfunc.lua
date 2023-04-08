@@ -212,12 +212,17 @@ function earlyMediaProcess(name, DxLeg)
     if class then streams = fieldjsonify(rdbconn:hget('class:preanswer:'..class, 'streams')) end
     for i=1, #streams do
         local streamtype = streams[i].type
+        local streamdata = streams[i].stream
         if streamtype == 'tone' then
-            DxLeg:execute('gentones', streams[i].stream)
+            DxLeg:execute('gentones', streamdata)
         elseif streamtype == 'media' then
-            DxLeg:execute('playback', streams[i].stream)
+            DxLeg:execute('playback', streamdata)
         elseif streamtype == 'speak' then
-            DxLeg:execute('speak', 'flite|slt|'..streams[i].stream)
+            DxLeg:execute('speak', 'flite|slt|'..streamdata)
+        elseif streamtype == 'signal' then
+            if ({'true', 'false', 'ring_ready'}, streamdata) then
+                DxLeg:setVariable("ignore_early_media", streamdata)
+            end
         else end
     end
 end
