@@ -6,13 +6,13 @@
 
 - name: Download CaptAgent source code and checksum
   get_url:
-    url: https://github.com/sipcapture/captagent/archive/6.3.1.tar.gz
-    dest: /usr/local/src/captagent-6.3.1.tar.gz
-    checksum: md5:7be6408eac5ec94d7c4bd22a5aaa3dcc
+    url: https://github.com/sipcapture/captagent/archive/6.4.1.tar.gz
+    dest: /usr/local/src/captagent-6.4.1.tar.gz
+    checksum: md5:6abe455bd21a34478c13fb2ea697a532
 
 - name: Unarchive tar the CaptAgent release
   unarchive:
-    src: /usr/local/src/captagent-6.3.1.tar.gz
+    src: /usr/local/src/captagent-6.4.1.tar.gz
     dest: /usr/local/src
     remote_src: yes
 
@@ -33,7 +33,7 @@
   shell: ./build.sh && ./configure --enable-compression --enable-ipv6 --enable-pcre --enable-ssl --enable-tls && make && make install
   args:
     executable: /bin/bash
-    chdir: /usr/local/src/captagent-6.3.1
+    chdir: /usr/local/src/captagent-6.4.1
 
 - name: Delete default CaptAgent config folder
   file:
@@ -45,4 +45,3 @@
     path: /usr/local/captagent/etc/captagent
     state: directory
     mode: '0755'
-
