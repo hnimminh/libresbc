@@ -69,7 +69,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
       </a>
     </td>
     <td>
-      <a href="https://bit.ly/awesome-go-keygen">
+      <a href="http://www.shiblysolution.com">
       <img src="https://user-images.githubusercontent.com/58973699/198830637-3ceb8588-6a3c-46a0-8b7b-d33bfbe6bb14.png" width="128" alt="keygen"><br/>
       <b>Leading integrations & services</b><br/>
       <sup>marked its flagship in South-East Asia.</sup>
