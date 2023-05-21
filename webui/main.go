@@ -2,10 +2,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"embed"
 	"flag"
 	"fmt"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -19,9 +22,10 @@ import (
 var staticfiles embed.FS
 
 var (
-	host  string
-	port  int
-	debug bool
+	host     string
+	port     int
+	debug    bool
+	libresbc string
 
 	httplistenaddr string
 )
@@ -31,6 +35,8 @@ func init() {
 	flag.StringVar(&host, "H", "0.0.0.0", "HTTP API binding IP address")
 	flag.IntVar(&port, "port", 8088, "HTTP API binding port")
 	flag.IntVar(&port, "P", 8088, "HTTP API binding port")
+	flag.StringVar(&libresbc, "libresbc", "http://127.0.0.1:8088", "LibreSBC web API interface")
+	flag.StringVar(&libresbc, "L", "http://127.0.0.1:8088", "LibreSBC web API interface")
 	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.BoolVar(&debug, "d", false, "sets log level to debug")
 	flag.Parse()
@@ -63,15 +69,35 @@ func init() {
       LibreSBC - v0.0.0
 
       Listen              %s
+      LibreSBC            %s
       Debug               %v
     --------------------------------------------------
 `
-	fmt.Printf(appBanner, httplistenaddr, debug)
+	fmt.Printf(appBanner, httplistenaddr, libresbc, debug)
 
 }
 
 func main() {
 	router := mux.NewRouter()
+
+	// HEALTHCHECK FOR WEBUI
+	router.HandleFunc("/healthcheck",
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(200)
+			w.Write([]byte("OK"))
+		}).Methods("GET")
+
+	// PROXY TO LIBRESBC
+	apiurl, err := url.Parse(libresbc)
+	if err != nil {
+		zlog.Fatal().Err(err).Str("module", "libresbc").Str("function", "webui").Str("action", "urlparse").
+			Msg("Unable to parse libresbc web API URL")
+	}
+	proxy := httputil.NewSingleHostReverseProxy(apiurl)
+	proxy.Transport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	router.PathPrefix("/libreapi").Handler(proxy)
 
 	// STATIC ADMIN WEB UI
 	router.PathPrefix("/").Handler(
@@ -79,15 +105,9 @@ func main() {
 			http.FS(staticfiles),
 		))
 
-	// HEALTH CHECK
-	router.HandleFunc("/healthcheck",
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(200)
-			w.Write([]byte("OK"))
-		}).Methods("GET")
-
-	err := http.ListenAndServe(httplistenaddr, router)
-	if err != nil {
+	// SERVE
+	//--------------------------------------------------------------------------------
+	if err := http.ListenAndServe(httplistenaddr, router); err != nil {
 		zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httplistenaddr).
 			Msg("Failed to start web service")
 	}
