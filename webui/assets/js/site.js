@@ -1,64 +1,67 @@
 const EMPTYSTR = '';
-var GroupItemELMS = document.getElementById('AccordionGroupItems');
+var BaseNetAliasTableELMS = document.getElementById('base-netalias-table');
 var ProgressDotELMS = document.getElementById('progessdot');
 var EventMessageEMLS = document.getElementById('event-message');
 var ToastMsgEMLS = document.getElementById('toastmsg');
 /*---------------------------------------------------------------------------*/
 function InitialPage(){
-    ListInstances();
 }
 
 /* ---------------------------------------------------------------------------
-    INSTANCE SERVICES
+    BASE CONFIG
 --------------------------------------------------------------------------- */
-function ListData(){
+
+function GetBaseCfg() {
+    GetandPresentNetAlias();
+}
+
+function GetandPresentNetAlias(){
     $.ajax({
         type: "GET",
-        url: "/service ",
+        url: "/libreapi/base/netalias",
         success: function (data) {
             ShowProgress();
-            PresentInstance(data);
+            PresentData(data);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
-            GroupItemELMS.innerHTML = EMPTYSTR;
+            BaseNetAliasTableELMS.innerHTML = EMPTYSTR;
             ShowToast(jqXHR.responseJSON.error);
         }
     });
 }
 
 function PresentData(DataList){
-    let htmlitems = EMPTYSTR;
+    let tablebody = EMPTYSTR;
     let cnt = 1;
     DataList.forEach((element) => {
-        let expires = element.expires
-        let ttl = expires - (Math.floor(Date.now() / 1000) - Number(element.timestamp))
-        let htmlitem = `<div class="accordion-item">
-        <h2 class="accordion-header" id="flush-heading`+cnt+`">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapse`+cnt+`" aria-expanded="false" aria-controls="flush-collapse`+cnt+`">
-            <div class="lead">
-                <span class="badge bg-primary rounded-pill">ipaddr: `+element.ipaddr+`</span>
-                <span class="badge bg-warning text-dark rounded-pill">role: `+element.role+`</span>
-                <span class="badge bg-success rounded-pill">swtype: `+element.swtype+`</span>
-                <span class="badge bg-danger rounded-pill">expires: `+ttl+`/`+expires+`</span>
-            </div>
-            </button>
-        </h2>
-        <div id="flush-collapse`+cnt+`" class="accordion-collapse collapse" aria-labelledby="flush-heading`+cnt+`">
-            <div class="accordion-body">
-                <code><pre id="instance-data-`+cnt+`">`+JSON.stringify(element, undefined, 4)+`</pre></code>
-            </div>
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-primary" onclick="TerminateInstance(`+cnt+`);">Soft Terminate</button>
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasBottom" aria-controls="offcanvasBottom" onclick="CallStatus(`+cnt+`);">Call Status</button>
-            </div><br><br>
-        </div>
-        </div>`;
-        htmlitems = htmlitems + htmlitem;
+        htmltb = `<tr>
+                    <td>`+cnt+`</td>
+                    <td>`+element.name+`</td>
+                    <td>`+element.desc+`</td>
+                    <td>
+                      <button class="btn btn-primary btn-sm" type="button"><i class="fa fa-pencil"></i></button>
+                      <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle"></i></button>
+                    </td>
+                  </tr>`
+        tablebody = tablebody + htmltb
         cnt++;
     });
-    GroupItemELMS.innerHTML = htmlitems;
+    BaseNetAliasTableELMS.innerHTML = `
+        <table class="table">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">Name</th>
+            <th scope="col">Description</th>
+            <th scope="col">Action</th>
+        </tr>
+        </thead>
+        <tbody>` + tablebody + `</tbody>
+        </table>`;
 }
+
+
 
 /* ---------------------------------------------------------------------------
     PROGRESS STATE
