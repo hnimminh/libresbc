@@ -40,7 +40,7 @@ function PresentData(DataList){
                     <td>`+element.name+`</td>
                     <td>`+element.desc+`</td>
                     <td>
-                      <button class="btn btn-primary btn-sm" type="button"><i class="fa fa-pencil"></i></button>
+                      <button class="btn btn-primary btn-sm" type="button"><i class="fa fa-pencil" onclick="RemoveNetAlias(`+element.name+`)"></i></button>
                       <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle"></i></button>
                     </td>
                   </tr>`
@@ -61,6 +61,21 @@ function PresentData(DataList){
         </table>`;
 }
 
+function RemoveNetAlias(name){
+    $.ajax({
+        type: "DELETE",
+        url: "/libreapi/base/netalias/"+name,
+        success: function (data) {
+            ShowProgress();
+            PresentData(data);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            BaseNetAliasTableELMS.innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
 
 
 /* ---------------------------------------------------------------------------
