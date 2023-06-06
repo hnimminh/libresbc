@@ -11,3 +11,11 @@
       font-size: 3.5rem;
     }
   }
+
+.toast{
+    /* position: absolute; */
+    position: fixed;
+    top: 80px;
+    right: 10px;
+    z-index: 999;
+}

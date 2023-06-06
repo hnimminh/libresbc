@@ -81,9 +81,15 @@ function RemoveNetAlias(name){
 /* ---------------------------------------------------------------------------
     PROGRESS STATE
 --------------------------------------------------------------------------- */
+var ProgressDotELMS = document.getElementById('progessdot');
+var ToastMsgEMLS = document.getElementById('toastmsg');
+
 function ShowProgress(){
     ProgressDotELMS.classList.remove('invisible');
-    setTimeout(function() {ProgressDotELMS.classList.add('invisible')}, 777);
+    setTimeout(function() {
+        ProgressDotELMS.classList.add('invisible')
+    },
+    777);
 }
 
 function ShowToast(message, msgtype='danger'){
@@ -108,6 +114,6 @@ function ShowToast(message, msgtype='danger'){
         ToastMsgEMLS.classList.remove('bg-warning');
         ToastMsgEMLS.classList.remove('bg-success');
     }
-    EventMessageEMLS.innerHTML = message;
+    document.getElementById('event-message').innerHTML = message;
     $('.toast').toast('show');
 }
