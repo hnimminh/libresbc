@@ -98,12 +98,12 @@ function ShowToast(message, msgtype='danger'){
         ToastMsgEMLS.classList.remove('bg-primary');
         ToastMsgEMLS.classList.remove('bg-warning');
         ToastMsgEMLS.classList.remove('bg-success');
-    } else if (msgtype === 'success'){
+    }else if (msgtype === 'success'){
         ToastMsgEMLS.classList.add('bg-success');
         ToastMsgEMLS.classList.remove('bg-primary');
         ToastMsgEMLS.classList.remove('bg-danger');
         ToastMsgEMLS.classList.remove('bg-warning');
-    }  else if (msgtype === 'warning'){
+    }else if (msgtype === 'warning'){
         ToastMsgEMLS.classList.add('bg-warning');
         ToastMsgEMLS.classList.remove('bg-primary');
         ToastMsgEMLS.classList.remove('bg-danger');
