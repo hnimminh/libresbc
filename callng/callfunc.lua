@@ -636,7 +636,7 @@ function routing_query(tablename, routingdata)
             local action, p, s, l = unpack(split(routevalue, ':'))
             if action == BLOCK then
                 return BLOCK, BLOCK, routingrules
-            elseif action == QUERY then
+            elseif action == JUMPS then
                 tablename, _ = pchoice(p, s, tonumber(l))
                 goto REQUERYROUTE
             elseif action == ROUTE then
