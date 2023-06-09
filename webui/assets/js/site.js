@@ -1,8 +1,19 @@
 const EMPTYSTR = '';
-var BaseNetAliasTableELMS = document.getElementById('base-netalias-table');
-var ProgressDotELMS = document.getElementById('progessdot');
-var EventMessageEMLS = document.getElementById('event-message');
-var ToastMsgEMLS = document.getElementById('toastmsg');
+const APIGuide = {
+    "NetAlias": {
+        "path": "/libreapi/base/netalias",
+        "tablename": "base-netalias-table"
+    },
+    "AccessControl": {
+        "path": "/libreapi/base/acl",
+        "tablename": "base-accesscontrol-table"
+    }
+}
+
+var ConfigDetailTextH = document.getElementById("config-detail");
+var ConfigSubmitBntH = document.getElementById("config-submit");
+
+var PanelLabelH = document.getElementById("offcanvaspanel-label");
 /*---------------------------------------------------------------------------*/
 function InitialPage(){
 }
@@ -12,42 +23,48 @@ function InitialPage(){
 --------------------------------------------------------------------------- */
 
 function GetBaseCfg() {
-    GetandPresentNetAlias();
+    GeneralGetPresent("NetAlias");
+    GeneralGetPresent("AccessControl");
 }
 
-function GetandPresentNetAlias(){
+function GeneralGetPresent(SettingName){
+    let path = APIGuide[SettingName]['path']
+    let tablename = APIGuide[SettingName]['tablename']
     $.ajax({
         type: "GET",
-        url: "/libreapi/base/netalias",
+        url: path,
         success: function (data) {
             ShowProgress();
-            PresentData(data);
+            GeneralPresentData(data, SettingName, tablename);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
-            BaseNetAliasTableELMS.innerHTML = EMPTYSTR;
+            document.getElementById(tablename).innerHTML = EMPTYSTR;
             ShowToast(jqXHR.responseJSON.error);
         }
     });
 }
 
-function PresentData(DataList){
+function GeneralPresentData(DataList, SettingName, tablename){
     let tablebody = EMPTYSTR;
     let cnt = 1;
     DataList.forEach((element) => {
+        let name = element.name
         htmltb = `<tr>
                     <td>`+cnt+`</td>
-                    <td>`+element.name+`</td>
+                    <td>`+name+`</td>
                     <td>`+element.desc+`</td>
                     <td>
-                      <button class="btn btn-primary btn-sm" type="button"><i class="fa fa-pencil" onclick="RemoveNetAlias(`+element.name+`)"></i></button>
-                      <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle"></i></button>
+                      <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="GeneralRemove('`+name+`','`+SettingName+`')"></i></button>
+                      <button class="btn btn-primary btn-sm" type="button">
+                        <i class="fa fa-pencil" onclick="GeneralModify('`+name+`','`+SettingName+`')"></i>
+                      </button>
                     </td>
                   </tr>`
         tablebody = tablebody + htmltb
         cnt++;
     });
-    BaseNetAliasTableELMS.innerHTML = `
+    document.getElementById(tablename).innerHTML = `
         <table class="table">
         <thead>
         <tr>
@@ -61,17 +78,61 @@ function PresentData(DataList){
         </table>`;
 }
 
-function RemoveNetAlias(name){
+function GeneralRemove(name, SettingName){
+    let path = APIGuide[SettingName]['path']
     $.ajax({
         type: "DELETE",
-        url: "/libreapi/base/netalias/"+name,
+        url: path + "/" + name,
         success: function (data) {
+            ShowToast("Delete Successfully " + SettingName + " " + name, "info");
             ShowProgress();
-            PresentData(data);
+            GeneralGetPresent(SettingName);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
-            BaseNetAliasTableELMS.innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+function GeneralModify(name, SettingName){
+    ShowProgress();
+    let path = APIGuide[SettingName]['path']
+    $.ajax({
+        type: "GET",
+        url: path + "/" + name,
+        success: function (data) {
+            ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
+            ConfigDetailTextH.value = JSON.stringify(data, undefined, 4);
+            PanelLabelH.innerHTML = SettingName + "  <strong><code>" + name + "</code></strong>";
+            ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+name+`','`+SettingName+`')`);
+
+            var OffCanvasHtml = document.getElementById("offcanvaspanel");
+            var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+            offcanvaspanel.show();
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+
+function GeneralSubmit(name, SettingName){
+    let path = APIGuide[SettingName]['path'];
+    let jsonstring = ConfigDetailTextH.value;
+    $.ajax({
+        type: "PUT",
+        url: path + "/" + name,
+        dataType: "json",
+        contentType: 'application/json',
+        data: jsonstring,
+        success: function (data) {
+            ShowToast("Data has been submited", "info");
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
             ShowToast(jqXHR.responseJSON.error);
         }
     });

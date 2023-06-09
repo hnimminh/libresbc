@@ -76,14 +76,10 @@
                 </div>
                 <hr>
                 <h5>Access Control</h5>
-                <div class="col-md-12 my-5" id="base-accessctl-table">
+                <div class="col-md-12 my-5" id="base-accesscontrol-table">
                   <!--  -->
                 </div>
-                <hr>
-                <h5>Cluster</h5>
-                <div class="col-md-12 my-5" id="base-cluster-table">
-                  <!--  -->
-                </div>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvaspanel" aria-controls="offcanvaspanel" onclick="CallStatus(`+cnt+`);">Call Status</button>
               </div>
               <!-- CLASS -->
               <div class="tab-pane fade" id="nav-cfg-class" role="tabpanel" aria-labelledby="cfg-class-tab">
@@ -103,6 +99,27 @@
                 <div class="spinner-grow text-warning" role="status"></div>
               </div>
             </div>
+
+            <!----- BEGIN: CANVAS -->
+            <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="true" tabindex="0" id="offcanvaspanel" aria-labelledby="offcanvaspanel-label">
+              <div class="offcanvas-header">
+                <h5 class="offcanvas-title" id="offcanvaspanel-label"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+              </div>
+              <div class="offcanvas-body">
+                <div class="col-md-12 col-lg-12 py-3">
+                  <div id="offcanvas-content" class="row">
+                    <div class="col-md-12 col-lg-12">
+                      <textarea class="form-control" id="config-detail" rows="30"></textarea>
+                      <br>
+                      <button type="button" class="btn btn-primary" id="config-submit" aria-label="Submit" onclick="">Submit</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!----- END: CANVAS -->
+
           </main>
         <!-- FOOTER ––––––––––––––––––––––––––––––––––––––––––––––––––--------- -->
         <footer class="my-1 pt-5 text-muted text-center text-small">
