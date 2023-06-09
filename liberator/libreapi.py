@@ -2135,7 +2135,7 @@ def check_existent_routing(table):
     return table
 
 def check_existent_preanswer(preanswer):
-    if preanswer:
+    if preanswer is not None:
         if not rdbconn.exists(f'class:preanswer:{preanswer}'):
             raise ValueError('nonexistent class')
     return preanswer
