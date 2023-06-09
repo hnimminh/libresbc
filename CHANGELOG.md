@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
-- Fix jumps routing table 
+- Fix jumps routing table
+- Update CaptAgent to 6.4.1
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env
