@@ -111,13 +111,12 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 * Capability: Carrier-grade 
 
 ## Upcomming Features
-- [x] Documentation
 - [x] Access Layer
-- [ ] TLS/SSL with LetEncrypt support
+- [x] TLS/SSL with LetEncrypt support
+- [ ] Cluster  (_in progress_)
 - [ ] MsTeam Direct Routing Intergaration
 - [ ] STIR/SHAKEN and Identity Assurance
-- [ ] Dashboard WebUI
-- [ ] Self-Organizing Autonomous Clustering
+- [ ] Dashboard WebUI (_in progress_)
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
@@ -149,10 +148,8 @@ Protect the network and other devices from:
 
 ### Quality of service 
 The [QoS](https://en.wikipedia.org/wiki/Quality_of_service) policy of a network and prioritization of flows is usually implemented by the SBC. It can include such functions as:
-* Resource allocation
 * [Rate limiting](https://en.wikipedia.org/wiki/Call_volume_(telecommunications)) include call per second (cps), concurrent calls (concurency)
 * Traffic Optimization by [token bucket](https://en.wikipedia.org/wiki/Token_bucket) and [leaky bucket](https://en.wikipedia.org/wiki/Leaky_bucket)
-* [ToS](https://en.wikipedia.org/wiki/Type_of_service)/[DSCP](https://en.wikipedia.org/wiki/Differentiated_services) bit setting
 
 ### Media services
 Offer border-based media control and services such as:
@@ -169,12 +166,12 @@ Offer border-based media control and services such as:
 Support to intergrate with 3rd-party system or customer function easily
 * Flexible JSON for Call Detail Record ([CDR](https://en.wikipedia.org/wiki/Call_detail_record)), Send CDR to HTTP API, enabling customized/3rd-party usage such as databases, data analysis or billing purpose. 
 * Customization routing mechanism via HTTP API
-* Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/) 
-* [SNMP](https://en.wikipedia.org/wiki/Simple_Network_Management_Protocol) and/or [Prometheus](https://prometheus.io/) monitoring
+* Network capture support: Live Capture and Intergrated with [Homer](https://sipcapture.org/)
+
 
 ### High Avaibility
 * [Distributed System](https://en.wikipedia.org/wiki/Distributed_computing)
-* Active-Active [Cluster](https://en.wikipedia.org/wiki/Computer_cluster) Concept
+* Active-Active [Cluster](https://en.wikipedia.org/wiki/Computer_cluster) Concept (_under development_)
 * Healthcheck and Failure Autodetection
 
 ## Documents
