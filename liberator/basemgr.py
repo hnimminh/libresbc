@@ -18,7 +18,7 @@ import os
 import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
-from ipaddress import IPv4Network
+from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
 
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
@@ -65,6 +65,8 @@ def nftupdate(data):
         # FIREWARESET
         whiteset = rdbconn.smembers(f'firewall:whiteset')
         blackset = rdbconn.smembers(f'firewall:blackset')
+        whitesetv6 = rdbconn.smembers(f'firewall:whitesetv6')
+        blacksetv6 = rdbconn.smembers(f'firewall:blacksetv6')
         # RTP PORTRANGE
         rtpportrange = list(map(fieldjsonify ,rdbconn.hmget('cluster:attributes', 'rtp_start_port', 'rtp_end_port')))
         # NETALIAS
@@ -83,6 +85,8 @@ def nftupdate(data):
             sip_port, sips_port, sip_address, rtp_address = rdbconn.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
             sip_ip = netaliases[sip_address]['listen']
             rtp_ip = netaliases[rtp_address]['listen']
+            sip_ip_version = IPvAddress(sip_ip).version
+            rtp_ip_version = IPvAddress(rtp_ip).version
 
             intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
             for intconnameid in intconnameids:
@@ -90,25 +94,29 @@ def nftupdate(data):
             rtpaddrstrlist = pipe.execute()
 
             farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
-            farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
+            _farendrtpaddrs = [ip for ip in farendrtpaddrs if IPvNetwork(ip).version==rtp_ip_version and not IPvNetwork(ip).is_loopback]
 
-            sipprofiles[profilename] = {'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
-                                        'sipudpports': fieldjsonify(sip_port),
-                                        'sip_ip': sip_ip,
-                                        'rtp_ip': rtp_ip,
-                                        'farendrtpaddrs': [ip for ip in farendrtpaddrs if not IPv4Network(ip).is_loopback],
-                                        'farendsipaddrs': [ip for ip in farendsipaddrs if not IPv4Network(ip).is_loopback]}
+            farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
+            _farendsipaddrs = [ip for ip in farendsipaddrs if IPvNetwork(ip).version==sip_ip_version and not IPvNetwork(ip).is_loopback]
+
+            sipprofiles[profilename] = {
+                'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
+                'sipudpports': fieldjsonify(sip_port),
+                'sip_ip': sip_ip,
+                'rtp_ip': rtp_ip,
+                f'farendrtpaddrv{rtp_ip_version}s': _farendrtpaddrs,
+                f'farendsipaddrv{sip_ip_version}s': _farendsipaddrs
+            }
 
         # ACCESS LAYERS
         layernames = rdbconn.smembers('nameset:access:service')
         accesslayers = dict()
         for layername in layernames:
-            transports, sip_port, sips_port, sip_address, whiteips, blackips = rdbconn.hmget(f'access:service:{layername}', 'transports', 'sip_port',
-                                                                                               'sips_port', 'sip_address', 'whiteips', 'blackips')
-            whiteips = fieldjsonify(whiteips)
-            blackips = fieldjsonify(blackips)
-            if not whiteips: whiteips = {'0.0.0.0/0'}
-
+            transports, sip_port, sips_port, sip_address, whiteips, blackips, whiteipv6s, blackipv6s = rdbconn.hmget(
+                f'access:service:{layername}',
+                'transports', 'sip_port','sips_port', 'sip_address', 'whiteips', 'blackips','whiteipv6s', 'blackipv6s'
+            )
+            sip_ip = netaliases[sip_address]['listen']
             transports = fieldjsonify(transports)
             sipudpports = None
             if 'udp' in transports: sipudpports = fieldjsonify(sip_port)
@@ -116,14 +124,31 @@ def nftupdate(data):
             if 'tcp' in transports: siptcpports.append(fieldjsonify(sip_port))
             if 'tls' in transports: siptcpports.append(fieldjsonify(sips_port))
 
-            accesslayers[layername] = {'whiteips': whiteips,
-                                       'blackips': blackips,
-                                       'sip_ip': netaliases[sip_address]['listen'],
-                                       'sipudpports': sipudpports,
-                                       'siptcpports': set(siptcpports)}
+            layerdata = {
+                'sip_ip': sip_ip,
+                'sipudpports': sipudpports,
+                'siptcpports': set(siptcpports)
+            }
+
+            if IPvAddress(sip_ip).version == 4:
+                whiteips = fieldjsonify(whiteips)
+                blackips = fieldjsonify(blackips)
+                if not whiteips:
+                    whiteips = {'0.0.0.0/0'}
+                layerdata.update({'whiteips': whiteips, 'blackips': blackips})
+            else:
+                whiteipv6s = fieldjsonify(whiteipv6s)
+                blackipv6s = fieldjsonify(blackipv6s)
+                if not whiteipv6s:
+                    whiteipv6s = {'::/0'}
+                layerdata.update({'whiteipv6s': whiteipv6s, 'blackipv6s': blackipv6s})
+
+            accesslayers[layername] = layerdata
+
         # RULE FILE
         template = _NFT.get_template("nftables.j2.conf")
-        stream = template.render(whiteset=whiteset, blackset=blackset, rtpportrange=rtpportrange, sipprofiles=sipprofiles,
+        stream = template.render(whiteset=whiteset, blackset=blackset, whitesetv6=whitesetv6, blacksetv6=blacksetv6,
+                                 rtpportrange=rtpportrange, sipprofiles=sipprofiles,
                                  accesslayers=accesslayers, dftbantime=_DFTBANTIME)
         nftfile = '/etc/nftables.conf.new'
         with open(nftfile, 'w') as nftf: nftf.write(stream)
@@ -519,6 +544,8 @@ class SecurityEventHandler(Thread):
         _kamiantiflooding = 'kami:antiflooding'
         _apiwhiteset = 'api:whiteset'
         _apiblackset = 'api:blackset'
+        _apiwhitesetv6 = 'api:whitesetv6'
+        _apiblacksetv6 = 'api:blacksetv6'
         while True:
             try:
                 pubsub = rdbconn.pubsub()
@@ -531,12 +558,21 @@ class SecurityEventHandler(Thread):
                         srcips = data.get('srcips')
                         ops = 'delete' if data.get('_flag') else 'add'
                         if srcips and portion in [_kamiauthfailure, _kamiattackavoid, _kamiantiflooding]:
+                            # there is only 1 srcip in these portions
                             bantime = data.get('bantime')
-                            nftsets('TemporaryBlocks', ops, srcips, bantime)
+                            ipversion = IPvAddress(srcips[0]).version
+                            if ipversion == 4:
+                                nftsets('TemporaryBlocks', ops, srcips, bantime)
+                            if ipversion == 6:
+                                nftsets('TemporaryBlocksV6', ops, srcips, bantime)
                         if srcips and portion==_apiwhiteset:
                             nftsets('WhiteHole', ops, srcips)
                         if srcips and portion==_apiblackset:
                             nftsets('BlackHole', ops, srcips)
+                        if srcips and portion==_apiwhitesetv6:
+                            nftsets('WhiteHoleV6', ops, srcips)
+                        if srcips and portion==_apiblacksetv6:
+                            nftsets('BlackHoleV6', ops, srcips)
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:

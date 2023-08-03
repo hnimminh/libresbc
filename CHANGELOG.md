@@ -11,6 +11,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix jumps routing table
 - Update CaptAgent to 6.4.1
 - PreAnswer validation
+- Support IPv6
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env
