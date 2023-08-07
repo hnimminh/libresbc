@@ -1,12 +1,36 @@
+const DUMMY = 'DUMMY'
 const EMPTYSTR = '';
 const APIGuide = {
     "NetAlias": {
         "path": "/libreapi/base/netalias",
-        "tablename": "base-netalias-table"
+        "tablename": "base-netalias-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "addresses": [
+                {
+                    "member": "nodeid",
+                    "listen": "ip_address",
+                    "advertise": "ip_address"
+                }
+            ]
+        }
     },
     "AccessControl": {
         "path": "/libreapi/base/acl",
-        "tablename": "base-accesscontrol-table"
+        "tablename": "base-accesscontrol-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "action": "deny",
+            "rules": [
+                {
+                    "action": "allow",
+                    "key": "cidr",
+                    "value": "ip_network_address"
+                }
+            ]
+        }
     }
 }
 
@@ -16,6 +40,7 @@ var ConfigSubmitBntH = document.getElementById("config-submit");
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
 /*---------------------------------------------------------------------------*/
 function InitialPage(){
+    GetBaseCfg();
 }
 
 /* ---------------------------------------------------------------------------
@@ -78,6 +103,7 @@ function GeneralPresentData(DataList, SettingName, tablename){
         </table>`;
 }
 
+
 function GeneralRemove(name, SettingName){
     let path = APIGuide[SettingName]['path']
     $.ajax({
@@ -94,6 +120,7 @@ function GeneralRemove(name, SettingName){
         }
     });
 }
+
 
 function GeneralModify(name, SettingName){
     ShowProgress();
@@ -118,13 +145,20 @@ function GeneralModify(name, SettingName){
     });
 }
 
-
 function GeneralSubmit(name, SettingName){
     let path = APIGuide[SettingName]['path'];
     let jsonstring = ConfigDetailTextH.value;
+
+    let method = 'PUT';
+    let url = path + "/" + name
+    if (name === DUMMY) {
+        method = 'POST';
+        url = path;
+    }
+
     $.ajax({
-        type: "PUT",
-        url: path + "/" + name,
+        type: method,
+        url: url,
         dataType: "json",
         contentType: 'application/json',
         data: jsonstring,
@@ -138,6 +172,19 @@ function GeneralSubmit(name, SettingName){
     });
 }
 
+
+function GeneralCreate(SettingName){
+    let sample = APIGuide[SettingName]['sample'];
+
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+DUMMY+`','`+SettingName+`')`);
+    ConfigDetailTextH.value = JSON.stringify(sample, undefined, 4);
+    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + EMPTYSTR + "</code></strong>";
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+DUMMY+`','`+SettingName+`')`);
+
+    var OffCanvasHtml = document.getElementById("offcanvaspanel");
+    var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+    offcanvaspanel.show();
+}
 
 /* ---------------------------------------------------------------------------
     PROGRESS STATE
