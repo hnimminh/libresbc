@@ -10,6 +10,7 @@
         <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/acl"/>
         <list name="loopback.auto" default="deny">
           <node type="allow" cidr="127.0.0.1/32"/>
+          <node type="allow" cidr="::1/128"/>
        </list>
       </network-lists>
     </configuration>
