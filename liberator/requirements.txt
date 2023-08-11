@@ -9,5 +9,5 @@ aiofiles==0.5.0
 redis==4.4.4
 contextvars==2.4
 schedule==0.6.0
-redfs
+redfs==0.0.4rc0
 validators==0.18.2
