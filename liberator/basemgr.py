@@ -215,7 +215,7 @@ def fsinstance(data):
         xmlstream = xmltemplate.render(eslhost=ESL_HOST, eslport=ESL_PORT, eslpassword=ESL_SECRET)
         with open(xmlfile, 'w') as fsf: fsf.write(xmlstream)
         clitemplate = _FSXML.get_template("etc/fs_cli.conf")
-        clistream = clitemplate.render(secret=ESL_SECRET)
+        clistream = clitemplate.render(eslhost=ESL_HOST, eslport=ESL_PORT, eslpassword=ESL_SECRET)
         with open(clifile, 'w') as clif: clif.write(clistream)
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
