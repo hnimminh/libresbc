@@ -1,6 +1,21 @@
 const DUMMY = 'DUMMY'
 const EMPTYSTR = '';
 const APIGuide = {
+    "Cluster": {
+        "path": "/libreapi/cluster",
+        "tablename": "cluster-table",
+        "sample": {
+            "name": "cluster-name",
+            "members": [
+                "member-name"
+            ],
+            "rtp_start_port": 10000,
+            "rtp_end_port": 30000,
+            "max_calls_per_second": 100,
+            "max_concurrent_calls": 3000
+        }
+    },
+    // BASE
     "NetAlias": {
         "path": "/libreapi/base/netalias",
         "tablename": "netalias-table",
@@ -193,7 +208,7 @@ const APIGuide = {
     "Gateway": {
         "path": "/libreapi/base/gateway",
         "tablename": "gateway-table",
-        "sample":     {
+        "sample":{
             "name": "name",
             "desc": "description",
             "username": "none",
@@ -276,10 +291,72 @@ var ConfigSubmitBntH = document.getElementById("config-submit");
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
 /*---------------------------------------------------------------------------*/
 
+function GetPresentNode(){
+    $.ajax({
+        type: "GET",
+        url: '/libreapi/predefine',
+        success: function (data) {
+            ShowProgress();
+            let CandidateHtml = EMPTYSTR;
+            data.candidates.forEach((element) => {
+                CandidateHtml = CandidateHtml + `<span class="badge bg-secondary rounded-pill" id="cdr-bucket">`+element+`</span>`;
+            });
+            document.getElementById('node-info').innerHTML = `
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                Software Version <span class="badge bg-success rounded-pill">` + data.swversion + `</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                NodeID <span class="badge bg-danger rounded-pill">`+data.nodeid+`</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                Node Candidates
+                <div>` + CandidateHtml + `</div> </li>`;
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            document.getElementById('node-info').innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
 
-/* ---------------------------------------------------------------------------
-    BASE CONFIG
---------------------------------------------------------------------------- */
+    $.ajax({
+        type: "GET",
+        url: '/libreapi/cluster',
+        success: function (data) {
+            ShowProgress();
+            let MembersHtml = EMPTYSTR;
+            data.members.forEach((element) => {
+                MembersHtml = MembersHtml + `<span class="badge bg-dark rounded-pill" id="cdr-bucket">`+element+`</span>`;
+            });
+            document.getElementById('cluster-info').innerHTML = `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+            Cluster Name <span class="badge bg-warning text-dark rounded-pill">`+data.name+`</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Members
+                <div>` + MembersHtml +`</div>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                Soft Capacity
+                <div>
+                <span class="badge bg-primary rounded-pill">cps: `+data.max_calls_per_second+`</span>
+                <span class="badge bg-primary rounded-pill">concurrent call: `+data.max_concurrent_calls+`</span>
+                </div>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                RTP Ranges
+                <div>
+                <span class="badge bg-light text-dark rounded-pill" id="cdr-bucket">`+data.rtp_start_port+`-`+data.rtp_end_port+`</span>
+            </div>`;
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            document.getElementById('cluster-info').innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
 function GeneralGetPresent(SettingName){
     let path = APIGuide[SettingName]['path']
     let tablename = APIGuide[SettingName]['tablename']
@@ -401,6 +478,11 @@ function GeneralSubmit(name, SettingName){
         data: jsonstring,
         success: function (data) {
             ShowToast("Data has been submited", "info");
+            if (SettingName === 'Cluster'){
+                GetPresentNode();
+            } else {
+                GeneralGetPresent(SettingName);
+            }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);

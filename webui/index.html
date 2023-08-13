@@ -16,7 +16,7 @@
     <link rel="icon" type="image/png" href="assets/images/favicon.ico">
     <meta name="theme-color" content="#fcba03">
   </head>
-  <body onload="InitialPage()">
+  <body onload="GetPresentNode();">
     <!-- HEADER ––––––––––––––––––––––––––––––––––––––––––––––––––--------- -->
     <div class="py-3 mb-4 border-bottom">
       <header class="container d-flex flex-wrap justify-content-center ">
@@ -27,8 +27,8 @@
         <ul class="nav nav-pills">
           <!-- HOME -->
           <li class="nav-item">
-            <a href="" class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="false" onclick="">
-              Home</a>
+            <a href="" class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="false" onclick="GetPresentNode();">
+              Node Home</a>
           </li>
           <!-- BASE -->
           <li class="nav-item dropdown">
@@ -70,7 +70,7 @@
             </ul>
           </li>
           <li class="nav-item">
-            <a href="" class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#nav-dashboard" type="button" role="tab" aria-controls="nav-dashboard" aria-selected="false">
+            <a href="" class="nav-link" id="cfg-routing-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-routing" type="button" role="tab" aria-controls="nav-cfg-routing" aria-selected="false" onclick="">
               Routing</a>
           </li>
         </ul>
@@ -97,7 +97,20 @@
                   <h3>Home</h3>
                 </div>
                 <hr>
-                <p>Nothing to show here yet</p>
+                <div class="col-md-12 col-lg-12 py-3">
+                  <div class="row">
+                    <div class="col-md-6 g-3 py-2">
+                      <ul class="list-group" id="node-info">
+                      </ul>
+                    </div>
+                    <div class="col-md-6 g-3 py-2">
+                      <ul class="list-group" id="cluster-info">
+                      </ul>
+                      <br>
+                      <button type="button" class="btn btn-outline-danger" onclick="GeneralModify('', 'Cluster');"><i class="fa fa-connectdevelop"></i> Redefine Cluster</button>
+                    </div>
+                  </div>
+                </div>
               </div>
               <!--##### BASE --->
               <div class="tab-pane fade" id="nav-cfg-netalias-base" role="tabpanel" aria-labelledby="cfg-netalias-base-tab">
@@ -241,7 +254,17 @@
                 <div class="col-md-12 my-5" id="access-user-directory-table">
                   <!-- ACCESS USER DIRECTORY -->
                 </div>
-
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-routing" role="tabpanel" aria-labelledby="cfg-routing-tab">
+                  <div class="py-1 text-center">
+                    <h3>Routing </h3>
+                  </div>
+                  <hr>
+                  <!-- <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('Routing');">Create <i class="fa fa-plus"></i></button> -->
+                  <div class="col-md-12 my-5" id="routing-table">
+                    <!-- ROUTING -->
+                  </div>
+              </div>
               <!-- END -->
             </div>
             <!--- PROGRESS BAR -->
