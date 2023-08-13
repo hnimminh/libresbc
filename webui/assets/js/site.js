@@ -31,6 +31,72 @@ const APIGuide = {
                 }
             ]
         }
+    },
+    "MediaClass": {
+        "path": "/libreapi/class/media",
+        "tablename": "base-media-class-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "codecs": [
+                "PCMA",
+                "PCMU",
+                "OPUS",
+                "G729",
+                "AMR-WB"
+            ]
+        }
+    },
+    "CapacityClass": {
+        "path": "/libreapi/class/capacity",
+        "tablename": "base-capacity-class-table",
+        "sample": {
+            "name":"name",
+            "desc": "description",
+            "cps": -1,
+            "concurentcalls": -1
+        }
+    },
+    "TranslationClass": {
+        "path": "/libreapi/class/translation",
+        "tablename": "base-translation-class-table",
+        "sample": {
+            "name":"name",
+            "desc": "description",
+            "cps": -1,
+            "concurentcalls": -1
+        }
+    },
+    "ManipulationClass": {
+        "path": "/libreapi/class/manipulation",
+        "tablename": "base-manipulation-class-table",
+        "sample": {
+            "name":"name",
+            "desc": "description",
+            "actions": [
+                    {
+                    "action": "action",
+                    "targetvar": "variable",
+                    "values": [
+                        "value"
+                    ]
+                }
+            ]
+        }
+    },
+    "PreAnswerClass": {
+        "path": "/libreapi/class/preanswer",
+        "tablename": "base-preanswer-class-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "streams": [
+                {
+                    "type": "signal/tone/media/speak",
+                    "stream": "ring_ready/tone/mediafile"
+                }
+            ]
+        }
     }
 }
 
@@ -51,6 +117,15 @@ function GetBaseCfg() {
     GeneralGetPresent("NetAlias");
     GeneralGetPresent("AccessControl");
 }
+
+
+function ShowConfigData(apis){
+    let _apis = apis.split(",");
+    for (var i = 0; i < _apis.length; i++) {
+        GeneralGetPresent(_apis[i]);
+    }
+}
+
 
 function GeneralGetPresent(SettingName){
     let path = APIGuide[SettingName]['path']
@@ -81,7 +156,7 @@ function GeneralPresentData(DataList, SettingName, tablename){
                     <td>`+element.desc+`</td>
                     <td>
                       <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="GeneralRemove('`+name+`','`+SettingName+`')"></i></button>
-                      <button class="btn btn-primary btn-sm" type="button">
+                      <button class="btn btn-success btn-sm" type="button">
                         <i class="fa fa-pencil" onclick="GeneralModify('`+name+`','`+SettingName+`')"></i>
                       </button>
                     </td>

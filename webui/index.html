@@ -30,13 +30,13 @@
               Base</a>
           </li>
           <li class="nav-item">
-            <a href="" class="nav-link" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-class" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false">
+            <a href="" class="nav-link" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-class" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false" onclick="ShowConfigData('MediaClass,CapacityClass,TranslationClass,ManipulationClass,PreAnswerClass')">
               Class</a>
           </li>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Interconnect</a>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-class" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false" href="#">SIP Profile</a></li>
+                <li><a class="dropdown-item" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-intcon" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false" href="#">SIP Profile</a></li>
                 <li><a class="dropdown-item" href="#">Access Service</a></li>
                 <li><a class="dropdown-item" href="#">Inbound</a></li>
                 <li><a class="dropdown-item" href="#">Outbound & Gateway</a></li>
@@ -85,7 +85,30 @@
                 <div class="py-1 text-center">
                   <h3>Classes </h3>
                 </div>
-                <div class="col-md-12 col-lg-12 py-3">
+                <hr>
+                <h5>Media <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('MediaClass');"><i class="fa fa-plus"></i></button> </h5> 
+                <div class="col-md-12 my-5" id="base-media-class-table">
+                  <!-- MEDIA CLASS -->
+                </div>
+                <hr>            
+                <h5>Capacity <button type="button" class="btn btn-sm btn-outline-primary" onclick="GeneralCreate('CapacityClass');"><i class="fa fa-plus"></i></button> </h5> 
+                <div class="col-md-12 my-5" id="base-capacity-class-table">
+                  <!-- CAPACITY CLASS -->
+                </div> 
+                <hr>
+                <h5>Translation Rule <button type="button" class="btn btn-sm btn-outline-primary" onclick="GeneralCreate('TranslationClass');"><i class="fa fa-plus"></i></button> </h5> 
+                <div class="col-md-12 my-5" id="base-translation-class-table">
+                  <!-- TRANSLATIONS CLASS -->
+                </div>
+                <hr>
+                <h5>Manipulation Rule <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('ManipulationClass');"><i class="fa fa-plus"></i></button> </h5> 
+                <div class="col-md-12 my-5" id="base-manipulation-class-table">
+                  <!-- MANIPULATION CLASS -->
+                </div>
+                <hr>
+                <h5>PreAnswer <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('PreAnswerClass');"><i class="fa fa-plus"></i></button> </h5> 
+                <div class="col-md-12 my-5" id="base-preanswer-class-table">
+                  <!-- PREANSWER CLASS -->
                 </div>
               </div>
               <!-- END -->
