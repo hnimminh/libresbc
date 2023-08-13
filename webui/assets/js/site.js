@@ -207,6 +207,68 @@ const APIGuide = {
             "ping": "interval-in-second-for-sip-options"
         }
     },
+    // ACCESS LAYER
+    "AccessService": {
+        "path": "/libreapi/access/service",
+        "tablename": "access-service-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "trying_reason": "LibreSBC Trying",
+            "natping_from": "sip:keepalive@libresbc",
+            "topology_hiding": "hide.topo",
+            "whiteips":[],
+            "blackips":[],
+            "antiflooding": {
+                "sampling": 2,
+                "density": 20,
+                "window": 600,
+                "threshold": 3,
+                "bantime": 600
+            },
+            "authfailure": {
+                "window": 600,
+                "threshold": 18,
+                "bantime": 900
+            },
+            "attackavoid": {
+                "window": 18000,
+                "threshold": 3,
+                "bantime": 7200
+            },
+            "transports": [
+                "udp",
+                "tcp"
+            ],
+            "sip_address": "netalias",
+            "domains": [
+                "libre.sbc"
+            ]
+        }
+    },
+    "AccessDomainPolicy": {
+        "path": "/libreapi/access/domain-policy",
+        "tablename": "access-domain-policy-table",
+        "sample": {
+            "domain": "libre.sbc",
+            "srcsocket": {
+                "ip": "127.0.0.3"
+            },
+            "dstsocket": {
+                "ip": "127.0.0.2"
+            }
+        }
+    },
+    "AccessUserDirectory": {
+        "path": "/libreapi/access/directory/user/domain",
+        "tablename": "access-user-directory-table",
+        "sample": {
+            "domain": "libre.sbc",
+            "id": "joebiden",
+            "secret": "p@ssword"
+        }
+    },
+    // ROUTING
 }
 
 var ConfigDetailTextH = document.getElementById("config-detail");
