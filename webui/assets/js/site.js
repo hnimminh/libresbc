@@ -3,7 +3,7 @@ const EMPTYSTR = '';
 const APIGuide = {
     "NetAlias": {
         "path": "/libreapi/base/netalias",
-        "tablename": "base-netalias-table",
+        "tablename": "netalias-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -18,7 +18,7 @@ const APIGuide = {
     },
     "AccessControl": {
         "path": "/libreapi/base/acl",
-        "tablename": "base-accesscontrol-table",
+        "tablename": "acl-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -32,9 +32,10 @@ const APIGuide = {
             ]
         }
     },
+    // CLASS
     "MediaClass": {
         "path": "/libreapi/class/media",
-        "tablename": "base-media-class-table",
+        "tablename": "media-class-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -49,7 +50,7 @@ const APIGuide = {
     },
     "CapacityClass": {
         "path": "/libreapi/class/capacity",
-        "tablename": "base-capacity-class-table",
+        "tablename": "capacity-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
@@ -59,17 +60,20 @@ const APIGuide = {
     },
     "TranslationClass": {
         "path": "/libreapi/class/translation",
-        "tablename": "base-translation-class-table",
+        "tablename": "translation-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
-            "cps": -1,
-            "concurentcalls": -1
+            "caller_number_pattern": "^([0-9]+)$",
+            "caller_number_replacement": "+%{1}",
+            "destination_number_pattern": "",
+            "destination_number_replacement": "",
+            "caller_name": "_auto"
         }
     },
     "ManipulationClass": {
         "path": "/libreapi/class/manipulation",
-        "tablename": "base-manipulation-class-table",
+        "tablename": "manipulation-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
@@ -86,7 +90,7 @@ const APIGuide = {
     },
     "PreAnswerClass": {
         "path": "/libreapi/class/preanswer",
-        "tablename": "base-preanswer-class-table",
+        "tablename": "preanswer-class-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -97,7 +101,112 @@ const APIGuide = {
                 }
             ]
         }
-    }
+    },
+    // INTERCONCTION
+    "SIPProfile": {
+        "path": "/libreapi/sipprofile",
+        "tablename": "sipprofile-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "user_agent": "LibreSBC",
+            "sdp_user": "LibreSBC",
+            "local_network_acl": "rfc1918.auto",
+            "enable_100rel": true,
+            "ignore_183nosdp": true,
+            "sip_options_respond_503_on_busy": false,
+            "disable_transfer": true,
+            "manual_redirect": true,
+            "enable_3pcc": false,
+            "enable_compact_headers": false,
+            "dtmf_type": "rfc2833",
+            "media_timeout": 0,
+            "rtp_rewrite_timestamps": true,
+            "context": "carrier",
+            "sip_port": 5060,
+            "addrdetect": "none",
+            "sip_address": "netalias",
+            "rtp_address": "netalias",
+            "tls": false,
+            "tls_only": false,
+            "sips_port": 5061,
+            "tls_version": "tlsv1.2"
+        }
+    },
+    "Inbound": {
+        "path": "/libreapi/interconnection/inbound",
+        "tablename": "inbound-intcon-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "sipprofile": "sipprofile",
+            "routing": "routing-table",
+            "sipaddrs": [
+                "farend-sip-signaling-ip"
+            ],
+            "rtpaddrs": [
+                "farend-rtp-media-ip"
+            ],
+            "ringready": false,
+            "media_class": "media-class",
+            "capacity_class": "capacity-class",
+            "translation_classes": [],
+            "manipulation_classes": [],
+            "authscheme": "IP",
+            "nodes": [
+                "_ALL_"
+            ],
+            "enable": true
+        }
+    },
+    "Outbound": {
+        "path": "/libreapi/interconnection/outbound",
+        "tablename": "outbound-intcon-table",
+        "sample": {
+            "name": "name",
+            "desc": "description",
+            "media_class": "media-class",
+            "capacity_class": "capacity-class",
+            "translation_classes": [],
+            "manipulation_classes": [],
+            "sipprofile": "gsipv6",
+            "privacy": [
+                "none"
+            ],
+            "cid_type": "none",
+            "distribution": "weight_based",
+            "gateways": [
+              {
+                "name": "HONEYPOT6GW",
+                "weight": 1
+              }
+            ],
+            "rtpaddrs": [
+                "farend-rtp-media-ip"
+            ],
+            "nodes": [
+                "_ALL_"
+            ],
+            "enable": true,
+        }
+    },
+    "Gateway": {
+        "path": "/libreapi/base/gateway",
+        "tablename": "gateway-table",
+        "sample":     {
+            "name": "name",
+            "desc": "description",
+            "username": "none",
+            "password": "none",
+            "proxy": "farend-sip-signaling-ip",
+            "port": 5060,
+            "transport": "udp",
+            "do_register": false,
+            "caller_id_in_from": true,
+            "cid_type": "none",
+            "ping": "interval-in-second-for-sip-options"
+        }
+    },
 }
 
 var ConfigDetailTextH = document.getElementById("config-detail");

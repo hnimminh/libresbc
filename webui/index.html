@@ -25,21 +25,44 @@
           <span class="fs-4 fw-light text-muted">&nbsp;&nbsp;<em>libresbc</em></span>
         </a>
         <ul class="nav nav-pills">
+          <!-- HOME -->
           <li class="nav-item">
-            <a href="" class="nav-link active" id="cfg-base-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-base" type="button" role="tab" aria-controls="nav-cfg-base" aria-selected="false" onclick="GetBaseCfg()">
-              Base</a>
+            <a href="" class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#nav-home" type="button" role="tab" aria-controls="nav-home" aria-selected="false" onclick="">
+              Home</a>
           </li>
-          <li class="nav-item">
-            <a href="" class="nav-link" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-class" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false" onclick="ShowConfigData('MediaClass,CapacityClass,TranslationClass,ManipulationClass,PreAnswerClass')">
-              Class</a>
-          </li>
+          <!-- BASE -->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Interconnect</a>
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Bases</a>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" id="cfg-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-intcon" type="button" role="tab" aria-controls="nav-cfg-class" aria-selected="false" href="#">SIP Profile</a></li>
-                <li><a class="dropdown-item" href="#">Access Service</a></li>
-                <li><a class="dropdown-item" href="#">Inbound</a></li>
-                <li><a class="dropdown-item" href="#">Outbound & Gateway</a></li>
+              <li><a class="dropdown-item" id="cfg-netlias-base-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-netalias-base" type="button" role="tab" aria-controls="nav-cfg-netalias-base" aria-selected="false" href="" onclick="GeneralGetPresent('NetAlias');">NetAlias</a></li>
+              <li><a class="dropdown-item" id="cfg--tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-acl-base" type="button" role="tab" aria-controls="nav-cfg-acl-base" aria-selected="false" href="" onclick="GeneralGetPresent('AccessControl');">Access Control</a></li>
+            </ul>
+          </li>
+          <!-- CLASS -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Class</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" id="cfg-media-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-media-class" type="button" role="tab" aria-controls="nav-cfg-media-class" aria-selected="false" href="" onclick="GeneralGetPresent('MediaClass');">Media Class</a></li>
+              <li><a class="dropdown-item" id="cfg-capacity-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-capacity-class" type="button" role="tab" aria-controls="nav-cfg-capacity-class" aria-selected="false" href="" onclick="GeneralGetPresent('CapacityClass');">Capacity Class</a></li>
+              <li><a class="dropdown-item" id="cfg-translation-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-translation-class" type="button" role="tab" aria-controls="nav-cfg-translation-class" aria-selected="false" href="" onclick="GeneralGetPresent('TranslationClass');">Translation Class</a></li>
+              <li><a class="dropdown-item" id="cfg-manipulation-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-manipulation-class" type="button" role="tab" aria-controls="nav-cfg-manipulation-class" aria-selected="false" href="" onclick="GeneralGetPresent('ManipulationClass');">Manipulation Class</a></li>
+              <li><a class="dropdown-item" id="cfg-preanswer-class-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-preanswer-class" type="button" role="tab" aria-controls="nav-cfg-preanswer-class" aria-selected="false" href="" onclick="GeneralGetPresent('PreAnswerClass');">PreAnswer Class</a></li>
+            </ul>
+          </li>
+          <!-- INTERCONNECTION -->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">Connections</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" id="cfg-sipprofile-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-sipprofile" type="button" 
+                role="tab" aria-controls="nav-cfg-sipprofile" aria-selected="false" href="" onclick="GeneralGetPresent('SIPProfile');">SIP Profile</a></li>
+              <li><a class="dropdown-item" id="cfg-inbound-intcon-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-inbound-intcon" type="button" 
+                role="tab" aria-controls="nav-cfg-inbound-intcon" aria-selected="false" href="" onclick="GeneralGetPresent('Inbound');">Inbound Interconnect</a></li>
+              <li><a class="dropdown-item" id="cfg-outbound-intcon-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-outbound-intcon" type="button" 
+                role="tab" aria-controls="nav-cfg-outbound-intcon" aria-selected="false" href="" onclick="GeneralGetPresent('Outbound');">Outbound Interconnect</a></li>
+              <li><a class="dropdown-item" id="cfg-gateway-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-gateway" type="button" 
+                role="tab" aria-controls="nav-cfg-gateway" aria-selected="false" href="" onclick="GeneralGetPresent('Gateway');">SIP Gateway</a></li>
+              <li><a class="dropdown-item" id="cfg-access-service-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-access-service" type="button" 
+                role="tab" aria-controls="nav-cfg-access-service" aria-selected="false" href="" onclick="GeneralGetPresent('AccessService');">Access Service</a></li>
             </ul>
           </li>
           <li class="nav-item">
@@ -64,55 +87,140 @@
             </div>
             <!----- END: TOAST -->
             <div class="tab-content" id="nav-tabContent">
-              <!-- BASE --->
-              <div class="tab-pane fade show active" id="nav-cfg-base" role="tabpanel" aria-labelledby="cfg-base-tab">
+               <!-- HOME --->
+              <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="home-tab">
                 <div class="py-1 text-center">
-                  <h3>Bases</h3>
+                  <h3>Home</h3>
                 </div>
                 <hr>
-                <h5>NetAlias <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('NetAlias');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-netalias-table">
-                  <!-- GetandPresentNetAlias -->
+                <p>Nothing to show here yet</p>
+              </div>
+              <!--##### BASE --->
+              <div class="tab-pane fade" id="nav-cfg-netalias-base" role="tabpanel" aria-labelledby="cfg-netalias-base-tab">
+                <div class="py-1 text-center">
+                  <h3>NetAlias </h3>
                 </div>
                 <hr>
-                <h5>Access Control <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('AccessControl');"><i class="fa fa-plus"></i></button> </h5>
-                <div class="col-md-12 my-5" id="base-accesscontrol-table">
-                  <!-- GetandPresentAccessControl -->
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('NetAlias');"> Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="netalias-table">
+                  <!-- NET ALIAS -->
                 </div>
               </div>
-              <!-- CLASS -->
-              <div class="tab-pane fade" id="nav-cfg-class" role="tabpanel" aria-labelledby="cfg-class-tab">
+              <div class="tab-pane fade" id="nav-cfg-acl-base" role="tabpanel" aria-labelledby="cfg-acl-base-tab">
                 <div class="py-1 text-center">
-                  <h3>Classes </h3>
+                  <h3>Network Control List </h3>
                 </div>
                 <hr>
-                <h5>Media <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('MediaClass');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-media-class-table">
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('AccessControl');"> Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="acl-table">
+                  <!-- ACCESS CONTROL -->
+                </div>
+              </div>
+              <!--##### CLASS MEDIA-->
+              <div class="tab-pane fade" id="nav-cfg-media-class" role="tabpanel" aria-labelledby="cfg-media-class-tab">
+                <div class="py-1 text-center">
+                  <h3>Media Class </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('MediaClass');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="media-class-table">
                   <!-- MEDIA CLASS -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-capacity-class" role="tabpanel" aria-labelledby="cfg-capacity-class-tab">
+                <div class="py-1 text-center">
+                  <h3>Capacity Class </h3>
                 </div>
-                <hr>            
-                <h5>Capacity <button type="button" class="btn btn-sm btn-outline-primary" onclick="GeneralCreate('CapacityClass');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-capacity-class-table">
-                  <!-- CAPACITY CLASS -->
-                </div> 
                 <hr>
-                <h5>Translation Rule <button type="button" class="btn btn-sm btn-outline-primary" onclick="GeneralCreate('TranslationClass');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-translation-class-table">
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('CapacityClass');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="capacity-class-table">
+                  <!-- CAPACITY CLASS -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-translation-class" role="tabpanel" aria-labelledby="cfg-translation-class-tab">
+                <div class="py-1 text-center">
+                  <h3>Translation Rules </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('TranslationClass');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="translation-class-table">
                   <!-- TRANSLATIONS CLASS -->
                 </div>
-                <hr>
-                <h5>Manipulation Rule <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('ManipulationClass');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-manipulation-class-table">
-                  <!-- MANIPULATION CLASS -->
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-manipulation-class" role="tabpanel" aria-labelledby="cfg-manipulation-class-tab">
+                <div class="py-1 text-center">
+                  <h3>Manipulation Rules </h3>
                 </div>
                 <hr>
-                <h5>PreAnswer <button type="button" class="btn btn-sm btn-primary" onclick="GeneralCreate('PreAnswerClass');"><i class="fa fa-plus"></i></button> </h5> 
-                <div class="col-md-12 my-5" id="base-preanswer-class-table">
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('ManipulationClass');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="manipulation-class-table">
+                  <!-- MANIPULATION CLASS -->
+                </div>
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-preanswer-class" role="tabpanel" aria-labelledby="cfg-preanswer-class-tab">
+                <div class="py-1 text-center">
+                  <h3>PreAnswer Class </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('PreAnswerClass');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="preanswer-class-table">
                   <!-- PREANSWER CLASS -->
                 </div>
               </div>
+              <!--##### INTERCONNECTION -->
+              <div class="tab-pane fade" id="nav-cfg-sipprofile" role="tabpanel" aria-labelledby="cfg-sipprofile-tab">
+                <div class="py-1 text-center">
+                  <h3>SIP Profile </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('SIPProfile');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="sipprofile-table">
+                  <!-- SIP PROFILE -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-inbound-intcon" role="tabpanel" aria-labelledby="cfg-inbound-intcon-tab">
+                <div class="py-1 text-center">
+                  <h3>Inbound Interconnect </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('Inbound');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="inbound-intcon-table">
+                  <!-- INBOUND INTERCONNECT -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-outbound-intcon" role="tabpanel" aria-labelledby="cfg-outbound-intcon-tab">
+                <div class="py-1 text-center">
+                  <h3>Outbound Interconnect </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('Outbound');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="outbound-intcon-table">
+                  <!-- OUTBOUND INTERCONNECT -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-gateway" role="tabpanel" aria-labelledby="cfg-gateway-tab">
+                <div class="py-1 text-center">
+                  <h3>Gateway </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('Gateway');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="gateway-table">
+                  <!-- GATEWAY INTERCONNECT -->
+                </div>           
+              </div>
+              <div class="tab-pane fade" id="nav-cfg-access-service" role="tabpanel" aria-labelledby="cfg-access-service-tab">
+                <div class="py-1 text-center">
+                  <h3>Access Service </h3>
+                </div>
+                <hr>
+                <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('AccessService');">Create <i class="fa fa-plus"></i></button>
+                <div class="col-md-12 my-5" id="access-service-table">
+                  <!-- ACCESS SERVICE -->
+                </div>           
+              </div>
               <!-- END -->
             </div>
+            <!--- PROGRESS BAR -->
             <hr>
             <div id="progessdot" class="invisible">
               <div class="d-flex justify-content-center">
@@ -121,7 +229,6 @@
                 <div class="spinner-grow text-warning" role="status"></div>
               </div>
             </div>
-
             <!----- BEGIN: CANVAS -->
             <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="true" tabindex="0" id="offcanvaspanel" aria-labelledby="offcanvaspanel-label">
               <div class="offcanvas-header">
@@ -141,7 +248,6 @@
               </div>
             </div>
             <!----- END: CANVAS -->
-
           </main>
         <!-- FOOTER ––––––––––––––––––––––––––––––––––––––––––––––––––--------- -->
         <footer class="my-1 pt-5 text-muted text-center text-small">
