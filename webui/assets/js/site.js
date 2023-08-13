@@ -353,9 +353,13 @@ function GeneralRemove(name, SettingName){
 function GeneralModify(name, SettingName){
     ShowProgress();
     let path = APIGuide[SettingName]['path']
+    let url = APIGuide[SettingName]['path'] + "/" + name
+    if (name===EMPTYSTR) {
+        url = path
+    }
     $.ajax({
         type: "GET",
-        url: path + "/" + name,
+        url: url,
         success: function (data) {
             ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
             ConfigDetailTextH.value = JSON.stringify(data, undefined, 4);
@@ -379,6 +383,11 @@ function GeneralSubmit(name, SettingName){
 
     let method = 'PUT';
     let url = path + "/" + name
+    // for modify special API such as [cluster]
+    if (name === EMPTYSTR) {
+        url = path;
+    }
+    // for create new object
     if (name === DUMMY) {
         method = 'POST';
         url = path;
