@@ -273,31 +273,13 @@ const APIGuide = {
 
 var ConfigDetailTextH = document.getElementById("config-detail");
 var ConfigSubmitBntH = document.getElementById("config-submit");
-
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
 /*---------------------------------------------------------------------------*/
-function InitialPage(){
-    GetBaseCfg();
-}
+
 
 /* ---------------------------------------------------------------------------
     BASE CONFIG
 --------------------------------------------------------------------------- */
-
-function GetBaseCfg() {
-    GeneralGetPresent("NetAlias");
-    GeneralGetPresent("AccessControl");
-}
-
-
-function ShowConfigData(apis){
-    let _apis = apis.split(",");
-    for (var i = 0; i < _apis.length; i++) {
-        GeneralGetPresent(_apis[i]);
-    }
-}
-
-
 function GeneralGetPresent(SettingName){
     let path = APIGuide[SettingName]['path']
     let tablename = APIGuide[SettingName]['tablename']
