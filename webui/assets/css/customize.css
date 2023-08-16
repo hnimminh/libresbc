@@ -31,3 +31,7 @@
     transform: translateX(-100%);
     */
   }
+
+.custom-tooltip {
+    --bs-tooltip-bg: var(--bs-primary);
+  }

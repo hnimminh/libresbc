@@ -1,24 +1,13 @@
-const DUMMY = 'DUMMY'
+const DUMMY = 'DUMMY';
 const EMPTYSTR = '';
 const APIGuide = {
     "Cluster": {
-        "path": "/libreapi/cluster",
-        "tablename": "cluster-table",
-        "sample": {
-            "name": "cluster-name",
-            "members": [
-                "member-name"
-            ],
-            "rtp_start_port": 10000,
-            "rtp_end_port": 30000,
-            "max_calls_per_second": 100,
-            "max_concurrent_calls": 3000
-        }
+        "path": "/libreapi/cluster"
     },
     // BASE
     "NetAlias": {
         "path": "/libreapi/base/netalias",
-        "tablename": "netalias-table",
+        "presentation-html": "netalias-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -33,7 +22,7 @@ const APIGuide = {
     },
     "AccessControl": {
         "path": "/libreapi/base/acl",
-        "tablename": "acl-table",
+        "presentation-html": "acl-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -50,7 +39,7 @@ const APIGuide = {
     // CLASS
     "MediaClass": {
         "path": "/libreapi/class/media",
-        "tablename": "media-class-table",
+        "presentation-html": "media-class-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -65,7 +54,7 @@ const APIGuide = {
     },
     "CapacityClass": {
         "path": "/libreapi/class/capacity",
-        "tablename": "capacity-class-table",
+        "presentation-html": "capacity-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
@@ -75,7 +64,7 @@ const APIGuide = {
     },
     "TranslationClass": {
         "path": "/libreapi/class/translation",
-        "tablename": "translation-class-table",
+        "presentation-html": "translation-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
@@ -88,7 +77,7 @@ const APIGuide = {
     },
     "ManipulationClass": {
         "path": "/libreapi/class/manipulation",
-        "tablename": "manipulation-class-table",
+        "presentation-html": "manipulation-class-table",
         "sample": {
             "name":"name",
             "desc": "description",
@@ -105,7 +94,7 @@ const APIGuide = {
     },
     "PreAnswerClass": {
         "path": "/libreapi/class/preanswer",
-        "tablename": "preanswer-class-table",
+        "presentation-html": "preanswer-class-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -120,7 +109,7 @@ const APIGuide = {
     // INTERCONCTION
     "SIPProfile": {
         "path": "/libreapi/sipprofile",
-        "tablename": "sipprofile-table",
+        "presentation-html": "sipprofile-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -150,7 +139,7 @@ const APIGuide = {
     },
     "Inbound": {
         "path": "/libreapi/interconnection/inbound",
-        "tablename": "inbound-intcon-table",
+        "presentation-html": "inbound-intcon-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -176,7 +165,7 @@ const APIGuide = {
     },
     "Outbound": {
         "path": "/libreapi/interconnection/outbound",
-        "tablename": "outbound-intcon-table",
+        "presentation-html": "outbound-intcon-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -207,7 +196,7 @@ const APIGuide = {
     },
     "Gateway": {
         "path": "/libreapi/base/gateway",
-        "tablename": "gateway-table",
+        "presentation-html": "gateway-table",
         "sample":{
             "name": "name",
             "desc": "description",
@@ -225,7 +214,7 @@ const APIGuide = {
     // ACCESS LAYER
     "AccessService": {
         "path": "/libreapi/access/service",
-        "tablename": "access-service-table",
+        "presentation-html": "access-service-table",
         "sample": {
             "name": "name",
             "desc": "description",
@@ -263,7 +252,7 @@ const APIGuide = {
     },
     "AccessDomainPolicy": {
         "path": "/libreapi/access/domain-policy",
-        "tablename": "access-domain-policy-table",
+        "presentation-html": "access-domain-policy-table",
         "sample": {
             "domain": "libre.sbc",
             "srcsocket": {
@@ -276,7 +265,7 @@ const APIGuide = {
     },
     "AccessUserDirectory": {
         "path": "/libreapi/access/directory/user/domain",
-        "tablename": "access-user-directory-table",
+        "presentation-html": "access-user-directory-table",
         "sample": {
             "domain": "libre.sbc",
             "id": "joebiden",
@@ -284,11 +273,44 @@ const APIGuide = {
         }
     },
     // ROUTING
-}
+    "RoutingTable": {
+        "path": "/libreapi/routing/table",
+        "presentation-html": "routing-presentation-object",
+        "sample": 	{
+            "name": "name",
+            "desc": "description",
+            "action": "route/block/query/httpr",
+            "variables": ["cidnumber", "cidname", "dstnumber", "intconname", "realm"],
+            "routes": {
+                "primary": "primary-endpoint",
+                "secondary": "secondary-endpoint",
+                "load": "load-share-percentage"
+            }
+        }
+    },
+    "RoutingRecord": {
+        "path": "/libreapi/routing/record",
+        "presentation-html": null,
+        "sample": 	{
+            "table": "routing-table-name",
+            "match": "em/lpm/eq/ne/gt/lt",
+            "value": "reference_value",
+            "action": "route/block/jumps",
+            "routes": {
+                "primary": "primary-endpoint",
+                "secondary": "secondary-endpoint",
+                "load": "load-share-percentage"
+            }
+        }
+    },
+};
 
 var ConfigDetailTextH = document.getElementById("config-detail");
 var ConfigSubmitBntH = document.getElementById("config-submit");
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
+// Tooltip
+var tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+var tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 /*---------------------------------------------------------------------------*/
 
 function GetPresentNode(){
@@ -359,23 +381,27 @@ function GetPresentNode(){
 
 function GeneralGetPresent(SettingName){
     let path = APIGuide[SettingName]['path']
-    let tablename = APIGuide[SettingName]['tablename']
+    let presentation = APIGuide[SettingName]["presentation-html"]
     $.ajax({
         type: "GET",
         url: path,
         success: function (data) {
             ShowProgress();
-            GeneralPresentData(data, SettingName, tablename);
+            if (SettingName === 'RoutingTable'){
+                RoutingTablePresentData(data, SettingName, presentation);
+            } else{
+                GeneralPresentData(data, SettingName, presentation);
+            }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
-            document.getElementById(tablename).innerHTML = EMPTYSTR;
+            document.getElementById(presentation).innerHTML = EMPTYSTR;
             ShowToast(jqXHR.responseJSON.error);
         }
     });
 }
 
-function GeneralPresentData(DataList, SettingName, tablename){
+function GeneralPresentData(DataList, SettingName, presentation){
     let tablebody = EMPTYSTR;
     let cnt = 1;
     DataList.forEach((element) => {
@@ -394,7 +420,7 @@ function GeneralPresentData(DataList, SettingName, tablename){
         tablebody = tablebody + htmltb
         cnt++;
     });
-    document.getElementById(tablename).innerHTML = `
+    document.getElementById(presentation).innerHTML = `
         <table class="table">
         <thead>
         <tr>
@@ -503,6 +529,39 @@ function GeneralCreate(SettingName){
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
     offcanvaspanel.show();
+}
+
+// Routing
+function RoutingTablePresentData(Rtables, SettingName, presentation){
+    let RoutingTablesHtml = EMPTYSTR;
+    Rtables.forEach((Rtable) => {
+        let rtbName = Rtable.name;
+        let rtbAction = Rtable.action;
+        let rtbDesc = Rtable.desc;
+        let detail = JSON.stringify(Rtable).replaceAll('"', '');
+        console.log(detail);
+        rtblhtml = `
+      <div class="accordion-item">
+        <h2 class="accordion-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="`+detail+`">
+          <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT`+rtbName+`">
+            <span class="text-primary fw-bolder">`+rtbName+`</span> &nbsp;&nbsp;
+            <span class="badge rounded-pill text-bg-danger">`+rtbAction+`</span> &nbsp;&nbsp;
+            `+rtbDesc+`
+          </button>
+        </h2>
+        <div id="collapseRT`+rtbName+`" class="accordion-collapse collapse">
+          <div class="accordion-body">
+            <div class="col-md-6 col-lg-6">
+            </div>
+          </div>
+        </div>
+      </div>`
+      RoutingTablesHtml = RoutingTablesHtml + rtblhtml;
+    });
+    document.getElementById(presentation).innerHTML = RoutingTablesHtml;
+    // update tooltip
+    tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 }
 
 /* ---------------------------------------------------------------------------

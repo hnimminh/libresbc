@@ -70,8 +70,8 @@
             </ul>
           </li>
           <li class="nav-item">
-            <a href="" class="nav-link" id="cfg-routing-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-routing" type="button" role="tab" aria-controls="nav-cfg-routing" aria-selected="false" onclick="">
-              Routing</a>
+            <a href="" class="nav-link" id="cfg-routing-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-routing" type="button" 
+            role="tab" aria-controls="nav-cfg-routing" aria-selected="false" onclick="GeneralGetPresent('RoutingTable');">Routing</a>
           </li>
         </ul>
       </header>
@@ -91,7 +91,7 @@
             </div>
             <!----- END: TOAST -->
             <div class="tab-content" id="nav-tabContent">
-               <!-- HOME --->
+               <!--##### HOME --->
               <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="home-tab">
                 <div class="py-1 text-center">
                   <h3>Home</h3>
@@ -260,10 +260,38 @@
                     <h3>Routing </h3>
                   </div>
                   <hr>
-                  <!-- <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('Routing');">Create <i class="fa fa-plus"></i></button> -->
-                  <div class="col-md-12 my-5" id="routing-table">
-                    <!-- ROUTING -->
+                  <button type="button" class="btn btn-outline-primary" onclick="GeneralCreate('RoutingTable');" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="create new routing table"> Create
+                  </button>
+                  <br><br>
+                  <!--- BEGIN: ROUTING DATA -->
+                  <div class="accordion" id="routing-presentation-object">
+                  <!--
+                    <div class="accordion-item">    
+                      <h2 class="accordion-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="tyel">
+                        <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRTBL1">
+                          <span class="text-primary fw-bolder">Goto</span> &nbsp;&nbsp;
+                          <span class="badge rounded-pill text-bg-danger">httpr</span> &nbsp;&nbsp;
+                          description for routing table1
+                        </button>
+                      </h2>
+                      <div id="collapseRTBL1" class="accordion-collapse collapse">
+                        <div class="accordion-body">
+                          <div class="col-md-6 col-lg-6">
+                            <ul class="list-group list-group-flush">
+                              <li class="list-group-item">Name</li>
+                              <li class="list-group-item">Description</li>
+                              <li class="list-group-item">Action</li>
+                              <li class="list-group-item">Primary</li>
+                              <li class="list-group-item">Secondary</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  -->
                   </div>
+                  <!--- END: ROUTING DATA -->                
               </div>
               <!-- END -->
             </div>

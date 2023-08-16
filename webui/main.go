@@ -66,7 +66,7 @@ func init() {
       +-+-+-+-+-+-+-+ + +-+-+-+-+-+
 
       Open Source Session Border Controler
-      LibreSBC - v0.0.0
+      LibreSBC - v0.6.0
 
       Listen              %s
       LibreSBC            %s
@@ -98,7 +98,7 @@ func main() {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	router.PathPrefix("/libreapi").Handler(proxy)
-
+	//router.PathPrefix("/apidocs", "/openapi.json").Handler(proxy)
 	// STATIC ADMIN WEB UI
 	router.PathPrefix("/").Handler(
 		http.FileServer(
