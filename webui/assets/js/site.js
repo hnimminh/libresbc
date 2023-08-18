@@ -385,7 +385,7 @@ function GeneralGetPresent(SettingName){
         success: function (data) {
             ShowProgress();
             if (SettingName === 'RoutingTable'){
-                RoutingTablePresentData(data, SettingName, presentation);
+                RoutingTablePresentData(data, presentation);
             } else{
                 GeneralPresentData(data, SettingName, presentation);
             }
@@ -529,17 +529,21 @@ function GeneralCreate(SettingName){
 }
 
 // Routing
-function RoutingTablePresentData(Rtables, SettingName, presentation){
+function RoutingTablePresentData(Rtables, presentation){
     let RoutingTablesHtml = EMPTYSTR;
     Rtables.forEach((Rtable) => {
         let rtbName = Rtable.name;
         let rtbAction = Rtable.action;
         let rtbDesc = Rtable.desc;
-        let detail = JSON.stringify(Rtable).replaceAll('"', '');
-        console.log(detail);
+
+        let newRecordButton = EMPTYSTR;
+        if (rtbAction === 'query'){
+            newRecordButton = `<button type="button" class="btn btn-outline-primary text-start" onclick="CreateRoutingRecord('`+rtbName+`')"><i class="fa fa-plus-square-o"></i> Create Record</button>`;
+        }
+
         rtblhtml = `
-      <div class="accordion-item">
-        <h2 class="accordion-header" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-custom-class="custom-tooltip" data-bs-title="`+detail+`">
+        <div class="accordion-item">
+        <h2 class="accordion-header" data-bs-title="show detail">
           <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT`+rtbName+`">
             <span class="text-primary fw-bolder">`+rtbName+`</span> &nbsp;&nbsp;
             <span class="badge rounded-pill text-bg-danger">`+rtbAction+`</span> &nbsp;&nbsp;
@@ -548,18 +552,94 @@ function RoutingTablePresentData(Rtables, SettingName, presentation){
         </h2>
         <div id="collapseRT`+rtbName+`" class="accordion-collapse collapse">
           <div class="accordion-body">
-            <div class="col-md-6 col-lg-6">
+            <div class="row">
+                <div class="col-md-4 col-lg-4">
+                    <div class="btn-group-vertical" role="group">
+                        <button type="button" class="btn btn-outline-primary text-start" onclick="RoutingTableDetail('`+rtbName+`')"><i class="fa fa-refresh"></i> Load Table</button>
+                        <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('`+rtbName+`','RoutingTable')"><i class="fa fa-pencil-square-o"></i> Update Table</button>
+                        `+newRecordButton+`
+                    </div>
+                </div>
+                <div class="col-md-8 col-lg-8" id="DetailRT`+rtbName+`">
+                </div>
+            </div>
+            <br>
+            <div class="row" id="TableRR`+rtbName+`">
             </div>
           </div>
         </div>
-      </div>`
-      RoutingTablesHtml = RoutingTablesHtml + rtblhtml;
+        </div>`
+        RoutingTablesHtml = RoutingTablesHtml + rtblhtml;
     });
     document.getElementById(presentation).innerHTML = RoutingTablesHtml;
-    // update tooltip
-    tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 }
+
+function RoutingTableDetail(Rtablename){
+    $.ajax({
+        type: "GET",
+        url: '/libreapi/routing/table/'+Rtablename,
+        success: function (data) {
+            ShowProgress();
+            records = data.records;
+            delete data['records'];
+            document.getElementById("DetailRT"+Rtablename).innerHTML = `
+            <div class="card border-primary">
+            <div class="card-body text-primary">
+              <pre><code>`+JSON.stringify(data, undefined, 2)+`</code></pre>
+            </div>
+            </div>`;
+            // routing record
+            let recordtable = EMPTYSTR;
+            let cnt = 1;
+            records.forEach((record)=>{
+                let action = record.action;
+                let primary = 'N/A'
+                let secondary = 'N/A'
+                if (action!=='block'){
+                    primary = record.routes.primary;
+                    secondary = record.routes.secondary;
+                }
+                recordhtml = `<tr>
+                    <td>`+cnt+`</td>
+                    <td>`+record.match+`</td>
+                    <td>`+record.value+`</td>
+                    <td>`+action+`</td>
+                    <td>`+primary+`</td>
+                    <td>`+secondary+`</td>
+                    <td>
+                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick=""></i></button>
+                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick=""></i></button>
+                    </td>
+                </tr>`
+                recordtable = recordtable + recordhtml;
+                cnt++;
+            });
+            if (records.length!==0){
+                document.getElementById("TableRR"+Rtablename).innerHTML = `
+                <table class="table table-bordered">
+                <thead class="table-light">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Match</th>
+                    <th scope="col">Value</th>
+                    <th scope="col">Action</th>
+                    <th scope="col">Primary</th>
+                    <th scope="col">Secondary</th>
+                    <th scope="col"> </th>
+                </tr>
+                </thead>
+                <tbody>` + recordtable + `</tbody>
+                </table>`;
+            };
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            document.getElementById("DetailRT"+Rtablename).innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
 
 /* ---------------------------------------------------------------------------
     PROGRESS STATE
