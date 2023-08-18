@@ -419,12 +419,12 @@ function GeneralPresentData(DataList, SettingName, presentation){
     });
     document.getElementById(presentation).innerHTML = `
         <table class="table">
-        <thead>
+        <thead class="table-light">
         <tr>
             <th scope="col">#</th>
             <th scope="col">Name</th>
             <th scope="col">Description</th>
-            <th scope="col">Action</th>
+            <th scope="col"> </th>
         </tr>
         </thead>
         <tbody>` + tablebody + `</tbody>
