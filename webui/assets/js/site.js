@@ -462,13 +462,8 @@ function GeneralModify(name, SettingName){
         url: url,
         success: function (data) {
             ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
-            ConfigDetailTextH.value = JSON.stringify(data, undefined, 4);
-            PanelLabelH.innerHTML = SettingName + "  <strong><code>" + name + "</code></strong>";
-            ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+name+`','`+SettingName+`', 1)`);
-
-            var OffCanvasHtml = document.getElementById("offcanvaspanel");
-            offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
-            offcanvaspanel.show();
+            // canvas
+            PresentCanvas(data, name, SettingName);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
@@ -689,11 +684,16 @@ function UpdateRoutingRecord(tablename, match, value, action, primary, secondary
             "load": load
         }
     }
-    // prepare canvas
     ShowToast("Detailize Successfully " + SettingName + " " + tablename, "info");
-    ConfigDetailTextH.value = JSON.stringify(record, undefined, 4);
-    PanelLabelH.innerHTML = SettingName + "  <strong><code>" +tablename+ "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+tablename+`','`+SettingName+`', 1)`);
+    // canvas
+    PresentCanvas(record, tablename, SettingName);
+}
+
+/* ----------------------- */
+function PresentCanvas(Data, ObjectName, SettingName){
+    ConfigDetailTextH.value = JSON.stringify(Data, undefined, 4);
+    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + ObjectName + "</code></strong>";
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`')`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
