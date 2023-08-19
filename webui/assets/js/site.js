@@ -515,8 +515,12 @@ function GeneralSubmit(name, SettingName){
     });
 }
 
-function GeneralCreate(SettingName){
+// create button
+function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
     let sample = APIGuide[SettingName]['sample'];
+    if (SettingName === 'RoutingRecord'){
+        sample['table'] = ObjectName;
+    }
 
     ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+DUMMY+`','`+SettingName+`')`);
     ConfigDetailTextH.value = JSON.stringify(sample, undefined, 4);
