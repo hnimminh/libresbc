@@ -2636,7 +2636,7 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
                     compare, param = listify(hashfield)
                     recordvalue = listify(valuefield)
                     action = recordvalue[0]
-                    record = {'matching': compare, 'value': param, 'action': action}
+                    record = {'match': compare, 'value': param, 'action': action}
                     if action != 'block':
                         record.update({'routes':{'primary': recordvalue[1], 'secondary': recordvalue[2], 'load': int(recordvalue[3])}})
                     records.append(record)

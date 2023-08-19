@@ -12,6 +12,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Update CaptAgent to 6.4.1
 - PreAnswer validation
 - Support IPv6
+- Fix routing recording typo match key
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env
