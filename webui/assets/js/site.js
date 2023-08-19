@@ -307,6 +307,7 @@ const APIGuide = {
 var ConfigDetailTextH = document.getElementById("config-detail");
 var ConfigSubmitBntH = document.getElementById("config-submit");
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
+var offcanvaspanel;
 /*---------------------------------------------------------------------------*/
 
 function GetPresentNode(){
@@ -466,7 +467,7 @@ function GeneralModify(name, SettingName){
             ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+name+`','`+SettingName+`', 1)`);
 
             var OffCanvasHtml = document.getElementById("offcanvaspanel");
-            var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+            offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
             offcanvaspanel.show();
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -509,6 +510,7 @@ function GeneralSubmit(name, SettingName, flag=0){
             } else {
                 GeneralGetPresent(SettingName);
             }
+            offcanvaspanel.hide();
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
@@ -532,7 +534,7 @@ function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
     ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`')`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
-    var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+    offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
     offcanvaspanel.show();
 }
 
@@ -697,7 +699,7 @@ function UpdateRoutingRecord(tablename, match, value, action, primary, secondary
     ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+tablename+`','`+SettingName+`', 1)`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
-    var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+    offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
     offcanvaspanel.show();
 
 }
