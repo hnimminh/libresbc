@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, validator, root_validator, schema
 from pydantic.fields import ModelField
 from typing import Optional, List, Dict, Union, Any
 from enum import Enum
-from ipaddress import IPv4Address, IPv4Network
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_network as IPvNetwork
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 
@@ -198,8 +198,8 @@ def netalias_agreement(addresses):
 
 class IPSuite(BaseModel):
     member: str = Field(regex=_NAME_, description='NodeID of member in cluster')
-    listen: IPv4Address = Field(description='the listen ip address')
-    advertise: IPv4Address = Field(description='the advertising ip address')
+    listen: Union[IPv4Address, IPv6Address] = Field(description='the listen ip address')
+    advertise: Union[IPv4Address, IPv6Address] = Field(description='the advertising ip address')
 
 class NetworkAlias(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of network alias (identifier)')
@@ -340,7 +340,7 @@ def list_netalias(response: Response):
 # SYSTEMWIDE FIREWALL IP WHITE/BLACK
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @librerouter.patch("/libreapi/base/firewall/{nameset}", status_code=200)
-def update_fwset(reqbody: List[IPv4Address], response: Response, nameset: str=Path(..., regex='^whiteset|blackset$')):
+def update_fwset(reqbody: List[Union[IPv4Address, IPv6Address]], response: Response, nameset: str=Path(..., regex='^whiteset|blackset|whitesetv6|blacksetv6$')):
     requestid=get_request_uuid()
     result = None
     try:
@@ -371,7 +371,9 @@ def get_fwset(response: Response):
     try:
         whiteset = list(rdbconn.smembers('firewall:whiteset'))
         blackset = list(rdbconn.smembers('firewall:blackset'))
-        result = {'whiteset': whiteset, 'blackset': blackset}
+        whitesetv6 = list(rdbconn.smembers('firewall:whitesetv6'))
+        blacksetv6 = list(rdbconn.smembers('firewall:blacksetv6'))
+        result = {'whiteset': whiteset, 'blackset': blackset, 'whitesetv6': whitesetv6, 'blacksetv6': blacksetv6}
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
@@ -402,8 +404,8 @@ class ACLRuleModel(BaseModel):
         key = rule.get('key')
         value = rule.get('value')
         if key=='cidr':
-            if not IPv4Network(value):
-                raise ValueError('for cidr key, value must be IPv4Network or IPv4Address')
+            if not (validators.ipv4_cidr(value) or validators.ipv4(value) or validators.ipv6_cidr(value) or validators.ipv6(value)):
+                raise ValueError('IPv4/IPv6 address is required for CIDR')
         else:
             force = rule.get('force')
             if force:
@@ -1621,8 +1623,8 @@ class GatewayModel(BaseModel):
 
         for key, value in values.items():
             if key in ['realm', 'proxy', 'from_domain', 'register_proxy']:
-                if not validators.ip_address.ipv4(value) and not validators.domain(value):
-                    raise ValueError(f'{key} must be IPv4 address or Domain')
+                if not validators.domain(value) and not validators.ipv4(value) and not validators.ipv6(value):
+                    raise ValueError(f'{key} must be IPv4/IPv6 address or Domain')
         return values
 
 @librerouter.post("/libreapi/base/gateway", status_code=200)
@@ -1834,7 +1836,7 @@ class OutboundInterconnection(BaseModel):
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
-    rtpaddrs: List[IPv4Network] = Field(min_items=0, max_item=20, description='a set of IPv4 Network that use for RTP')
+    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=20, description='a set of IPv4/IPv6 Network that use for RTP')
     media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
@@ -2150,8 +2152,8 @@ class InboundInterconnection(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     routing: str = Field(description='routing table that will be used by this inbound interconnection')
-    sipaddrs: List[IPv4Network] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
-    rtpaddrs: List[IPv4Network] = Field(min_items=0, max_item=20, description='a set of IPv4 Network that use for RTP')
+    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
+    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=20, description='a set of IPv4/IPv6 Network that use for RTP')
     ringready: bool = Field(default=False, description='response 180 ring indication')
     media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
@@ -2210,11 +2212,11 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         # guaranted that the address not overlap eachother
         _farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{sipprofile}')
         for sipaddr in sipaddrs:
-            cidr = IPv4Network(sipaddr)
+            cidr = IPvNetwork(sipaddr)
             for _farendsipaddr in _farendsipaddrs:
-                _cidr = IPv4Network(_farendsipaddr)
+                _cidr = IPvNetwork(_farendsipaddr)
                 if _cidr.overlaps(cidr):
-                        response.status_code, result = 403, {'error': f'These addresses {sipaddr} & {_farendsipaddr} are overlaped'}; return
+                    response.status_code, result = 403, {'error': f'These addresses {sipaddr} & {_farendsipaddr} are overlaped'}; return
         # processing
         data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
@@ -2281,9 +2283,9 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         if newaddrs:
             _farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{_sipprofile}')
             for newaddr in newaddrs:
-                cidr = IPv4Network(newaddr)
+                cidr = IPvNetwork(newaddr)
                 for _farendsipaddr in _farendsipaddrs:
-                    _cidr = IPv4Network(_farendsipaddr)
+                    _cidr = IPvNetwork(_farendsipaddr)
                     if _cidr.overlaps(cidr):
                             response.status_code, result = 403, {'error': f'These addresses {newaddr} & {_farendsipaddr} are overlaped'}; return
         # transaction block
@@ -2888,7 +2890,7 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
 class Socket(BaseModel):
     transport: TransportEnum = Field(default='udp', description='transport protocol', hidden_field=True)
     port: int = Field(default=5060, ge=0, le=65535, description='sip port', hidden_field=True )
-    ip: IPv4Address = Field(description='ip address')
+    ip: Union[IPv4Address, IPv6Address] = Field(description='ip address')
     force: Optional[bool] = Field(description='set true if you need to add none loopback ip', hidden_field=True)
     @root_validator()
     def socket_ip(cls, kvs):
@@ -2896,7 +2898,7 @@ class Socket(BaseModel):
         force = kvs.pop('force', None)
         if not force:
             ip = kvs.get('ip')
-            if not IPv4Network(ip).is_loopback:
+            if not IPvNetwork(ip).is_loopback:
                 raise ValueError('ip must be loopback address only')
         return kvs
 
@@ -3072,8 +3074,10 @@ class AccessService(BaseModel):
     antiflooding: Optional[AntiFlooding] = Field(description='antifloofing/ddos')
     authfailure: AuthFailure = Field(description='authentication failure/bruteforce/intrusion detection')
     attackavoid: AttackAvoid = Field(description='attack avoidance')
-    blackips: List[IPv4Network] = Field(default=[], max_items=1024, description='denied ip list')
-    whiteips: List[IPv4Network] = Field(default=[], max_items=1024 ,description='allowed ip list')
+    blackips: List[IPv4Network] = Field(default=[], max_items=1024, description='denied ipv4 list')
+    whiteips: List[IPv4Network] = Field(default=[], max_items=1024 ,description='allowed ipv4 list')
+    blackipv6s: List[IPv6Network] = Field(default=[], max_items=1024, description='denied ipv6 list')
+    whiteipv6s: List[IPv4Network] = Field(default=[], max_items=1024 ,description='allowed ipv6 list')
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
     @root_validator
     def access_service_validation(cls, kvs):
@@ -3093,6 +3097,10 @@ class AccessService(BaseModel):
         whiteips = kvs.get('whiteips')
         if blackips and whiteips:
             raise ValueError('only one of blackips/whiteips can be set')
+        blackipv6s = kvs.get('blackipv6s')
+        whiteipv6s = kvs.get('whiteipv6s')
+        if blackipv6s and whiteipv6s:
+            raise ValueError('only one of blackipv6s/whiteipv6s can be set')
         return kvs
 
 
@@ -3257,7 +3265,7 @@ def list_access_service(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class NetDirectory(BaseModel):
     domain: str = Field(description='user domain')
-    ip: IPv4Network = Field(description='IPv4 Address for IP auth')
+    ip: Union[IPv4Network, IPv6Network]= Field(description='IPv4/IPv6 Address for IP auth')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port for arriving call')
     transport: TransportEnum = Field(default='udp', description='farend transport protocol for arriving call')
 

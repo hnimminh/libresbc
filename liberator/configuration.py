@@ -38,7 +38,8 @@ REDIS_TIMEOUT = 5
 # VOICE ATTRIBUTE
 #-----------------------------------------------------------------------------------------------------
 SWCODECS = ['ALAW', 'ULAW', 'OPUS', 'G729', 'AMR', 'AMR-WB']
-_BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 'none']
+_BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 'none', 'wan.auto',
+                  'wan_v6.auto', 'wan_v4.auto', 'any_v6.auto', 'any_v4.auto', 'rfc6598.auto']
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------

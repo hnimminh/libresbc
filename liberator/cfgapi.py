@@ -13,6 +13,7 @@ import copy
 import hashlib
 
 import redis
+import validators
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 
@@ -177,6 +178,19 @@ def sip(request: Request, response: Response):
             map_profilename_gateways[profilename] = list(filter(lambda gwdata: gwdata, map(jsonhash, pipe.execute())))
         for sipprofile in sipprofiles:
             gateways = map_profilename_gateways.get(sipprofile)
+            for gateway in gateways:
+                realm = gateway.get('realm')
+                if realm and validators.ipv6(realm):
+                    gateway['realm'] = f'[{realm}]'
+                proxy = gateway.get('proxy')
+                if proxy and validators.ipv6(proxy):
+                    gateway['proxy'] = f'[{proxy}]'
+                from_domain = gateway.get('from_domain')
+                if from_domain and validators.ipv6(from_domain):
+                    gateway['from_domain'] = f'[{from_domain}]'
+                register_proxy = gateway.get('register_proxy')
+                if register_proxy and validators.ipv6(register_proxy):
+                    gateway['register_proxy'] = f'[{register_proxy}]'
             if gateways:
                 sipprofiles[sipprofile]['gateways'] = gateways
 
