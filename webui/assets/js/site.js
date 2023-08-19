@@ -431,7 +431,7 @@ function GeneralPresentData(DataList, SettingName, presentation){
         </table>`;
 }
 
-
+// remove button
 function GeneralRemove(name, SettingName){
     let path = APIGuide[SettingName]['path']
     $.ajax({
@@ -449,13 +449,13 @@ function GeneralRemove(name, SettingName){
     });
 }
 
-
+// modify/update button
 function GeneralModify(name, SettingName){
     ShowProgress();
     let path = APIGuide[SettingName]['path']
     let url = APIGuide[SettingName]['path'] + "/" + name
     if (name===EMPTYSTR) {
-        url = path
+        url = path;
     }
     $.ajax({
         type: "GET",
@@ -477,6 +477,7 @@ function GeneralModify(name, SettingName){
     });
 }
 
+// submit button in canvas
 function GeneralSubmit(name, SettingName){
     let path = APIGuide[SettingName]['path'];
     let jsonstring = ConfigDetailTextH.value;
@@ -513,7 +514,6 @@ function GeneralSubmit(name, SettingName){
         }
     });
 }
-
 
 function GeneralCreate(SettingName){
     let sample = APIGuide[SettingName]['sample'];
