@@ -8,13 +8,13 @@ const APIGuide = {
         "path": "/libreapi/base/netalias",
         "presentation-html": "netalias-table",
         "sample": {
-            "name": "name",
+            "name": "netalias_name",
             "desc": "description",
             "addresses": [
                 {
                     "member": "nodeid",
-                    "listen": "ip_address",
-                    "advertise": "ip_address"
+                    "listen": "listen_ip_address",
+                    "advertise": "advertise_ip_address"
                 }
             ]
         }
@@ -23,7 +23,7 @@ const APIGuide = {
         "path": "/libreapi/base/acl",
         "presentation-html": "acl-table",
         "sample": {
-            "name": "name",
+            "name": "acl_name",
             "desc": "description",
             "action": "deny",
             "rules": [
@@ -40,7 +40,7 @@ const APIGuide = {
         "path": "/libreapi/class/media",
         "presentation-html": "media-class-table",
         "sample": {
-            "name": "name",
+            "name": "media_class_name",
             "desc": "description",
             "codecs": [
                 "PCMA",
@@ -55,7 +55,7 @@ const APIGuide = {
         "path": "/libreapi/class/capacity",
         "presentation-html": "capacity-class-table",
         "sample": {
-            "name":"name",
+            "name":"capacity_class_name",
             "desc": "description",
             "cps": -1,
             "concurentcalls": -1
@@ -65,7 +65,7 @@ const APIGuide = {
         "path": "/libreapi/class/translation",
         "presentation-html": "translation-class-table",
         "sample": {
-            "name":"name",
+            "name":"translation_class_name",
             "desc": "description",
             "caller_number_pattern": "^([0-9]+)$",
             "caller_number_replacement": "+%{1}",
@@ -78,7 +78,7 @@ const APIGuide = {
         "path": "/libreapi/class/manipulation",
         "presentation-html": "manipulation-class-table",
         "sample": {
-            "name":"name",
+            "name":"manipulation_class_name",
             "desc": "description",
             "actions": [
                     {
@@ -95,7 +95,7 @@ const APIGuide = {
         "path": "/libreapi/class/preanswer",
         "presentation-html": "preanswer-class-table",
         "sample": {
-            "name": "name",
+            "name": "preanswer_class_name",
             "desc": "description",
             "streams": [
                 {
@@ -106,11 +106,11 @@ const APIGuide = {
         }
     },
     // INTERCONECTION
-     "SIPProfile": {
+    "SIPProfile": {
         "path": "/libreapi/sipprofile",
         "presentation-html": "sipprofile-table",
         "sample": {
-            "name": "name",
+            "name": "sip_profile_name",
             "desc": "description",
             "user_agent": "LibreSBC",
             "sdp_user": "LibreSBC",
@@ -128,8 +128,8 @@ const APIGuide = {
             "context": "carrier",
             "sip_port": 5060,
             "addrdetect": "none",
-            "sip_address": "netalias",
-            "rtp_address": "netalias",
+            "sip_address": "netalias_name",
+            "rtp_address": "netalias_name",
             "tls": false,
             "tls_only": false,
             "sips_port": 5061,
@@ -140,19 +140,19 @@ const APIGuide = {
         "path": "/libreapi/interconnection/inbound",
         "presentation-html": "inbound-intcon-table",
         "sample": {
-            "name": "name",
+            "name": "inbound_interconnection_name",
             "desc": "description",
-            "sipprofile": "sipprofile",
-            "routing": "routing-table",
+            "sipprofile": "sip_profile_name",
+            "routing": "routing_table_name",
             "sipaddrs": [
-                "farend-sip-signaling-ip"
+                "farend_sip_signaling_ip_network_address"
             ],
             "rtpaddrs": [
-                "farend-rtp-media-ip"
+                "farend_rtp_media_ip_network_address"
             ],
             "ringready": false,
-            "media_class": "media-class",
-            "capacity_class": "capacity-class",
+            "media_class": "media_class",
+            "capacity_class": "capacity_class",
             "translation_classes": [],
             "manipulation_classes": [],
             "authscheme": "IP",
@@ -166,13 +166,16 @@ const APIGuide = {
         "path": "/libreapi/interconnection/outbound",
         "presentation-html": "outbound-intcon-table",
         "sample": {
-            "name": "name",
+            "name": "outbound_interconnection_name",
             "desc": "description",
-            "media_class": "media-class",
-            "capacity_class": "capacity-class",
+            "sipprofile": "sip_profile_name",
+            "rtpaddrs": [
+                "farend_rtp_media_ip_network_address"
+            ],
+            "media_class": "media_class",
+            "capacity_class": "capacity_class",
             "translation_classes": [],
             "manipulation_classes": [],
-            "sipprofile": "gsipv6",
             "privacy": [
                 "none"
             ],
@@ -180,12 +183,9 @@ const APIGuide = {
             "distribution": "weight_based",
             "gateways": [
               {
-                "name": "HONEYPOT6GW",
+                "name": "gateway_name",
                 "weight": 1
               }
-            ],
-            "rtpaddrs": [
-                "farend-rtp-media-ip"
             ],
             "nodes": [
                 "_ALL_"
@@ -197,17 +197,17 @@ const APIGuide = {
         "path": "/libreapi/base/gateway",
         "presentation-html": "gateway-table",
         "sample":{
-            "name": "name",
+            "name": "gateway_name",
             "desc": "description",
             "username": "none",
             "password": "none",
-            "proxy": "farend-sip-signaling-ip",
+            "proxy": "farend_sip_signaling_ip_address",
             "port": 5060,
             "transport": "udp",
             "do_register": false,
             "caller_id_in_from": true,
             "cid_type": "none",
-            "ping": "interval-in-second-for-sip-options"
+            "ping": 600
         }
     },
     // ACCESS LAYER
@@ -243,7 +243,7 @@ const APIGuide = {
                 "udp",
                 "tcp"
             ],
-            "sip_address": "netalias",
+            "sip_address": "netalias_name",
             "domains": [
                 "libre.sbc"
             ]
@@ -276,14 +276,14 @@ const APIGuide = {
         "path": "/libreapi/routing/table",
         "presentation-html": "routing-presentation-object",
         "sample": 	{
-            "name": "name",
+            "name": "routing_table_name",
             "desc": "description",
             "action": "route/block/query/httpr",
             "variables": ["cidnumber", "cidname", "dstnumber", "intconname", "realm"],
             "routes": {
-                "primary": "primary-endpoint",
-                "secondary": "secondary-endpoint",
-                "load": "load-share-percentage"
+                "primary": "primary_endpoint",
+                "secondary": "secondary_endpoint",
+                "load": 100
             }
         }
     },
@@ -291,14 +291,14 @@ const APIGuide = {
         "path": "/libreapi/routing/record",
         "presentation-html": null,
         "sample": 	{
-            "table": "routing-table-name",
+            "table": "routing_table_name",
             "match": "em/lpm/eq/ne/gt/lt",
             "value": "reference_value",
             "action": "route/block/jumps",
             "routes": {
-                "primary": "primary-endpoint",
-                "secondary": "secondary-endpoint",
-                "load": "load-share-percentage"
+                "primary": "primary_endpoint",
+                "secondary": "secondary_endpoint",
+                "load": 50
             }
         }
     },
