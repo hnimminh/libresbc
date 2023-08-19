@@ -463,7 +463,7 @@ function GeneralModify(name, SettingName){
         success: function (data) {
             ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
             // canvas
-            PresentCanvas(data, name, SettingName);
+            PresentCanvas(data, name, SettingName, 'PUT');
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
@@ -473,16 +473,17 @@ function GeneralModify(name, SettingName){
 }
 
 // submit button in canvas
-function GeneralSubmit(name, SettingName, flag=0){
+function GeneralSubmit(name, SettingName, method="POST"){
     let path = APIGuide[SettingName]['path'];
     let jsonstring = ConfigDetailTextH.value;
 
     // create or update
-    let method = 'POST';
     let url = path;
-    if (flag === 1){
-        method = 'PUT';
+    if (method === 'PUT'){
         url = path + "/" + name
+    }
+    if (name===EMPTYSTR) {
+        url = path;
     }
 
     // for modify special API such as [cluster]
@@ -521,7 +522,7 @@ function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
         sample['table'] = ObjectName;
     }
     // canvas
-    PresentCanvas(sample, ObjectName, SettingName);
+    PresentCanvas(sample, ObjectName, SettingName, 'POST');
 }
 
 // -------------------------------------------------//
@@ -680,14 +681,14 @@ function UpdateRoutingRecord(tablename, match, value, action, primary, secondary
     }
     ShowToast("Detailize Successfully " + SettingName + " " + tablename, "info");
     // canvas
-    PresentCanvas(record, tablename, SettingName);
+    PresentCanvas(record, tablename, SettingName, 'PUT');
 }
 
 /* ----------------------- */
-function PresentCanvas(Data, ObjectName, SettingName){
+function PresentCanvas(Data, ObjectName, SettingName, method){
     ConfigDetailTextH.value = JSON.stringify(Data, undefined, 4);
     PanelLabelH.innerHTML = SettingName + "  <strong><code>" + ObjectName + "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`')`);
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`','`+method+`')`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
