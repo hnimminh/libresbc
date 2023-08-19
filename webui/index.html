@@ -289,16 +289,17 @@
                 <div class="col-md-12 col-lg-12 py-3">
                   <div id="offcanvas-content" class="row">
                     <div class="col-md-12 col-lg-12">
-                      <textarea class="form-control" id="config-detail" rows="30"></textarea>
+                      <textarea class="form-control" id="config-detail" is="highlighted-code" rows="30" language="json" tab-size="4"></textarea>
                       <br>
-                      <button type="button" class="btn btn-primary" id="config-submit" aria-label="Submit" onclick="">Submit</button>
+                      <button type="button" class="btn btn-danger" onclick="PrettyCode();"><i class="fa fa-code"></i></button>
+                      <button type="button" class="btn btn-primary" id="config-submit" onclick=""><i class="fa fa-play"></i> Submit</button>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
             <!----- END: CANVAS -->
-          </main>
+        </main>
         <!-- FOOTER ––––––––––––––––––––––––––––––––––––––––––––––––––--------- -->
         <footer class="my-1 pt-5 text-muted text-center text-small">
           <p class="mb-1">&copy; 2023 <span> <a href="https://github.com/hnimminh/libresbc">LibreSBC</a></span></p>

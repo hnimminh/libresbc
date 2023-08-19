@@ -520,14 +520,8 @@ function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
     if (SettingName === 'RoutingRecord'){
         sample['table'] = ObjectName;
     }
-
-    ConfigDetailTextH.value = JSON.stringify(sample, undefined, 4);
-    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + ObjectName + "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`')`);
-
-    var OffCanvasHtml = document.getElementById("offcanvaspanel");
-    offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
-    offcanvaspanel.show();
+    // canvas
+    PresentCanvas(sample, ObjectName, SettingName);
 }
 
 // -------------------------------------------------//
@@ -599,9 +593,9 @@ function RoutingTableDetail(Rtablename){
                 let action = record.action;
                 let match = record.match;
                 let value = record.value;
-                let primary = 'N/A'
-                let secondary = 'N/A'
-                let load = 'N/A'
+                let primary = EMPTYSTR;
+                let secondary = EMPTYSTR;
+                let load = EMPTYSTR;
                 if (action!=='block'){
                     primary = record.routes.primary;
                     secondary = record.routes.secondary;
@@ -698,7 +692,24 @@ function PresentCanvas(Data, ObjectName, SettingName){
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
     offcanvaspanel.show();
+}
 
+function PrettyCode(){
+    //
+    // https://github.com/WebReflection/highlighted-code
+    //
+    (async ({chrome, netscape}) => {
+        // add Safari polyfill if needed
+        if (!chrome && !netscape)
+          await import('https://unpkg.com/@ungap/custom-elements');
+
+        const {default: HighlightedCode} =
+          await import('https://unpkg.com/highlighted-code');
+
+        // bootstrap a theme through one of these names
+        // https://github.com/highlightjs/highlight.js/tree/main/src/styles
+        HighlightedCode.useTheme('monokai-sublime'); //intellij-light,monokai-sublime/googlecode/idea/github
+    })(self);
 }
 
 /* ---------------------------------------------------------------------------

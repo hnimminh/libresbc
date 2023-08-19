@@ -35,3 +35,5 @@
 .custom-tooltip {
     --bs-tooltip-bg: var(--bs-primary);
   }
+
+textarea[is="highlighted-code"] { padding: 8px; }
