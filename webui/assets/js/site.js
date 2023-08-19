@@ -597,22 +597,27 @@ function RoutingTableDetail(Rtablename){
             let cnt = 1;
             records.forEach((record)=>{
                 let action = record.action;
+                let match = record.match;
+                let value = record.value;
                 let primary = 'N/A'
                 let secondary = 'N/A'
+                let load = 'N/A'
                 if (action!=='block'){
                     primary = record.routes.primary;
                     secondary = record.routes.secondary;
+                    load = record.routes.load;
                 }
                 recordhtml = `<tr>
                     <td>`+cnt+`</td>
-                    <td>`+record.match+`</td>
-                    <td>`+record.value+`</td>
+                    <td>`+match+`</td>
+                    <td>`+value+`</td>
                     <td>`+action+`</td>
                     <td>`+primary+`</td>
                     <td>`+secondary+`</td>
+                    <td>`+load+`</td>
                     <td>
-                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick=""></i></button>
-                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick=""></i></button>
+                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="RemoveRoutingRecord('`+Rtablename+`','`+match+`','`+value+`')"></i></button>
+                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="UpdateRoutingRecord('`+Rtablename+`','`+match+`','`+value+`','`+action+`','`+primary+`','`+secondary+`','`+load+`')"></i></button>
                     </td>
                 </tr>`
                 recordtable = recordtable + recordhtml;
@@ -629,6 +634,7 @@ function RoutingTableDetail(Rtablename){
                     <th scope="col">Action</th>
                     <th scope="col">Primary</th>
                     <th scope="col">Secondary</th>
+                    <th scope="col">Load</th>
                     <th scope="col"> </th>
                 </tr>
                 </thead>
@@ -644,6 +650,53 @@ function RoutingTableDetail(Rtablename){
     });
 }
 
+function RemoveRoutingRecord(tablename, match, value){
+    let SettingName = 'RoutingRecord';
+    let path = APIGuide[SettingName]['path']
+    $.ajax({
+        type: "DELETE",
+        url: path + "/" + tablename + '/' + match + '/' + value,
+        success: function (data) {
+            ShowToast("Delete Successfully " + SettingName + " " + tablename + " " + match + " " + value, "info");
+            ShowProgress();
+            RoutingTableDetail(tablename);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+function UpdateRoutingRecord(tablename, match, value, action, primary, secondary, load){
+    ShowProgress();
+    let SettingName = 'RoutingRecord';
+    let record = APIGuide[SettingName]['sample'];
+    record['table'] = tablename;
+    record['match'] = match;
+    record['value'] = value;
+    record['action'] = action;
+    if (action!=='block'){
+        record['routes'] = {
+            'primary': primary,
+            'secondary': secondary,
+            'load': load
+        }
+    } else {
+       delete record['routes'];
+    }
+
+    // prepare canvas
+    ShowToast("Detailize Successfully " + SettingName + " " + tablename, "info");
+    ConfigDetailTextH.value = JSON.stringify(record, undefined, 4);
+    PanelLabelH.innerHTML = SettingName + "  <strong><code>" +tablename+ "</code></strong>";
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+tablename+`','`+SettingName+`')`);
+
+    var OffCanvasHtml = document.getElementById("offcanvaspanel");
+    var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
+    offcanvaspanel.show();
+
+}
 
 /* ---------------------------------------------------------------------------
     PROGRESS STATE
