@@ -521,12 +521,9 @@ function GeneralSubmit(name, SettingName, flag=0){
 
 // create button
 function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
-    console.log(APIGuide);
     let sample = APIGuide[SettingName]['sample'];
-    console.log(APIGuide);
     if (SettingName === 'RoutingRecord'){
         sample['table'] = ObjectName;
-        console.log(sample);
     }
 
     ConfigDetailTextH.value = JSON.stringify(sample, undefined, 4);
