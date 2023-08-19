@@ -1,4 +1,3 @@
-const DUMMY = 'DUMMY';
 const EMPTYSTR = '';
 const APIGuide = {
     "Cluster": {
@@ -106,8 +105,8 @@ const APIGuide = {
             ]
         }
     },
-    // INTERCONCTION
-    "SIPProfile": {
+    // INTERCONECTION
+     "SIPProfile": {
         "path": "/libreapi/sipprofile",
         "presentation-html": "sipprofile-table",
         "sample": {
@@ -464,7 +463,7 @@ function GeneralModify(name, SettingName){
             ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
             ConfigDetailTextH.value = JSON.stringify(data, undefined, 4);
             PanelLabelH.innerHTML = SettingName + "  <strong><code>" + name + "</code></strong>";
-            ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+name+`','`+SettingName+`')`);
+            ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+name+`','`+SettingName+`', 1)`);
 
             var OffCanvasHtml = document.getElementById("offcanvaspanel");
             var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
@@ -478,19 +477,20 @@ function GeneralModify(name, SettingName){
 }
 
 // submit button in canvas
-function GeneralSubmit(name, SettingName){
+function GeneralSubmit(name, SettingName, flag=0){
     let path = APIGuide[SettingName]['path'];
     let jsonstring = ConfigDetailTextH.value;
 
-    let method = 'PUT';
-    let url = path + "/" + name
-    // for modify special API such as [cluster]
-    if (name === EMPTYSTR) {
-        url = path;
+    // create or update
+    let method = 'POST';
+    let url = path;
+    if (flag === 1){
+        method = 'PUT';
+        url = path + "/" + name
     }
-    // for create new object
-    if (name === DUMMY) {
-        method = 'POST';
+
+    // for modify special API such as [cluster]
+    if (SettingName==='RoutingRecord') {
         url = path;
     }
 
@@ -504,6 +504,8 @@ function GeneralSubmit(name, SettingName){
             ShowToast("Data has been submited", "info");
             if (SettingName === 'Cluster'){
                 GetPresentNode();
+            } else if (SettingName === 'RoutingRecord') {
+                RoutingTableDetail(name);
             } else {
                 GeneralGetPresent(SettingName);
             }
@@ -517,32 +519,36 @@ function GeneralSubmit(name, SettingName){
 
 // create button
 function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
+    console.log(APIGuide);
     let sample = APIGuide[SettingName]['sample'];
+    console.log(APIGuide);
     if (SettingName === 'RoutingRecord'){
         sample['table'] = ObjectName;
+        console.log(sample);
     }
 
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+DUMMY+`','`+SettingName+`')`);
     ConfigDetailTextH.value = JSON.stringify(sample, undefined, 4);
-    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + EMPTYSTR + "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+DUMMY+`','`+SettingName+`')`);
+    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + ObjectName + "</code></strong>";
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`')`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
     offcanvaspanel.show();
 }
 
-// Routing
-function RoutingTablePresentData(Rtables, presentation){
+// -------------------------------------------------//
+// --   Routing                                     //
+// -------------------------------------------------//
+function RoutingTablePresentData(data, presentation){
     let RoutingTablesHtml = EMPTYSTR;
-    Rtables.forEach((Rtable) => {
+    data.forEach((Rtable) => {
         let rtbName = Rtable.name;
         let rtbAction = Rtable.action;
         let rtbDesc = Rtable.desc;
 
         let newRecordButton = EMPTYSTR;
         if (rtbAction === 'query'){
-            newRecordButton = `<button type="button" class="btn btn-outline-primary text-start" onclick="CreateRoutingRecord('`+rtbName+`')"><i class="fa fa-plus-square-o"></i> Create Record</button>`;
+            newRecordButton = `<button type="button" class="btn btn-outline-primary text-start" onclick="GeneralCreate('RoutingRecord','`+rtbName+`')"><i class="fa fa-plus-square-o"></i> Create Record</button>`;
         }
 
         rtblhtml = `
@@ -589,7 +595,7 @@ function RoutingTableDetail(Rtablename){
             document.getElementById("DetailRT"+Rtablename).innerHTML = `
             <div class="card border-primary">
             <div class="card-body text-primary">
-              <pre><code>`+JSON.stringify(data, undefined, 2)+`</code></pre>
+              <pre><code>`+JSON.stringify(data, undefined, 4)+`</code></pre>
             </div>
             </div>`;
             // routing record
@@ -671,26 +677,24 @@ function RemoveRoutingRecord(tablename, match, value){
 function UpdateRoutingRecord(tablename, match, value, action, primary, secondary, load){
     ShowProgress();
     let SettingName = 'RoutingRecord';
-    let record = APIGuide[SettingName]['sample'];
-    record['table'] = tablename;
-    record['match'] = match;
-    record['value'] = value;
-    record['action'] = action;
+    let record = {
+        "table": tablename,
+        "match": match,
+        "value": value,
+        "action": action,
+    }
     if (action!=='block'){
         record['routes'] = {
-            'primary': primary,
-            'secondary': secondary,
-            'load': load
+            "primary": primary,
+            "secondary": secondary,
+            "load": load
         }
-    } else {
-       delete record['routes'];
     }
-
     // prepare canvas
     ShowToast("Detailize Successfully " + SettingName + " " + tablename, "info");
     ConfigDetailTextH.value = JSON.stringify(record, undefined, 4);
     PanelLabelH.innerHTML = SettingName + "  <strong><code>" +tablename+ "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+tablename+`','`+SettingName+`')`);
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+tablename+`','`+SettingName+`', 1)`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     var offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
