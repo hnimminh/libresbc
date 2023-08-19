@@ -556,6 +556,7 @@ function RoutingTablePresentData(data, presentation){
                     <div class="btn-group-vertical" role="group">
                         <button type="button" class="btn btn-outline-primary text-start" onclick="RoutingTableDetail('`+rtbName+`')"><i class="fa fa-refresh"></i> Load Table</button>
                         <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('`+rtbName+`','RoutingTable')"><i class="fa fa-pencil-square-o"></i> Update Table</button>
+                        <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('`+rtbName+`','RoutingTable')"><i class="fa fa-trash"></i> Delete Table</button>
                         `+newRecordButton+`
                     </div>
                 </div>
