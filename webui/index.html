@@ -80,229 +80,229 @@
     <div class="container mx-auto p-3 py-md-5">
       <div class="container">
         <main>
-            <!----- BEGIN: TOAST -->
-            <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center w-100">
-              <div id="toastmsg" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3500">
-                <div class="d-flex">
-                  <div class="toast-body" id="event-message"></div>
-                  <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
+          <!----- BEGIN: TOAST -->
+          <div aria-live="polite" aria-atomic="true" class="d-flex justify-content-center align-items-center w-100">
+            <div id="toastmsg" class="toast align-items-center text-white bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3500">
+              <div class="d-flex">
+                <div class="toast-body" id="event-message"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
               </div>
             </div>
-            <!----- END: TOAST -->
-            <div class="tab-content" id="nav-tabContent">
-               <!--##### HOME --->
-              <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="home-tab">
-                <div class="py-1 text-center">
-                  <h3>Home</h3>
-                </div>
-                <hr>
-                <div class="col-md-12 col-lg-12 py-3">
-                  <div class="row">
-                    <div class="col-md-6 g-3 py-2">
-                      <ul class="list-group" id="node-info">
-                      </ul>
-                    </div>
-                    <div class="col-md-6 g-3 py-2">
-                      <ul class="list-group" id="cluster-info">
-                      </ul>
-                      <br>
-                      <button type="button" class="btn btn-outline-danger" onclick="GeneralModify('', 'Cluster');"><i class="fa fa-connectdevelop"></i> Redefine Cluster</button>
-                    </div>
+          </div>
+          <!----- END: TOAST -->
+          <div class="tab-content" id="nav-tabContent">
+            <!--##### HOME --->
+            <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="home-tab">
+              <div class="py-1 text-center">
+                <h3>Home</h3>
+              </div>
+              <hr>
+              <div class="col-md-12 col-lg-12 py-3">
+                <div class="row">
+                  <div class="col-md-6 g-3 py-2">
+                    <ul class="list-group" id="node-info">
+                    </ul>
                   </div>
-                </div>
-              </div>
-              <!--##### BASE --->
-              <div class="tab-pane fade" id="nav-cfg-netalias-base" role="tabpanel" aria-labelledby="cfg-netalias-base-tab">
-                <div class="py-1 text-center">
-                  <h3>NetAlias </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('NetAlias');"> <i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="netalias-table">
-                  <!-- NET ALIAS -->
-                </div>
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-acl-base" role="tabpanel" aria-labelledby="cfg-acl-base-tab">
-                <div class="py-1 text-center">
-                  <h3>Network Control List </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessControl');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="acl-table">
-                  <!-- ACCESS CONTROL -->
-                </div>
-              </div>
-              <!--##### CLASS MEDIA-->
-              <div class="tab-pane fade" id="nav-cfg-media-class" role="tabpanel" aria-labelledby="cfg-media-class-tab">
-                <div class="py-1 text-center">
-                  <h3>Media Class </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('MediaClass');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="media-class-table">
-                  <!-- MEDIA CLASS -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-capacity-class" role="tabpanel" aria-labelledby="cfg-capacity-class-tab">
-                <div class="py-1 text-center">
-                  <h3>Capacity Class </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('CapacityClass');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="capacity-class-table">
-                  <!-- CAPACITY CLASS -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-translation-class" role="tabpanel" aria-labelledby="cfg-translation-class-tab">
-                <div class="py-1 text-center">
-                  <h3>Translation Rules </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('TranslationClass');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="translation-class-table">
-                  <!-- TRANSLATIONS CLASS -->
-                </div>
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-manipulation-class" role="tabpanel" aria-labelledby="cfg-manipulation-class-tab">
-                <div class="py-1 text-center">
-                  <h3>Manipulation Rules </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('ManipulationClass');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="manipulation-class-table">
-                  <!-- MANIPULATION CLASS -->
-                </div>
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-preanswer-class" role="tabpanel" aria-labelledby="cfg-preanswer-class-tab">
-                <div class="py-1 text-center">
-                  <h3>PreAnswer Class </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('PreAnswerClass');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="preanswer-class-table">
-                  <!-- PREANSWER CLASS -->
-                </div>
-              </div>
-              <!--##### INTERCONNECTION -->
-              <div class="tab-pane fade" id="nav-cfg-sipprofile" role="tabpanel" aria-labelledby="cfg-sipprofile-tab">
-                <div class="py-1 text-center">
-                  <h3>SIP Profile </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('SIPProfile');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="sipprofile-table">
-                  <!-- SIP PROFILE -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-inbound-intcon" role="tabpanel" aria-labelledby="cfg-inbound-intcon-tab">
-                <div class="py-1 text-center">
-                  <h3>Inbound Interconnect </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('Inbound');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="inbound-intcon-table">
-                  <!-- INBOUND INTERCONNECT -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-outbound-intcon" role="tabpanel" aria-labelledby="cfg-outbound-intcon-tab">
-                <div class="py-1 text-center">
-                  <h3>Outbound Interconnect </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('Outbound');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="outbound-intcon-table">
-                  <!-- OUTBOUND INTERCONNECT -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-gateway" role="tabpanel" aria-labelledby="cfg-gateway-tab">
-                <div class="py-1 text-center">
-                  <h3>Gateway </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('Gateway');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="gateway-table">
-                  <!-- GATEWAY INTERCONNECT -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-access-service" role="tabpanel" aria-labelledby="cfg-access-service-tab">
-                <div class="py-1 text-center">
-                  <h3>Access Service </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessService');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="access-service-table">
-                  <!-- ACCESS SERVICE -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-access-domain-policy" role="tabpanel" aria-labelledby="cfg-access-domain-policy-tab">
-                <div class="py-1 text-center">
-                  <h3>Access Domain Policy </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessDomainPolicy');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="access-domain-policy-table">
-                  <!-- ACCESS DOMAIN POLICY -->
-                </div>           
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-access-user-directory" role="tabpanel" aria-labelledby="cfg-access-user-directory-tab">
-                <div class="py-1 text-center">
-                  <h3>Access User Directory </h3>
-                </div>
-                <hr>
-                <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessUserDirectory');"><i class="fa fa-plus"></i> Create </button>
-                <div class="col-md-12 my-5" id="access-user-directory-table">
-                  <!-- ACCESS USER DIRECTORY -->
-                </div>
-              </div>
-              <div class="tab-pane fade" id="nav-cfg-routing" role="tabpanel" aria-labelledby="cfg-routing-tab">
-                  <div class="py-1 text-center">
-                    <h3>Routing </h3>
-                  </div>
-                  <hr>
-                  <button type="button" class="btn btn-primary" onclick="GeneralCreate('RoutingTable');"><i class="fa fa-plus"></i> Create </button>
-                  <br><br>
-                  <!--- BEGIN: ROUTING DATA -->
-                  <div class="accordion" id="routing-presentation-object">
-                    <!-- ROUTING DATA -->
-                  </div>
-                  <!--- END: ROUTING DATA -->                
-              </div>
-              <!-- END -->
-            </div>
-            <!--- PROGRESS BAR -->
-            <hr>
-            <div id="progessdot" class="invisible">
-              <div class="d-flex justify-content-center">
-                <div class="spinner-grow text-primary" role="status"></div>
-                <div class="spinner-grow text-danger" role="status"></div>
-                <div class="spinner-grow text-warning" role="status"></div>
-              </div>
-            </div>
-            <!----- BEGIN: CANVAS -->
-            <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="true" tabindex="0" id="offcanvaspanel" aria-labelledby="offcanvaspanel-label">
-              <div class="offcanvas-header">
-                <h5 class="offcanvas-title" id="offcanvaspanel-label"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-              </div>
-              <div class="offcanvas-body">
-                <div class="col-md-12 col-lg-12 py-3">
-                  <div id="offcanvas-content" class="row">
-                    <div class="col-md-12 col-lg-12">
-                      <textarea class="form-control" id="config-detail" is="highlighted-code" rows="30" language="json" tab-size="4"></textarea>
-                      <br>
-                      <button type="button" class="btn btn-danger" onclick="PrettyCode();"><i class="fa fa-code"></i></button>
-                      <button type="button" class="btn btn-primary" id="config-submit" onclick=""><i class="fa fa-play"></i> Submit</button>
-                    </div>
+                  <div class="col-md-6 g-3 py-2">
+                    <ul class="list-group" id="cluster-info">
+                    </ul>
+                    <br>
+                    <button type="button" class="btn btn-outline-danger" onclick="GeneralModify('', 'Cluster');"><i class="fa fa-connectdevelop"></i> Redefine Cluster</button>
                   </div>
                 </div>
               </div>
             </div>
-            <!----- END: CANVAS -->
+            <!--##### BASE --->
+            <div class="tab-pane fade" id="nav-cfg-netalias-base" role="tabpanel" aria-labelledby="cfg-netalias-base-tab">
+              <div class="py-1 text-center">
+                <h3>NetAlias </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('NetAlias');"> <i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="netalias-table">
+                <!-- NET ALIAS -->
+              </div>
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-acl-base" role="tabpanel" aria-labelledby="cfg-acl-base-tab">
+              <div class="py-1 text-center">
+                <h3>Network Control List </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessControl');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="acl-table">
+                <!-- ACCESS CONTROL -->
+              </div>
+            </div>
+            <!--##### CLASS MEDIA-->
+            <div class="tab-pane fade" id="nav-cfg-media-class" role="tabpanel" aria-labelledby="cfg-media-class-tab">
+              <div class="py-1 text-center">
+                <h3>Media Class </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('MediaClass');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="media-class-table">
+                <!-- MEDIA CLASS -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-capacity-class" role="tabpanel" aria-labelledby="cfg-capacity-class-tab">
+              <div class="py-1 text-center">
+                <h3>Capacity Class </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('CapacityClass');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="capacity-class-table">
+                <!-- CAPACITY CLASS -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-translation-class" role="tabpanel" aria-labelledby="cfg-translation-class-tab">
+              <div class="py-1 text-center">
+                <h3>Translation Rules </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('TranslationClass');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="translation-class-table">
+                <!-- TRANSLATIONS CLASS -->
+              </div>
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-manipulation-class" role="tabpanel" aria-labelledby="cfg-manipulation-class-tab">
+              <div class="py-1 text-center">
+                <h3>Manipulation Rules </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('ManipulationClass');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="manipulation-class-table">
+                <!-- MANIPULATION CLASS -->
+              </div>
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-preanswer-class" role="tabpanel" aria-labelledby="cfg-preanswer-class-tab">
+              <div class="py-1 text-center">
+                <h3>PreAnswer Class </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('PreAnswerClass');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="preanswer-class-table">
+                <!-- PREANSWER CLASS -->
+              </div>
+            </div>
+            <!--##### INTERCONNECTION -->
+            <div class="tab-pane fade" id="nav-cfg-sipprofile" role="tabpanel" aria-labelledby="cfg-sipprofile-tab">
+              <div class="py-1 text-center">
+                <h3>SIP Profile </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('SIPProfile');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="sipprofile-table">
+                <!-- SIP PROFILE -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-inbound-intcon" role="tabpanel" aria-labelledby="cfg-inbound-intcon-tab">
+              <div class="py-1 text-center">
+                <h3>Inbound Interconnect </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('Inbound');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="inbound-intcon-table">
+                <!-- INBOUND INTERCONNECT -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-outbound-intcon" role="tabpanel" aria-labelledby="cfg-outbound-intcon-tab">
+              <div class="py-1 text-center">
+                <h3>Outbound Interconnect </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('Outbound');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="outbound-intcon-table">
+                <!-- OUTBOUND INTERCONNECT -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-gateway" role="tabpanel" aria-labelledby="cfg-gateway-tab">
+              <div class="py-1 text-center">
+                <h3>Gateway </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('Gateway');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="gateway-table">
+                <!-- GATEWAY INTERCONNECT -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-access-service" role="tabpanel" aria-labelledby="cfg-access-service-tab">
+              <div class="py-1 text-center">
+                <h3>Access Service </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessService');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="access-service-table">
+                <!-- ACCESS SERVICE -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-access-domain-policy" role="tabpanel" aria-labelledby="cfg-access-domain-policy-tab">
+              <div class="py-1 text-center">
+                <h3>Access Domain Policy </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessDomainPolicy');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="access-domain-policy-table">
+                <!-- ACCESS DOMAIN POLICY -->
+              </div>           
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-access-user-directory" role="tabpanel" aria-labelledby="cfg-access-user-directory-tab">
+              <div class="py-1 text-center">
+                <h3>Access User Directory </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessUserDirectory');"><i class="fa fa-plus-square"></i> Create </button>
+              <div class="col-md-12 my-5" id="access-user-directory-table">
+                <!-- ACCESS USER DIRECTORY -->
+              </div>
+            </div>
+            <div class="tab-pane fade" id="nav-cfg-routing" role="tabpanel" aria-labelledby="cfg-routing-tab">
+              <div class="py-1 text-center">
+                <h3>Routing </h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('RoutingTable');"><i class="fa fa-plus-square"></i> Create </button>
+              <br><br>
+              <!--- BEGIN: ROUTING DATA -->
+              <div class="accordion" id="routing-presentation-object">
+                <!-- ROUTING DATA -->
+              </div>
+              <!--- END: ROUTING DATA -->                
+            </div>
+            <!-- END -->
+          </div>
+          <!--- PROGRESS BAR -->
+          <hr>
+          <div id="progessdot" class="invisible">
+            <div class="d-flex justify-content-center">
+              <div class="spinner-grow text-primary" role="status"></div>
+              <div class="spinner-grow text-danger" role="status"></div>
+              <div class="spinner-grow text-warning" role="status"></div>
+            </div>
+          </div>
+          <!----- BEGIN: CANVAS -->
+          <div class="offcanvas offcanvas-start" data-bs-scroll="true" data-bs-backdrop="true" tabindex="0" id="offcanvaspanel" aria-labelledby="offcanvaspanel-label">
+            <div class="offcanvas-header">
+              <h5 class="offcanvas-title" id="offcanvaspanel-label"></h5>
+              <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+            <div class="offcanvas-body">
+              <div class="col-md-12 col-lg-12 py-3">
+                <div id="offcanvas-content" class="row">
+                  <div class="col-md-12 col-lg-12">
+                    <textarea class="form-control" id="config-detail" is="highlighted-code" rows="30" language="json" tab-size="4"></textarea>
+                    <br>
+                    <button type="button" class="btn btn-danger" onclick="PrettyCode();"><i class="fa fa-code"></i></button>
+                    <button type="button" class="btn btn-primary" id="config-submit" onclick=""><i class="fa fa-play"></i> Submit</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!----- END: CANVAS -->
         </main>
         <!-- FOOTER ––––––––––––––––––––––––––––––––––––––––––––––––––--------- -->
         <footer class="my-1 pt-5 text-muted text-center text-small">
-          <p class="mb-1">&copy; 2023 <span> <a href="https://github.com/hnimminh/libresbc">LibreSBC</a></span></p>
+          <p class="mb-1">&copy; 2023 <span> <a href="https://github.com/hnimminh/libresbc">LIBRESBC</a></span></p>
         </footer>
       </div>
     </div>
