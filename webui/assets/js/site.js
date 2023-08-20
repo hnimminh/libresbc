@@ -318,18 +318,18 @@ function GetPresentNode(){
             ShowProgress();
             let CandidateHtml = EMPTYSTR;
             data.candidates.forEach((element) => {
-                CandidateHtml = CandidateHtml + `<span class="badge bg-secondary rounded-pill" id="cdr-bucket">`+element+`</span>`;
+                CandidateHtml = `${CandidateHtml}<span class="badge bg-secondary rounded-pill" id="cdr-bucket">${element}</span>`;
             });
             document.getElementById('node-info').innerHTML = `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                Software Version <span class="badge bg-success rounded-pill">` + data.swversion + `</span>
+                Software Version <span class="badge bg-success rounded-pill">${data.swversion}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                NodeID <span class="badge bg-danger rounded-pill">`+data.nodeid+`</span>
+                NodeID <span class="badge bg-danger rounded-pill">${data.nodeid}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                 Node Candidates
-                <div>` + CandidateHtml + `</div> </li>`;
+                <div>${CandidateHtml}</div></li>`;
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
@@ -345,27 +345,29 @@ function GetPresentNode(){
             ShowProgress();
             let MembersHtml = EMPTYSTR;
             data.members.forEach((element) => {
-                MembersHtml = MembersHtml + `<span class="badge bg-dark rounded-pill" id="cdr-bucket">`+element+`</span>`;
+                MembersHtml = `${MembersHtml}<span class="badge bg-dark rounded-pill" id="cdr-bucket">${element}</span>`;
             });
             document.getElementById('cluster-info').innerHTML = `
             <li class="list-group-item d-flex justify-content-between align-items-center">
-            Cluster Name <span class="badge bg-warning text-dark rounded-pill">`+data.name+`</span>
+            Cluster Name <span class="badge bg-warning text-dark rounded-pill">${data.name}</span>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 Members
-                <div>` + MembersHtml +`</div>
+                <div>
+                ${MembersHtml}
+                </div>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 Soft Capacity
                 <div>
-                <span class="badge bg-primary rounded-pill">cps: `+data.max_calls_per_second+`</span>
-                <span class="badge bg-primary rounded-pill">concurrent call: `+data.max_concurrent_calls+`</span>
+                <span class="badge bg-primary rounded-pill">cps: ${data.max_calls_per_second}</span>
+                <span class="badge bg-primary rounded-pill">concurrent call: ${data.max_concurrent_calls}</span>
                 </div>
             </li>
             <li class="list-group-item d-flex justify-content-between align-items-center">
                 RTP Ranges
                 <div>
-                <span class="badge bg-light text-dark rounded-pill" id="cdr-bucket">`+data.rtp_start_port+`-`+data.rtp_end_port+`</span>
+                <span class="badge bg-light text-dark rounded-pill" id="cdr-bucket">${data.rtp_start_port}-${data.rtp_end_port}</span>
             </div>`;
         },
         error: function (jqXHR, textStatus, errorThrown) {
@@ -403,31 +405,32 @@ function GeneralPresentData(DataList, SettingName, presentation){
     let cnt = 1;
     DataList.forEach((element) => {
         let name = element.name
-        htmltb = `<tr>
-                    <td>`+cnt+`</td>
-                    <td>`+name+`</td>
-                    <td>`+element.desc+`</td>
-                    <td>
-                      <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="GeneralRemove('`+name+`','`+SettingName+`')"></i></button>
-                      <button class="btn btn-success btn-sm" type="button">
-                        <i class="fa fa-pencil" onclick="GeneralModify('`+name+`','`+SettingName+`')"></i>
-                      </button>
-                    </td>
-                  </tr>`
-        tablebody = tablebody + htmltb
+        htmltb = `
+        <tr>
+        <td>${cnt}</td>
+        <td>${name}</td>
+        <td>${element.desc}</td>
+        <td>
+          <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="GeneralRemove('${name}','${SettingName}')"></i></button>
+          <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="GeneralModify('${name}','${SettingName}')"></i></button>
+        </td>
+        </tr>`;
+        tablebody = tablebody + htmltb;
         cnt++;
     });
     document.getElementById(presentation).innerHTML = `
         <table class="table">
-        <thead class="table-light">
-        <tr>
+          <thead class="table-light">
+          <tr>
             <th scope="col">#</th>
             <th scope="col">Name</th>
             <th scope="col">Description</th>
             <th scope="col"> </th>
-        </tr>
-        </thead>
-        <tbody>` + tablebody + `</tbody>
+          </tr>
+          </thead>
+          <tbody>
+            ${tablebody}
+          </tbody>
         </table>`;
 }
 
@@ -436,9 +439,9 @@ function GeneralRemove(name, SettingName){
     let path = APIGuide[SettingName]['path']
     $.ajax({
         type: "DELETE",
-        url: path + "/" + name,
+        url: `${path}/${name}`,
         success: function (data) {
-            ShowToast("Delete Successfully " + SettingName + " " + name, "info");
+            ShowToast(`Delete Successfully ${SettingName} ${name}`, "info");
             ShowProgress();
             GeneralGetPresent(SettingName);
         },
@@ -461,7 +464,7 @@ function GeneralModify(name, SettingName){
         type: "GET",
         url: url,
         success: function (data) {
-            ShowToast("Detailize Successfully " + SettingName + " " + name, "info");
+            ShowToast(`Detailize Successfully ${SettingName} ${name}`, "info");
             // canvas
             PresentCanvas(data, name, SettingName, 'PUT');
         },
@@ -480,7 +483,7 @@ function GeneralSubmit(name, SettingName, method="POST"){
     // create or update
     let url = path;
     if (method === 'PUT'){
-        url = path + "/" + name
+        url = `${path}/${name}`
     }
     if (name===EMPTYSTR) {
         url = path;
@@ -537,34 +540,32 @@ function RoutingTablePresentData(data, presentation){
 
         let newRecordButton = EMPTYSTR;
         if (rtbAction === 'query'){
-            newRecordButton = `<button type="button" class="btn btn-outline-primary text-start" onclick="GeneralCreate('RoutingRecord','`+rtbName+`')"><i class="fa fa-plus-square-o"></i> Create Record</button>`;
+            newRecordButton = `<button type="button" class="btn btn-outline-primary text-start" onclick="GeneralCreate('RoutingRecord','${rtbName}')"><i class="fa fa-plus-square-o"></i> Create Record</button>`;
         }
 
         rtblhtml = `
         <div class="accordion-item">
         <h2 class="accordion-header" data-bs-title="show detail">
-          <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT`+rtbName+`">
-            <span class="text-primary fw-bolder">`+rtbName+`</span> &nbsp;&nbsp;
-            <span class="badge rounded-pill text-bg-danger">`+rtbAction+`</span> &nbsp;&nbsp;
-            `+rtbDesc+`
-          </button>
+          <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT${rtbName}">
+            <span class="text-primary fw-bolder">${rtbName}</span> &nbsp;&nbsp;
+            <span class="badge rounded-pill text-bg-danger">${rtbAction}</span> &nbsp;&nbsp; ${rtbDesc}</button>
         </h2>
-        <div id="collapseRT`+rtbName+`" class="accordion-collapse collapse">
+        <div id="collapseRT${rtbName}" class="accordion-collapse collapse">
           <div class="accordion-body">
             <div class="row">
-                <div class="col-md-4 col-lg-4">
-                    <div class="btn-group-vertical" role="group">
-                        <button type="button" class="btn btn-outline-primary text-start" onclick="RoutingTableDetail('`+rtbName+`')"><i class="fa fa-refresh"></i> Load Table</button>
-                        <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('`+rtbName+`','RoutingTable')"><i class="fa fa-pencil-square-o"></i> Update Table</button>
-                        <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('`+rtbName+`','RoutingTable')"><i class="fa fa-trash"></i> Delete Table</button>
-                        `+newRecordButton+`
-                    </div>
+              <div class="col-md-4 col-lg-4">
+                <div class="btn-group-vertical" role="group">
+                  <button type="button" class="btn btn-outline-primary text-start" onclick="RoutingTableDetail('${rtbName}')"><i class="fa fa-refresh"></i> Load Table</button>
+                  <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('${rtbName}','RoutingTable')"><i class="fa fa-pencil-square-o"></i> Update Table</button>
+                  <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('${rtbName}','RoutingTable')"><i class="fa fa-trash"></i> Delete Table</button>
+                  ${newRecordButton}
                 </div>
-                <div class="col-md-8 col-lg-8" id="DetailRT`+rtbName+`">
-                </div>
+              </div>
+              <div class="col-md-8 col-lg-8" id="DetailRT${rtbName}">
+              </div>
             </div>
             <br>
-            <div class="row" id="TableRR`+rtbName+`">
+            <div class="row" id="TableRR${rtbName}">
             </div>
           </div>
         </div>
@@ -577,16 +578,16 @@ function RoutingTablePresentData(data, presentation){
 function RoutingTableDetail(Rtablename){
     $.ajax({
         type: "GET",
-        url: '/libreapi/routing/table/'+Rtablename,
+        url: `/libreapi/routing/table/${Rtablename}`,
         success: function (data) {
             ShowProgress();
             records = data.records;
             delete data['records'];
-            document.getElementById("DetailRT"+Rtablename).innerHTML = `
+            document.getElementById(`DetailRT${Rtablename}`).innerHTML = `
             <div class="card border-primary">
-            <div class="card-body text-primary">
-              <pre><code>`+JSON.stringify(data, undefined, 4)+`</code></pre>
-            </div>
+              <div class="card-body text-primary">
+                <pre><code>${JSON.stringify(data, undefined, 4)}</code></pre>
+              </div>
             </div>`;
             // routing record
             let recordtable = EMPTYSTR;
@@ -603,38 +604,35 @@ function RoutingTableDetail(Rtablename){
                     secondary = record.routes.secondary;
                     load = record.routes.load;
                 }
-                recordhtml = `<tr>
-                    <td>`+cnt+`</td>
-                    <td>`+match+`</td>
-                    <td>`+value+`</td>
-                    <td>`+action+`</td>
-                    <td>`+primary+`</td>
-                    <td>`+secondary+`</td>
-                    <td>`+load+`</td>
-                    <td>
-                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="RemoveRoutingRecord('`+Rtablename+`','`+match+`','`+value+`')"></i></button>
-                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="UpdateRoutingRecord('`+Rtablename+`','`+match+`','`+value+`','`+action+`','`+primary+`','`+secondary+`','`+load+`')"></i></button>
-                    </td>
-                </tr>`
+                recordhtml = `
+                <tr>
+                  <td>${cnt}</td> <td>${match}</td> <td>${value}</td> <td>${action}</td> <td>${primary}</td> <td>${secondary}</td> <td>${load}</td>
+                  <td>
+                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="RemoveRoutingRecord('${Rtablename}','${match}','${value}')"></i></button>
+                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="UpdateRoutingRecord('${Rtablename}','${match}','${value}','${action}','${primary}','${secondary}','${load}')"></i></button>
+                  </td>
+                </tr>`;
                 recordtable = recordtable + recordhtml;
                 cnt++;
             });
             if (records.length!==0){
-                document.getElementById("TableRR"+Rtablename).innerHTML = `
+                document.getElementById(`TableRR${Rtablename}`).innerHTML = `
                 <table class="table table-bordered">
                 <thead class="table-light">
                 <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Match</th>
-                    <th scope="col">Value</th>
-                    <th scope="col">Action</th>
-                    <th scope="col">Primary</th>
-                    <th scope="col">Secondary</th>
-                    <th scope="col">Load</th>
-                    <th scope="col"> </th>
+                  <th scope="col">#</th>
+                  <th scope="col">Match</th>
+                  <th scope="col">Value</th>
+                  <th scope="col">Action</th>
+                  <th scope="col">Primary</th>
+                  <th scope="col">Secondary</th>
+                  <th scope="col">Load</th>
+                  <th scope="col"></th>
                 </tr>
                 </thead>
-                <tbody>` + recordtable + `</tbody>
+                  <tbody>
+                  ${recordtable}
+                  </tbody>
                 </table>`;
             };
         },
@@ -651,9 +649,9 @@ function RemoveRoutingRecord(tablename, match, value){
     let path = APIGuide[SettingName]['path']
     $.ajax({
         type: "DELETE",
-        url: path + "/" + tablename + '/' + match + '/' + value,
+        url: `${path}/${tablename}/${match}/${value}`,
         success: function (data) {
-            ShowToast("Delete Successfully " + SettingName + " " + tablename + " " + match + " " + value, "info");
+            ShowToast(`Delete Successfully ${SettingName} ${tablename} ${match} ${value}`, "info");
             ShowProgress();
             RoutingTableDetail(tablename);
         },
@@ -680,7 +678,7 @@ function UpdateRoutingRecord(tablename, match, value, action, primary, secondary
             "load": load
         }
     }
-    ShowToast("Detailize Successfully " + SettingName + " " + tablename, "info");
+    ShowToast(`Detailize Successfully ${SettingName} ${tablename}`, "info");
     // canvas
     PresentCanvas(record, tablename, SettingName, 'PUT');
 }
@@ -688,8 +686,8 @@ function UpdateRoutingRecord(tablename, match, value, action, primary, secondary
 /* ----------------------- */
 function PresentCanvas(Data, ObjectName, SettingName, method){
     ConfigDetailTextH.value = JSON.stringify(Data, undefined, 4);
-    PanelLabelH.innerHTML = SettingName + "  <strong><code>" + ObjectName + "</code></strong>";
-    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('`+ ObjectName +`','`+SettingName+`','`+method+`')`);
+    PanelLabelH.innerHTML = `${SettingName}  <strong><code>${ObjectName}</code></strong>`;
+    ConfigSubmitBntH.setAttribute('onclick',`GeneralSubmit('${ObjectName}','${SettingName}','${method}')`);
 
     var OffCanvasHtml = document.getElementById("offcanvaspanel");
     offcanvaspanel = new bootstrap.Offcanvas(OffCanvasHtml);
