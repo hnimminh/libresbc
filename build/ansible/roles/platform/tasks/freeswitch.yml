@@ -20,8 +20,8 @@
     line: "{{item}}"
     create: yes
   with_items:
-    - deb [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ buster main
-    - deb-src [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ buster main
+    - deb [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{ ansible_distribution_release }} main
+    - deb-src [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{ ansible_distribution_release }} main
 
 - name: Run the equivalent of "apt-get update" as a separate step
   apt:
@@ -58,13 +58,10 @@
     pkg:
       - libopencore-amrwb-dev
       - libopencore-amrwb0
-      - libopencore-amrwb0-dbg
       - libvo-amrwbenc-dev
       - libvo-amrwbenc0
-      - vo-amrwbenc-dbg
       - libopencore-amrnb-dev
       - libopencore-amrnb0
-      - libopencore-amrnb0-dbg
     state: latest
 
 - name: copy AMR LIB to source

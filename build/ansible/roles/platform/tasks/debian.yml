@@ -4,7 +4,8 @@
   ignore_errors: true
 
 - name: Update apt-cache
-  apt: update_cache=yes
+  apt:
+    update_cache: yes
 
 - name: Update all packages to their latest version
   apt:
@@ -47,9 +48,7 @@
       - lsb-release
       - build-essential
       - g++
-      - g++-8
       - gcc
-      - gcc-8
       - libtool
       - autoconf
       - make
