@@ -63,7 +63,7 @@ func init() {
 	appBanner := `
       +-+-+-+-+-+-+-+-+ +-+-+-+-+-+
       |L|I|B|R|E|S|B|C| |W|E|B|U|I|
-      +-+-+-+-+-+-+-+ + +-+-+-+-+-+
+      +-+-+-+-+-+-+-+-+ +-+-+-+-+-+
 
       Open Source Session Border Controler
       LibreSBC - v0.6.0
