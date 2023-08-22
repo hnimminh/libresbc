@@ -39,7 +39,9 @@
             <param name="sip-trace" value="yes"/>
             <param name="sip-capture" value="no"/>
             <param name="shutdown-on-fail" value="true"/>
-            <param name="parse-all-invite-headers" value="true"/>
+            {#- <!-- MSG PARSE--> #}
+            <param name="parse-all-invite-headers" value="{{sipprofile.parse_all_invite_headers|default('true')}}"/>{% if sipprofile.p_asserted_id_parse is defined %}
+            <param name="p-asserted-id-parse" value="{{sipprofile.p_asserted_id_parse|default('default')}}"/>{% endif %}
             {#- <!-- UA IDENTITY--> #}
             <param name="user-agent-string" value="{{sipprofile.user_agent}}"/>
             <param name="username" value="{{sipprofile.sdp_user}}"/> {# <!-- sdp username in o= and s= fields --> #}
@@ -48,7 +50,9 @@
             <param name="auth-calls" value="true"/>
             <param name="nonce-ttl" value="60"/>
             <param name="challenge-realm" value="{{sipprofile.realm}}"/>
-            {#- <!-- NAT--> #}
+            {#- <!-- NAT/ACL--> #}{% if sipprofile.apply_proxy_acl is defined %}
+            <param name="apply-proxy-acl" value="{{sipprofile.apply_proxy_acl|default('none')}}"/>{% endif %}{% if sipprofile.apply_nat_acl is defined %}
+            <param name="apply-nat-acl" value="{{sipprofile.apply_nat_acl|default('none')}}"/>{% endif %}
             <param name="local-network-acl" value="{{sipprofile.local_network_acl}}"/>
             {#- <!-- SIP VERBOSE CALLFLOW CONTROL--> #}
             <param name="enable-100rel" value="{{sipprofile.enable_100rel|lower}}"/>

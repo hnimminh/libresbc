@@ -573,6 +573,10 @@ class SIPProfileModel(BaseModel):
     user_agent: str = Field(default='LibreSBC', max_length=64, description='Value that will be displayed in SIP header User-Agent')
     sdp_user: str = Field(default='LibreSBC', max_length=64, description='username with the o= and s= fields in SDP body')
     local_network_acl: str = Field(default='rfc1918.auto', description='set the local network that refer from predefined acl')
+    apply_nat_acl: Optional[str] = Field(description='set the network that apply NAT logic, refer from predefined acl (no-remove-protection)', hidden_field=True)
+    apply_proxy_acl: Optional[str] = Field(description='set the network that apply for SIP proxy, refer from predefined acl (no-remove-protection)', hidden_field=True)
+    parse_all_invite_headers: Optional[bool] = Field(description='parse all header from SIP INVITE', hidden_field=True)
+    p_asserted_id_parse: Optional[str] = Field(description='method to parse PAI header default/user-only/user-domain/verbatim', hidden_field=True)
     addrdetect: AddressDetect = Field(default='autonat', description='Mechanism to detect & advertise IP address SBC behide the NAT')
     enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
     ignore_183nosdp: bool = Field(default=True, description='Just ignore SIP 183 without SDP body')
@@ -609,8 +613,8 @@ class SIPProfileModel(BaseModel):
             if key=='sip_tls' and not value :
                 removekey(['sip_tls', 'sips_port', 'tls_only', 'tls_version', 'tls_cert_dir'], values)
 
-            if key=='local_network_acl':
-                if value not in _BUILTIN_ACLS_:
+            if key in ['local_network_acl', 'apply_nat_acl', 'apply_proxy_acl']:
+                if value and value not in _BUILTIN_ACLS_:
                     if not rdbconn.exists(f'base:acl:{value}'):
                         raise ValueError('nonexistent acl')
 
