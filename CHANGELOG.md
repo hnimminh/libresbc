@@ -17,6 +17,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix ansible compile codec amr
 - Packages and distro label, thanks to @ciscomonkey
 - Upgrate lib requests==2.22.0 -> 2.31.0, starlette==0.26.1 -> 0.27.0
+- Additional acl/parse SIP settings
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env
