@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix routing recording typo match key
 - Web Admin UI application
 - Fix ansible compile codec amr
+- Packages and distro label, thanks to @ciscomonkey
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env

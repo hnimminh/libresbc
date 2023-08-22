@@ -8,6 +8,8 @@
     pkg:
       - nginx
     state: latest
+  vars:
+    ansible_python_interpreter: /bin/python3
 
 - name: Delete default configuration folder
   file:
