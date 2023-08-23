@@ -16,8 +16,10 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Web Admin UI application
 - Fix ansible compile codec amr
 - Packages and distro label, thanks to @ciscomonkey
-- Upgrate lib requests==2.22.0 -> 2.31.0, starlette==0.26.1 -> 0.27.0
+- Upgrate lib requests==2.22.0 -> 2.31.0
+- Remove starlette out of requirement list
 - Additional acl/parse SIP settings
+- Force clone bcg729
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env
