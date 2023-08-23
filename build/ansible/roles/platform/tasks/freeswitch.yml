@@ -147,6 +147,7 @@
     dest: /usr/local/src/mod_bcg729
     recursive: no
     clone: yes
+    force: true
 
 - name: Change FS Path
   lineinfile:
