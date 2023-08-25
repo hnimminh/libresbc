@@ -20,6 +20,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Remove starlette out of requirement list
 - Additional acl/parse SIP settings
 - Force clone bcg729
+- Fix clean farendsipaddrs when update intcon inbound
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env

@@ -2282,8 +2282,12 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         _manipulation_classes = _data.get('manipulation_classes')
         _sipaddrs = set(_data.get('sipaddrs'))
         # verification
-        if sipprofile == _sipprofile: newaddrs = sipaddrs - _sipaddrs
-        else: newaddrs = sipaddrs
+        if sipprofile == _sipprofile:
+            newaddrs = sipaddrs - _sipaddrs
+            oldaddrs = _sipaddrs - sipaddrs
+        else:
+            newaddrs = sipaddrs
+            oldaddrs = _sipaddrs
         if newaddrs:
             _farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{_sipprofile}')
             for newaddr in newaddrs:
@@ -2304,9 +2308,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         pipe.srem(f'engagement:class:capacity:{_capacity_class}', _nameid)
         for translation in _translation_classes: pipe.srem(f'engagement:class:translation:{translation}', _nameid)
         for manipulation in _manipulation_classes: pipe.srem(f'engagement:class:manipulation:{manipulation}', _nameid)
-        if sipprofile == _sipprofile:
-            oldaddrs = _sipaddrs - sipaddrs
-            for oldaddr in oldaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', oldaddr)
+        for oldaddr in oldaddrs: pipe.srem(f'farendsipaddrs:in:{_sipprofile}', oldaddr)
         # processing: adding new-one
         data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
