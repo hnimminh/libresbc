@@ -263,7 +263,7 @@ const APIGuide = {
         }
     },
     "AccessUserDirectory": {
-        "path": "/libreapi/access/directory/user/domain",
+        "path": "/libreapi/access/directory/user",
         "presentation-html": "access-user-directory-table",
         "sample": {
             "domain": "libre.sbc",
