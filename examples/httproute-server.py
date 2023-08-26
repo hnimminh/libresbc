@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
 Very simple HTTP server in python for logging requests
-Usage: httpcdr-server.py [<ipaddr> <port>]
+Usage: httproute-server.py [<ipaddr> <port>]
 """
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import logging
+import socket
 
 
 DATA = ['AWS', 'AZURE']
@@ -32,6 +33,8 @@ class S(BaseHTTPRequestHandler):
 
 def run(server_class=HTTPServer, handler_class=S, ipaddr='127.0.0.1', port=54321):
     logging.basicConfig(level=logging.INFO)
+    if ':' in ipaddr:
+        server_class.address_family = socket.AF_INET6
     server_address = (ipaddr, port)
     httpd = server_class(server_address, handler_class)
     logging.info(f'Starting httpd, listen on {ipaddr}:{port}\n')
