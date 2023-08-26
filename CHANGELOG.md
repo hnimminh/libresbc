@@ -21,6 +21,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Additional acl/parse SIP settings
 - Force clone bcg729
 - Fix clean farendsipaddrs when update intcon inbound
+- HTTPR support IPv6
 
 ## [v0.6.0] - 2023-04-08
 - Update Dev Env

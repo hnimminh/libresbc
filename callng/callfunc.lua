@@ -516,6 +516,36 @@ function pchoice(a, b, p)
     else return b, a end
 end
 
+-- CURL REQUEST
+function curlget(url, headers)
+    local status, body
+    local curl = require("cURL")
+    local c = curl.easy{
+        url = url,
+        httpheader = headers,
+        [curl.OPT_TIMEOUT] = 5,
+        writefunction = function(r) body = r end
+    }
+
+    local ok, err = pcall(function() c:perform() end)
+    if not ok then
+        return ok, err, body, status
+    end
+    status = c:getinfo_response_code()
+    c:close()
+    return ok, err, body, status
+end
+
+local function curlroute(url, query)
+    local p, s
+    local ok, err, body, status = curlget( url..'?'..query, {["x-nodeid"] = NODEID})
+    if not ok or status~=200 then
+        logify('module', 'callng', 'space', 'callfunc', 'action', 'curlroute', 'url', url, 'query', query, 'error', err)
+    else
+        p, s = unpack(json.decode(body))
+    end
+    return p, s
+end
 
 -- HTTP REQUEST
 local function httprequest(method, url, payload, headers)
@@ -626,7 +656,7 @@ function routing_query(tablename, routingdata)
                 arrayinsert(params, variable..'='..routingdata[variable])
             end
             local query = join(params, '&')
-            primary, secondary = httproute(schema.routes, query)
+            primary, secondary = curlroute(schema.routes, query)
             return primary, secondary, {'routing.via.http'}
         else
             return nil, nil, routingrules
