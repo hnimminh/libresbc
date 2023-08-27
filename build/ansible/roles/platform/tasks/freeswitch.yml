@@ -143,22 +143,11 @@
 
 - name: Git clone bcg729
   git:
-    repo: https://github.com/xadhoom/mod_bcg729.git
+    repo: https://github.com/hnimminh/mod_bcg729.git
     dest: /usr/local/src/mod_bcg729
     recursive: no
     clone: yes
     force: true
-
-- name: Change FS Path
-  lineinfile:
-    path: /usr/local/src/mod_bcg729/Makefile
-    regexp: '{{item.regex}}'
-    line: '{{item.line}}'
-  with_items:
-    - regex: ^FS_INCLUDES=.*
-      line: FS_INCLUDES=/usr/local/include/freeswitch
-    - regex: ^FS_MODULES=.*
-      line: FS_MODULES=/usr/local/lib/freeswitch/mod
 
 - name: build bcg729
   shell: make && make install
