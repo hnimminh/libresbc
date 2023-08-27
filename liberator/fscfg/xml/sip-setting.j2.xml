@@ -36,7 +36,7 @@
           </gateways>
           <settings>
             <param name="debug" value="0"/>
-            <param name="sip-trace" value="yes"/>
+            <param name="sip-trace" value="no"/>
             <param name="sip-capture" value="no"/>
             <param name="shutdown-on-fail" value="true"/>
             {#- <!-- MSG PARSE--> #}

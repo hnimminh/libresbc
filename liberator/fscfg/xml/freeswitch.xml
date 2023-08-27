@@ -21,7 +21,7 @@
       </mappings>
       <settings>
         <param name="colorize" value="true"/>
-        <param name="loglevel" value="info"/>
+        <param name="loglevel" value="warning"/>
       </settings>
     </configuration>
     <!-- DISTRIBUTOR -->
