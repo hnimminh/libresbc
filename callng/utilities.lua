@@ -59,6 +59,37 @@ function delogify(...)
     dlogger(message)
 end
 
+--- log utils
+log = {}
+
+function log:debug(text, ...)
+    freeswitch.consoleLog("debug", string.format(text.."\n", ...))
+end
+
+function log:info(text, ...)
+    freeswitch.consoleLog("info", string.format(text.."\n", ...))
+end
+
+function log:notice(text, ...)
+    freeswitch.consoleLog("notice", string.format(text.."\n", ...))
+end
+
+function log:warn(text, ...)
+    freeswitch.consoleLog("warning", string.format(text.."\n", ...))
+end
+
+function log:error(text, ...)
+    freeswitch.consoleLog("err", string.format(text.."\n", ...))
+end
+
+function log:critical(text, ...)
+    freeswitch.consoleLog("crit", string.format(text.."\n", ...))
+end
+
+function log:alert(text, ...)
+    freeswitch.consoleLog("alert", string.format(text.."\n", ...))
+end
+
 -------------------------------------------------------------------------
 function ismeberof(intable, value)
 	for i=1, #intable do
