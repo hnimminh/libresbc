@@ -404,12 +404,13 @@ function GeneralPresentData(DataList, SettingName, presentation){
     let tablebody = EMPTYSTR;
     let cnt = 1;
     DataList.forEach((element) => {
-        let name = element.name
+        let name = element.name;
+        let desc = element.desc;
         htmltb = `
         <tr>
         <td>${cnt}</td>
         <td>${name}</td>
-        <td>${element.desc}</td>
+        <td>${desc}</td>
         <td>
           <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="GeneralRemove('${name}','${SettingName}')"></i></button>
           <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="GeneralModify('${name}','${SettingName}')"></i></button>
