@@ -125,7 +125,8 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 - [ ] Cluster  (_in progress_)
 - [ ] MsTeam Direct Routing Intergaration
 - [ ] STIR/SHAKEN and Identity Assurance
-- [x] Configration Admin WebUI  
+- [x] Configration Admin WebUI
+- [ ] Cloud Native Transformation
 
 ## Architecture
 ![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
