@@ -623,7 +623,10 @@ function AccessUserDirectoryDetail(Adomain){
             ShowProgress();
             let usertable = EMPTYSTR;
             let cnt = 1;
-            users = data[Adomain];
+            users = [];
+            if (Adomain in data){
+                users = data[Adomain];
+            }
             users.forEach((user)=>{
                 userhtml = `
                 <tr>
@@ -650,7 +653,9 @@ function AccessUserDirectoryDetail(Adomain){
                   ${usertable}
                   </tbody>
                 </table>`;
-            };
+            } else {
+                document.getElementById(`TableAD${Adomain}`).innerHTML = EMPTYSTR;
+            }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
