@@ -308,6 +308,8 @@ var ConfigDetailTextH = document.getElementById("config-detail");
 var ConfigSubmitBntH = document.getElementById("config-submit");
 var PanelLabelH = document.getElementById("offcanvaspanel-label");
 var offcanvaspanel;
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]')
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl))
 /*---------------------------------------------------------------------------*/
 
 function GetPresentNode(){

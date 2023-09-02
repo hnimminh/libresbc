@@ -36,4 +36,8 @@
     --bs-tooltip-bg: var(--bs-primary);
   }
 
+.danger-tooltip {
+    --bs-tooltip-bg: var(--bs-danger);
+  }
+
 textarea[is="highlighted-code"] { padding: 8px; }
