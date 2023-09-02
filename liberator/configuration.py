@@ -45,12 +45,12 @@ _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 
 #-----------------------------------------------------------------------------------------------------
 NODEID = '{{nodeid}}'
 CLUSTERS = {
-    'name': 'defaultname',
+    'name': 'defaults',
     'members': [NODEID],
-    "rtp_start_port": 0,
-    "rtp_end_port": 0,
-    "max_calls_per_second": 0,
-    "max_concurrent_calls": 0
+    "rtp_start_port": 16384,
+    "rtp_end_port": 32767,
+    "max_calls_per_second": 60,
+    "max_concurrent_calls": 4000
 }
 
 #-----------------------------------------------------------------------------------------------------
