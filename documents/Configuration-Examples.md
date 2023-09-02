@@ -318,8 +318,8 @@ Declare inbound traffic from Twilio
     "18.228.249.0/24"
   ],
   "ringready": false,
-  "media_class": "pstn",
-  "capacity_class": "smb",
+  "media_class": "pcm",
+  "capacity_class": "small",
   "translation_classes": [],
   "manipulation_classes": [],
   "authscheme": "IP",
