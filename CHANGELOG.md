@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+- Clean unused pipe in get domain-policy
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table

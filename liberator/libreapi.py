@@ -3034,7 +3034,6 @@ def detail_access_domain_policy(response: Response, domain:str=Path(..., regex=_
 def list_access_domain_policy(response: Response):
     result = None
     try:
-        pipe = rdbconn.pipeline()
         KEYPATTERN = f'access:policy:*'
         next, mainkeys = rdbconn.scan(0, KEYPATTERN, SCAN_COUNT)
         while next:
