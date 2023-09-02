@@ -251,7 +251,7 @@ const APIGuide = {
     },
     "AccessDomainPolicy": {
         "path": "/libreapi/access/domain-policy",
-        "presentation-html": "access-domain-policy-table",
+        "presentation-html": "access-domain-presentation-object",
         "sample": {
             "domain": "libre.sbc",
             "srcsocket": {
@@ -264,7 +264,7 @@ const APIGuide = {
     },
     "AccessUserDirectory": {
         "path": "/libreapi/access/directory/user",
-        "presentation-html": "access-user-directory-table",
+        "presentation-html": null,
         "sample": {
             "domain": "libre.sbc",
             "id": "joebiden",
@@ -388,7 +388,11 @@ function GeneralGetPresent(SettingName){
             ShowProgress();
             if (SettingName === 'RoutingTable'){
                 RoutingTablePresentData(data, presentation);
-            } else{
+            }
+            else if (SettingName === 'AccessDomainPolicy'){
+                AccessDomainPresentData(data, presentation);
+            }
+            else{
                 GeneralPresentData(data, SettingName, presentation);
             }
         },
@@ -507,6 +511,8 @@ function GeneralSubmit(name, SettingName, method="POST"){
                 GetPresentNode();
             } else if (SettingName === 'RoutingRecord') {
                 RoutingTableDetail(name);
+            } else if (SettingName === 'AccessUserDirectory'){
+                AccessUserDirectoryDetail(name);
             } else {
                 GeneralGetPresent(SettingName);
             }
@@ -527,6 +533,156 @@ function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
     }
     // canvas
     PresentCanvas(sample, ObjectName, SettingName, 'POST');
+}
+
+// --------------------------------------------------
+// ACCESS DOMAIN
+// --------------------------------------------------
+
+// Access domain policy+user presentation
+function AccessDomainPresentData(data, presentation){
+    let AccessDomainHtml = EMPTYSTR;
+    let cnt = 0;
+    data.forEach((Adomain) => {
+        adomainhtml = `
+        <div class="accordion-item">
+          <h2 class="accordion-header" data-bs-title="show detail">
+            <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT${Adomain}">
+              <span class="badge rounded-pill text-bg-primary">${cnt}</span>&nbsp;&nbsp;
+              <span class="text-primary fw-bolder">${Adomain}</span>
+            </button>
+          </h2>
+        <div id="collapseRT${Adomain}" class="accordion-collapse collapse">
+          <div class="accordion-body">
+            <div class="row">
+              <div class="col-md-4 col-lg-4">
+                <div class="btn-group-vertical" role="group">
+                  <button type="button" class="btn btn-outline-primary text-start" onclick="AccessDomainPolicyDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load Policy</button>
+                  <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('${Adomain}','AccessDomainPolicy')"><i class="fa fa-pencil-square-o"></i> Update Policy</button>
+                  <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('${Adomain}','AccessDomainPolicy')"><i class="fa fa-trash"></i> Delete Policy</button>
+                </div>
+              </div>
+              <div class="col-md-8 col-lg-8" id="DetailAD${Adomain}">
+              </div>
+            </div>
+            <br><br>
+            <div class="btn-group" role="group">
+              <button type="button" class="btn btn-primary text-start" onclick="GeneralCreate('AccessUserDirectory','${Adomain}')"><i class="fa fa-plus-square-o"></i> Create user</button>
+              <button type="button" class="btn btn-primary text-start" onclick="AccessUserDirectoryDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load users</button>
+            </div>
+            <br><br>
+              <div class="col-md-6 col-lg-6">
+                <div class="row" id="TableAD${Adomain}">
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>`
+        AccessDomainHtml = AccessDomainHtml + adomainhtml;
+        cnt = cnt+1;
+    });
+    document.getElementById(presentation).innerHTML = AccessDomainHtml;
+}
+
+// Access domain policy show detail
+function AccessDomainPolicyDetail(Adomain){
+    $.ajax({
+        type: "GET",
+        url: `/libreapi/access/domain-policy/${Adomain}`,
+        success: function (data) {
+            ShowProgress();
+            document.getElementById(`DetailAD${Adomain}`).innerHTML = `
+            <div class="card border-primary">
+              <div class="card-body text-primary">
+                <pre><code>${JSON.stringify(data, undefined, 4)}</code></pre>
+              </div>
+            </div>`;
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            document.getElementById(`DetailAD${Adomain}`).innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+// Access user directory list all user
+function AccessUserDirectoryDetail(Adomain){
+    $.ajax({
+        type: "GET",
+        url: `/libreapi/access/directory/user/${Adomain}`,
+        success: function (data) {
+            ShowProgress();
+            let usertable = EMPTYSTR;
+            let cnt = 1;
+            users = data[Adomain];
+            users.forEach((user)=>{
+                userhtml = `
+                <tr>
+                  <td>${cnt}</td> <td>${user}</td>
+                  <td>
+                    <button class="btn btn-danger btn-sm" type="button"><i class="fa fa-times-circle" onclick="RemoveAccessUser('${Adomain}','${user}')"></i></button>
+                    <button class="btn btn-success btn-sm" type="button"><i class="fa fa-pencil" onclick="UpdateAccessUser('${Adomain}','${user}')"></i></button>
+                  </td>
+                </tr>`;
+                usertable = usertable + userhtml;
+                cnt++;
+            });
+            if (users.length!==0){
+                document.getElementById(`TableAD${Adomain}`).innerHTML = `
+                <table class="table table-bordered">
+                <thead class="table-light">
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">User</th>
+                  <th scope="col"></th>
+                </tr>
+                </thead>
+                  <tbody>
+                  ${usertable}
+                  </tbody>
+                </table>`;
+            };
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            document.getElementById(`TableAD${Adomain}`).innerHTML = EMPTYSTR;
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+// Access user directory remove user
+function RemoveAccessUser(domain, user){
+    let SettingName = 'AccessUserDirectory';
+    let path = APIGuide[SettingName]['path']
+    $.ajax({
+        type: "DELETE",
+        url: `${path}/${domain}/${user}`,
+        success: function (data) {
+            ShowToast(`Delete Successfully ${SettingName} ${user}@${domain}`, "info");
+            ShowProgress();
+            RoutingTableDetail(tablename);
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
+}
+
+// Access user directory partial update user
+function UpdateAccessUser(domain, user){
+    ShowProgress();
+    let SettingName = 'AccessUserDirectory';
+    let data = {
+        "domain": domain,
+        "id": user,
+        "secret": "enter-new-password"
+    };
+    ShowToast(`Detailize Successfully ${SettingName} ${user}@${domain}`, "info");
+    // canvas
+    PresentCanvas(data, domain, SettingName, 'PATCH');
 }
 
 // -------------------------------------------------//

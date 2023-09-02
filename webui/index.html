@@ -61,12 +61,10 @@
                 role="tab" aria-controls="nav-cfg-outbound-intcon" aria-selected="false" href="" onclick="GeneralGetPresent('Outbound');">Outbound Interconnect</a></li>
               <li><a class="dropdown-item" id="cfg-gateway-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-gateway" type="button" 
                 role="tab" aria-controls="nav-cfg-gateway" aria-selected="false" href="" onclick="GeneralGetPresent('Gateway');">SIP Gateway</a></li>
+              <li><a class="dropdown-item" id="cfg-access-domain-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-access-domain" type="button"
+                  role="tab" aria-controls="nav-cfg-access-domain" aria-selected="false" href="" onclick="GeneralGetPresent('AccessDomainPolicy');">Access Domain</a></li>
               <li><a class="dropdown-item" id="cfg-access-service-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-access-service" type="button" 
                 role="tab" aria-controls="nav-cfg-access-service" aria-selected="false" href="" onclick="GeneralGetPresent('AccessService');">Access Service</a></li>
-              <li><a class="dropdown-item" id="cfg-access-domain-policy-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-access-domain-policy" type="button"
-                role="tab" aria-controls="nav-cfg-access-domain-policy" aria-selected="false" href="" onclick="GeneralGetPresent('AccessDomainPolicy');">Access Domain Policy</a></li>
-              <li><a class="dropdown-item" id="cfg-access-user-directory-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-access-user-directory" type="button"
-                role="tab" aria-controls="nav-cfg-access-user-directory" aria-selected="false" href="" onclick="GeneralGetPresent('AccessUserDirectory');">Access User Directory</a></li>
             </ul>
           </li>
           <li class="nav-item">
@@ -225,6 +223,17 @@
                 <!-- GATEWAY INTERCONNECT -->
               </div>           
             </div>
+            <div class="tab-pane fade" id="nav-cfg-access-domain" role="tabpanel" aria-labelledby="cfg-access-domain-tab">
+              <div class="py-1 text-center">
+                <h3>Access Domain</h3>
+              </div>
+              <hr>
+              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessDomainPolicy');"><i class="fa fa-plus-square"></i> Create </button>
+              <br><br>
+              <div class="accordion" id="access-domain-presentation-object">
+                <!-- ACCESS DOMAIN -->
+              </div>           
+            </div>
             <div class="tab-pane fade" id="nav-cfg-access-service" role="tabpanel" aria-labelledby="cfg-access-service-tab">
               <div class="py-1 text-center">
                 <h3>Access Service </h3>
@@ -234,26 +243,6 @@
               <div class="col-md-12 my-5" id="access-service-table">
                 <!-- ACCESS SERVICE -->
               </div>           
-            </div>
-            <div class="tab-pane fade" id="nav-cfg-access-domain-policy" role="tabpanel" aria-labelledby="cfg-access-domain-policy-tab">
-              <div class="py-1 text-center">
-                <h3>Access Domain Policy </h3>
-              </div>
-              <hr>
-              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessDomainPolicy');"><i class="fa fa-plus-square"></i> Create </button>
-              <div class="col-md-12 my-5" id="access-domain-policy-table">
-                <!-- ACCESS DOMAIN POLICY -->
-              </div>           
-            </div>
-            <div class="tab-pane fade" id="nav-cfg-access-user-directory" role="tabpanel" aria-labelledby="cfg-access-user-directory-tab">
-              <div class="py-1 text-center">
-                <h3>Access User Directory </h3>
-              </div>
-              <hr>
-              <button type="button" class="btn btn-primary" onclick="GeneralCreate('AccessUserDirectory');"><i class="fa fa-plus-square"></i> Create </button>
-              <div class="col-md-12 my-5" id="access-user-directory-table">
-                <!-- ACCESS USER DIRECTORY -->
-              </div>
             </div>
             <div class="tab-pane fade" id="nav-cfg-routing" role="tabpanel" aria-labelledby="cfg-routing-tab">
               <div class="py-1 text-center">
