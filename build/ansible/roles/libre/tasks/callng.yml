@@ -33,13 +33,13 @@
     executable: /bin/bash
     chdir: "{{dstdir}}/callng"
 
-- name: Update callng templating-file of configuration
-  template:
-    src: "{{srcdir}}/callng/configuration.lua"
-    dest: "{{dstdir}}/callng/configuration.lua"
-    owner: root
-    group: root
-    mode: '0754'
+#- name: Update callng templating-file of configuration
+#  template:
+#    src: "{{srcdir}}/callng/configuration.lua"
+#    dest: "{{dstdir}}/callng/configuration.lua"
+#    owner: root
+#    group: root
+#    mode: '0754'
 
 - name: Symbolic link for callng
   file:
