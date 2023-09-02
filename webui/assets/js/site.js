@@ -583,7 +583,7 @@ function AccessDomainPresentData(data, presentation){
                     </div>
                   </div>
                 </div>
-                <br><br>
+                <br>
                 <div class="row">
                   <div class="col-md-12 col-lg-12" id="TableAD${Adomain}"></div>
                 </div>
