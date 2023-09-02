@@ -49,7 +49,7 @@ sbcs:
 
 ### 5. Deployment
 ```bash
-ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent"
+ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent" -e "debian_codename=bullseye" -e "signalwire_pat_token=Your-SignalWire-Personal-Access-Tokens"
 ```
 
 #### Note:
@@ -59,8 +59,14 @@ ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine
 ```bash
 ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent" -e "signalwire_pat_token=Your-SignalWire-Personal-Access-Tokens"
 ```
+<br>
 
-<br><br>
+#### Specify Debian version (`bullsyes` & `buster`)
+* when `debian_codename` is omitted `buster` will be used as default [22/08/2023]
+```bash
+ansible-playbook playbooks/deployment.yml -i inventories/production -l "<machine-name>" -t "platform,libre,nginx,captagent" -e "debian_codename=bullseye"
+```
+
 *..and enjoy* 👏
 
 ## Troubleshooting
