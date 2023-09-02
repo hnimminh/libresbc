@@ -471,7 +471,11 @@ function GeneralModify(name, SettingName){
         success: function (data) {
             ShowToast(`Detailize Successfully ${SettingName} ${name}`, "info");
             // canvas
-            PresentCanvas(data, name, SettingName, 'PUT');
+            if (SettingName === 'AccessDomainPolicy'){
+                PresentCanvas(data, name, SettingName, 'PATCH');
+            }else{
+                PresentCanvas(data, name, SettingName, 'PUT');
+            }
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
