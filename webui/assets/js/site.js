@@ -670,7 +670,7 @@ function RemoveAccessUser(domain, user){
         success: function (data) {
             ShowToast(`Delete Successfully ${SettingName} ${user}@${domain}`, "info");
             ShowProgress();
-            RoutingTableDetail(tablename);
+            AccessUserDirectoryDetail(domain);
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
