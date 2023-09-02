@@ -547,32 +547,40 @@ function AccessDomainPresentData(data, presentation){
         adomainhtml = `
         <div class="accordion-item">
           <h2 class="accordion-header" data-bs-title="show detail">
-            <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseRT${Adomain}">
+            <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#collapseAD${Adomain}">
               <span class="badge rounded-pill text-bg-primary">${cnt}</span>&nbsp;&nbsp;
               <span class="text-primary fw-bolder">${Adomain}</span>
             </button>
           </h2>
-        <div id="collapseRT${Adomain}" class="accordion-collapse collapse">
+        <div id="collapseAD${Adomain}" class="accordion-collapse collapse">
           <div class="accordion-body">
             <div class="row">
-              <div class="col-md-4 col-lg-4">
-                <div class="btn-group-vertical" role="group">
-                  <button type="button" class="btn btn-outline-primary text-start" onclick="AccessDomainPolicyDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load Policy</button>
-                  <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('${Adomain}','AccessDomainPolicy')"><i class="fa fa-pencil-square-o"></i> Update Policy</button>
-                  <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('${Adomain}','AccessDomainPolicy')"><i class="fa fa-trash"></i> Delete Policy</button>
+              <div class="col-md-6 col-lg-6">
+                <div class="row">
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary text-start" onclick="AccessDomainPolicyDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load Policy</button>
+                    <button type="button" class="btn btn-outline-primary text-start" onclick="GeneralModify('${Adomain}','AccessDomainPolicy')"><i class="fa fa-pencil-square-o"></i> Update Policy</button>
+                    <button type="button" class="btn btn-outline-danger text-start" onclick="GeneralRemove('${Adomain}','AccessDomainPolicy')"><i class="fa fa-trash"></i> Delete Policy</button>
+                  </div>
+                </div>
+                <br>
+                <div class="row">
+                  <div class="col-md-12 col-lg-12" id="DetailAD${Adomain}"></div>
                 </div>
               </div>
-              <div class="col-md-8 col-lg-8" id="DetailAD${Adomain}">
-              </div>
-            </div>
-            <br><br>
-            <div class="btn-group" role="group">
-              <button type="button" class="btn btn-primary text-start" onclick="GeneralCreate('AccessUserDirectory','${Adomain}')"><i class="fa fa-plus-square-o"></i> Create user</button>
-              <button type="button" class="btn btn-primary text-start" onclick="AccessUserDirectoryDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load users</button>
-            </div>
-            <br><br>
               <div class="col-md-6 col-lg-6">
-                <div class="row" id="TableAD${Adomain}">
+                <div class="row g-3 justify-content-end">
+                  <div class="col-md-6 col-lg-6">
+                    <div class="btn-group" role="group">
+                      <button type="button" class="btn btn-primary text-start" onclick="GeneralCreate('AccessUserDirectory','${Adomain}')"><i class="fa fa-plus-square-o"></i> Create User</button>
+                      <button type="button" class="btn btn-primary text-start" onclick="AccessUserDirectoryDetail('${Adomain}')"><i class="fa fa-refresh"></i> Load Users</button>
+                    </div>
+                  </div>
+                </div>
+                <br><br>
+                <div class="row">
+                  <div class="col-md-12 col-lg-12" id="TableAD${Adomain}"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -630,7 +638,7 @@ function AccessUserDirectoryDetail(Adomain){
             });
             if (users.length!==0){
                 document.getElementById(`TableAD${Adomain}`).innerHTML = `
-                <table class="table table-bordered">
+                <table class="table table-hover">
                 <thead class="table-light">
                 <tr>
                   <th scope="col">#</th>
