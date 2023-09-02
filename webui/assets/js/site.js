@@ -683,14 +683,25 @@ function RemoveAccessUser(domain, user){
 function UpdateAccessUser(domain, user){
     ShowProgress();
     let SettingName = 'AccessUserDirectory';
-    let data = {
-        "domain": domain,
-        "id": user,
-        "secret": "enter-new-password"
-    };
-    ShowToast(`Detailize Successfully ${SettingName} ${user}@${domain}`, "info");
-    // canvas
-    PresentCanvas(data, domain, SettingName, 'PATCH');
+    let url = APIGuide[SettingName]['path'] + "/" + domain + "/" + user;
+    $.ajax({
+        type: "GET",
+        url: url,
+        success: function (data) {
+            let userdata = {
+                "domain": domain,
+                "id": user,
+                "secret": data.secret
+            };
+            ShowToast(`Detailize Successfully ${SettingName} ${user}@${domain}`, "info");
+            // canvas
+            PresentCanvas(userdata, domain, SettingName, 'PATCH');
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            console.log(jqXHR);
+            ShowToast(jqXHR.responseJSON.error);
+        }
+    });
 }
 
 // -------------------------------------------------//
