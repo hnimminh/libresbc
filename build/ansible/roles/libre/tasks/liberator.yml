@@ -70,15 +70,18 @@
     group: root
     mode: "{{item.mode}}"
   with_items:
-    - src: "{{srcdir}}/liberator/configuration.py"
-      dest: "{{dstdir}}/liberator/configuration.py"
-      mode: "0754"
+    #- src: "{{srcdir}}/liberator/configuration.py"
+    #  dest: "{{dstdir}}/liberator/configuration.py"
+    #  mode: "0754"
     - src: "{{srcdir}}/liberator/system/systemd/liberator.service"
       dest: "{{dstdir}}/liberator/system/systemd/liberator.service"
       mode: "0644"
-#   - src: "{{srcdir}}/liberator/system/sbin/liberator.sh"
-#     dest: /usr/local/sbin/liberator.sh
-#     mode: 0754
+    - src: libre.j2.env
+      dest: "{{dstdir}}/libre.env"
+      mode: "0644"
+    #- src: "{{srcdir}}/liberator/system/sbin/liberator.sh"
+    #  dest: /usr/local/sbin/liberator.sh
+    #  mode: 0754
 
 - name: Symbolic link for liberator service
   file:
