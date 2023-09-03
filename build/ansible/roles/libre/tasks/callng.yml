@@ -12,34 +12,11 @@
     src: "{{srcdir}}/callng/"
     dest: "{{dstdir}}/callng/"
 
-#- name: Gather callng lua file
-#  find:
-#    paths: "{{dstdir}}/callng"
-#    patterns: "*.lua"
-#    file_type: file
-#  register: nglua
-#- name: Update callng templating-file
-#  template:
-#    src: "{{srcdir}}/callng/{{ item.path | basename }}"
-#    dest: "{{dstdir}}/callng/{{ item.path | basename }}"
-#    owner: root
-#    group: root
-#    mode: '0754'
-#  with_items: "{{ nglua.files }}"
-
 - name: install lua pkgs
   shell: /bin/sh requirement.sh
   args:
     executable: /bin/bash
     chdir: "{{dstdir}}/callng"
-
-#- name: Update callng templating-file of configuration
-#  template:
-#    src: "{{srcdir}}/callng/configuration.lua"
-#    dest: "{{dstdir}}/callng/configuration.lua"
-#    owner: root
-#    group: root
-#    mode: '0754'
 
 - name: Symbolic link for callng
   file:
