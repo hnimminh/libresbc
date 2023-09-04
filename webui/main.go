@@ -28,7 +28,7 @@ var (
 	libresbc string
 	domain   string
 	secure   bool
-	tlsfiles string
+	certs    string
 
 	httpListenAddr string
 )
@@ -46,7 +46,8 @@ func init() {
 	flag.StringVar(&domain, "D", "", "FQDN - Fully qualified domain name")
 	flag.BoolVar(&secure, "tls", false, "enable https server instead of default: http")
 	flag.BoolVar(&secure, "t", false, "enable https server instead of default: http")
-	flag.StringVar(&tlsfiles, "tlsfiles", "", "TLS certificate/key files, syntax <crt:key>")
+	flag.StringVar(&certs, "certs", "", "Declare SSL/TLS certificate/key files, syntax <crt:key>")
+	flag.StringVar(&certs, "c", "", "Declare SSL/TLS certificate/key files, syntax <crt:key>")
 	flag.Parse()
 
 	// log setting
@@ -72,8 +73,8 @@ func init() {
 		if domain == "" {
 			zlog.Fatal().Msg("Domain is required for SSL/TLS")
 		}
-		if tlsfiles != "" && strings.Contains(tlsfiles, ":") {
-			zlog.Fatal().Msg("Invalid syntax declare for tlsfile, eg. crt:key")
+		if len(strings.Split(certs, ":")) != 2 {
+			zlog.Fatal().Msg("Invalid syntax declare for tls cert files, eg. crt:key")
 		}
 		viaBrowserAddr = fmt.Sprintf("https://%s:%d", domain, port)
 		if port == 443 {
@@ -130,17 +131,21 @@ func main() {
 			http.FS(staticfiles),
 		))
 
-	// SERVE
-	//--------------------------------------------------------------------------------
+	// SERVER
 	if secure {
-		if err := http.ListenAndServeTLS(httpListenAddr, "", "tlsKeyFile", router); err != nil {
+		crtfile, keyfile := func(certs string) (string, string) {
+			files := strings.Split(certs, ":")
+			return files[0], files[1]
+		}(certs)
+		if err := http.ListenAndServeTLS(httpListenAddr, crtfile, keyfile, router); err != nil {
 			zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httpListenAddr).
 				Msg("Failed to start web service with TLS")
 		}
-	} else {
-		if err := http.ListenAndServe(httpListenAddr, router); err != nil {
-			zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httpListenAddr).
-				Msg("Failed to start web service")
-		}
+		return
+	}
+
+	if err := http.ListenAndServe(httpListenAddr, router); err != nil {
+		zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httpListenAddr).
+			Msg("Failed to start web service")
 	}
 }
