@@ -13,6 +13,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Set default value for cluster hashmap
 - Support enable TLS option for webui
 - Switch config var from ansible to by envar
+- Fix kamailio syslog format
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table
