@@ -12,6 +12,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Clean unused pipe in get domain-policy
 - Set default value for cluster hashmap
 - Support enable TLS option for webui
+- Switch config var from ansible to by envar
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table

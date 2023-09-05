@@ -6,7 +6,7 @@
 # Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
-
+import os
 #-----------------------------------------------------------------------------------------------------
 #      GLOBAL CONFIGURATION FILES
 #-----------------------------------------------------------------------------------------------------
@@ -28,14 +28,25 @@ RDB_USOCKET = f'{RUNDIR}/redis.sock'
 #-----------------------------------------------------------------------------------------------------
 # REDIS ENDPOINT
 #-----------------------------------------------------------------------------------------------------
-REDIS_HOST = '{{redis.host}}'
-REDIS_PORT = {{redis.port}}
-REDIS_DB = {{redis.database}}
-REDIS_PASSWORD = {{ ('%s')|format(redis.password)|to_json if redis.password else 'None' }}
+REDIS_HOST = os.getenv('REDIS_HOST')
+if not REDIS_HOST:
+    REDIS_HOST = '127.0.0.1'
+
+_REDIS_PORT = os.getenv('REDIS_PORT')
+REDIS_PORT = 6379
+if _REDIS_PORT and _REDIS_PORT.isdigit():
+    REDIS_PORT = int(_REDIS_PORT)
+
+_REDIS_DB = os.getenv('REDIS_DB')
+REDIS_DB = 0
+if _REDIS_DB and _REDIS_DB.isdigit():
+    REDIS_DB = int(_REDIS_DB)
+
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD')
 SCAN_COUNT = 1000
 REDIS_TIMEOUT = 5
 #-----------------------------------------------------------------------------------------------------
-# VOICE ATTRIBUTE
+# VOICE ATTRIBUTES
 #-----------------------------------------------------------------------------------------------------
 SWCODECS = ['ALAW', 'ULAW', 'OPUS', 'G729', 'AMR', 'AMR-WB']
 _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 'none', 'wan.auto',
@@ -43,7 +54,7 @@ _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------
-NODEID = '{{nodeid}}'
+NODEID = os.getenv('NODEID')
 CLUSTERS = {
     'name': 'defaults',
     'members': [NODEID],
@@ -66,11 +77,19 @@ ESL_PORT = 8021
 #-----------------------------------------------------------------------------------------------------
 # HTTPCDR DATA
 #-----------------------------------------------------------------------------------------------------
-HTTPCDR_ENDPOINTS = {{httpcdr.endpoints if httpcdr else 'None'}}
+HTTPCDR_ENDPOINTS = os.getenv('HTTPCDR_ENDPOINTS')
+if HTTPCDR_ENDPOINTS:
+    HTTPCDR_ENDPOINTS = HTTPCDR_ENDPOINTS.split(',')
 #-----------------------------------------------------------------------------------------------------
 # CDR FILE
 #-----------------------------------------------------------------------------------------------------
-DISKCDR_ENABLE = {% if diskcdr is defined %}{{ 'True' if diskcdr else 'False'}}{% else %}False{% endif +%}
-CDRFNAME_INTERVAL = {% if cdrfilename is defined %}{{cdrfilename.interval}} {% else %}None{% endif +%}
-CDRFNAME_FMT = {% if cdrfilename is defined %}'{{cdrfilename.namefmt}}'{% else %}'%Y-%m-%d.cdr.nice'{% endif +%}
+DISKCDR_ENABLE = bool(os.getenv('DISKCDR_ENABLE'))
 
+_CDRFNAME_INTERVAL = os.getenv('CDRFNAME_INTERVAL')
+CDRFNAME_INTERVAL = None
+if _CDRFNAME_INTERVAL and _CDRFNAME_INTERVAL.isdigit():
+    CDRFNAME_INTERVAL = int(CDRFNAME_INTERVAL)
+
+CDRFNAME_FMT = os.getenv('CDRFNAME_FMT')
+if not CDRFNAME_FMT:
+    CDRFNAME_FMT = '%Y-%m-%d.cdr.nice'

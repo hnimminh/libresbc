@@ -8,24 +8,13 @@
 --
 
 -- configuration
-NODEID = os.getenv("NODEID")
-if not NODEID then
-    os.exit()
-end
+NODEID = '{{NODEID}}'
 
 --- REDIS ENDPOINT
-REDIS_HOST = os.getenv("REDIS_HOST")
-if not REDIS_HOST then REDIS_HOST = "127.0.0.1" end
-
-REDIS_PORT = os.getenv("REDIS_PORT")
-if not REDIS_PORT then REDIS_PORT = 6379 end
-
-REDIS_DB = os.getenv("REDIS_DB")
-if not REDIS_DB then REDIS_DB = 0 end
-
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-if not REDIS_PASSWORD then REDIS_PASSWORD = 6379 end
-
+REDIS_HOST = '{{REDIS_HOST}}'
+REDIS_PORT = {{REDIS_PORT}}
+REDIS_DB = {{REDIS_DB}}
+REDIS_PASSWORD = {{("'%s'")|format(REDIS_PASSWORD) if REDIS_PASSWORD else "nil"}}
 SCAN_COUNT = 1000
 REDIS_TIMEOUT = 5
 

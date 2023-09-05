@@ -15,6 +15,7 @@ import threading
 
 import uvicorn
 
+from configuration import REDIS_HOST, REDIS_PORT, REDIS_PASSWORD, REDIS_DB, NODEID, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE, CDRFNAME_INTERVAL, CDRFNAME_FMT
 from utilities import logify, debugy
 from api import httpapi
 from basemgr import BaseEventHandler, SecurityEventHandler, basestartup
@@ -25,7 +26,10 @@ from cdr import CDRMaster
 #---------------------------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     try:
-        debugy('module=liberator, space=main, action=initialize')
+        debugy(f'''module=liberator, space=main, action=initialize, REDIS_HOST={REDIS_HOST}, REDIS_PORT={REDIS_PORT}'''
+               f''', REDIS_PASSWORD={str(REDIS_PASSWORD)[:3]}*, REDIS_DB={REDIS_DB}, NODEID={NODEID}, HTTPCDR_ENDPOINTS={HTTPCDR_ENDPOINTS}'''
+               f''', DISKCDR_ENABLE={DISKCDR_ENABLE}, CDRFNAME_INTERVAL={CDRFNAME_INTERVAL}, CDRFNAME_FMT={CDRFNAME_FMT}'''
+            )
         # EVENT HANDLER
         basestartup()
         eventthead = BaseEventHandler()

@@ -380,12 +380,22 @@ def rdbinstance():
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+_NGLUA = Environment(loader=FileSystemLoader('nglua'))
 @threaded
 def basestartup():
     result = False
+    ngcfile = '../callng/configuration.lua'
     try:
         logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
+
+        # general lua config
+        ngtemplate = _NGLUA.get_template("configuration.j2.lua")
+        ngstream = ngtemplate.render(NODEID=NODEID, REDIS_HOST=REDIS_HOST, REDIS_PORT=REDIS_PORT,
+                                     REDIS_DB=REDIS_DB, REDIS_PASSWORD=REDIS_PASSWORD)
+        with open(ngcfile, 'w') as ngf:
+            ngf.write(ngstream)
+
         fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
