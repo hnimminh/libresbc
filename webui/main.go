@@ -26,8 +26,11 @@ var (
 	port     int
 	debug    bool
 	libresbc string
+	domain   string
+	secure   bool
+	certs    string
 
-	httplistenaddr string
+	httpListenAddr string
 )
 
 func init() {
@@ -39,6 +42,12 @@ func init() {
 	flag.StringVar(&libresbc, "L", "http://127.0.0.1:8088", "LibreSBC web API interface")
 	flag.BoolVar(&debug, "debug", false, "sets log level to debug")
 	flag.BoolVar(&debug, "d", false, "sets log level to debug")
+	flag.StringVar(&domain, "domain", "", "FQDN - Fully qualified domain name")
+	flag.StringVar(&domain, "D", "", "FQDN - Fully qualified domain name")
+	flag.BoolVar(&secure, "tls", false, "enable https server instead of default: http")
+	flag.BoolVar(&secure, "t", false, "enable https server instead of default: http")
+	flag.StringVar(&certs, "certs", "", "Declare SSL/TLS certificate/key files, syntax <crt:key>")
+	flag.StringVar(&certs, "c", "", "Declare SSL/TLS certificate/key files, syntax <crt:key>")
 	flag.Parse()
 
 	// log setting
@@ -58,7 +67,21 @@ func init() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	httplistenaddr = fmt.Sprintf("%s:%d", host, port)
+	httpListenAddr = fmt.Sprintf("%s:%d", host, port)
+	viaBrowserAddr := fmt.Sprintf("http://%s:%d", host, port)
+	if secure {
+		if domain == "" {
+			zlog.Fatal().Msg("Domain is required for SSL/TLS")
+		}
+		if len(strings.Split(certs, ":")) != 2 {
+			zlog.Fatal().Msg("Invalid syntax declare for tls cert files, eg. crt:key")
+		}
+		viaBrowserAddr = fmt.Sprintf("https://%s:%d", domain, port)
+		if port == 443 {
+			viaBrowserAddr = fmt.Sprintf("https://%s", domain)
+		}
+	}
+
 	// startup banner with setting displayed
 	appBanner := `
       +-+-+-+-+-+-+-+-+ +-+-+-+-+-+
@@ -68,12 +91,14 @@ func init() {
       Open Source Session Border Controler
       LibreSBC - v0.7.0
 
-      Listen              %s
-      LibreSBC            %s
-      Debug               %v
+      Listen    %s
+      LibreSBC  %s
+      Debug     %v
+
+      Access via browser at: %s
     --------------------------------------------------
 `
-	fmt.Printf(appBanner, httplistenaddr, libresbc, debug)
+	fmt.Printf(appBanner, httpListenAddr, libresbc, debug, viaBrowserAddr)
 
 }
 
@@ -106,10 +131,21 @@ func main() {
 			http.FS(staticfiles),
 		))
 
-	// SERVE
-	//--------------------------------------------------------------------------------
-	if err := http.ListenAndServe(httplistenaddr, router); err != nil {
-		zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httplistenaddr).
+	// SERVER
+	if secure {
+		crtfile, keyfile := func(certs string) (string, string) {
+			files := strings.Split(certs, ":")
+			return files[0], files[1]
+		}(certs)
+		if err := http.ListenAndServeTLS(httpListenAddr, crtfile, keyfile, router); err != nil {
+			zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httpListenAddr).
+				Msg("Failed to start web service with TLS")
+		}
+		return
+	}
+
+	if err := http.ListenAndServe(httpListenAddr, router); err != nil {
+		zlog.Fatal().Err(err).Str("module", "libresbc").Str("listen", httpListenAddr).
 			Msg("Failed to start web service")
 	}
 }
