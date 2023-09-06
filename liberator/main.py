@@ -7,7 +7,6 @@
 # All Rights Reserved.
 #
 
-import syslog
 import traceback
 import threading
 import uvicorn
@@ -43,5 +42,3 @@ if __name__ == '__main__':
         for thrd in threading.enumerate():
             thrd.stop = True
             logger.info(f'module=liberator, space=main, action=teardown, id={thrd.ident}, name={thrd.getName()}')
-        syslog.closelog()
-
