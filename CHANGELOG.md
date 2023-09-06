@@ -15,6 +15,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Switch config var from ansible to by envar
 - Fix kamailio syslog format
 - Add logging configuration envars
+- Consitent log format for multiple stacks
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table
