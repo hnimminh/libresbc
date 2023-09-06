@@ -19,6 +19,18 @@ _SWVERSION = 'v0.7.0'
 LOGDIR = '/var/log/libresbc'
 ETCDIR = '/etc/libresbc'
 RUNDIR = '/run/libresbc'
+
+#-----------------------------------------------------------------------------------------------------
+# LOGGING
+#-----------------------------------------------------------------------------------------------------
+LOGLEVEL = os.getenv('LOGLEVEL')
+_LOGSTACKS = os.getenv('LOGSTACKS')
+LOGSTACKS = ['SYSLOG']
+if _LOGSTACKS:
+    LOGSTACKS = _LOGSTACKS.split(',')
+    if not any(logstack in LOGSTACKS for logstack in ['FILE', 'SYSLOG', 'CONSOLE']):
+        LOGSTACKS = ['SYSLOG']
+
 #-----------------------------------------------------------------------------------------------------
 # RBD UNIX SOCKET LOCALIZE INSTANCE
 #-----------------------------------------------------------------------------------------------------
