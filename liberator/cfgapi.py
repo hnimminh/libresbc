@@ -9,17 +9,14 @@
 
 import traceback
 import json
-import copy
 import hashlib
-
 import redis
 import validators
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
-
 from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
+from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -45,7 +42,7 @@ def switch(request: Request, response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=cfgapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -85,7 +82,7 @@ def acl(request: Request, response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=cfgapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -114,7 +111,7 @@ def distributor(request: Request, response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.info(f"module=liberator, space=cfgapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -203,7 +200,7 @@ def sip(request: Request, response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=cfgapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -264,6 +261,6 @@ def directory(request: Request, response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
-        logify(f"module=liberator, space=cfgapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=cfgapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result

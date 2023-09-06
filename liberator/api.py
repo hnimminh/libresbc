@@ -9,14 +9,10 @@
 
 import time
 import uuid
-import syslog
-import traceback
-
 from fastapi import FastAPI, Request, Response, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
-
 from configuration import _APPLICATION, _SWVERSION, _DESCRIPTION
-from utilities import logify, debugy, _request_uuid_ctx_var, get_request_uuid
+from utilities import logger, _request_uuid_ctx_var, get_request_uuid
 from libreapi import librerouter
 from cfgapi import cfgrouter
 
@@ -44,9 +40,9 @@ async def tracking(request: Request, call_next) -> Response:
         response_body = response_body.decode()
         process_time = round(time.time() - start_time, 3)
         if url.startswith('/libreapi/'):
-            logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}')
+            logger.info(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}, response_body={response_body}')
         else:
-            logify(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}')
+            logger.info(f'module=liberator, space=httpapi, action=middleware, processtime={process_time}, requestid={get_request_uuid()}, clientip={clientip}, request={method}:{url}, status_code={status_code}')
         _request_uuid_ctx_var.reset(request_uuid)
         return Response(content=response_body,
                         status_code=status_code,
@@ -58,7 +54,7 @@ async def tracking(request: Request, call_next) -> Response:
 async def reqjson(request: Request):
     try:
         reqbody = await request.json()
-        logify(f'module=liberator, space=httpapi, action=request, requestid={get_request_uuid()}, request_body={reqbody}')
+        logger.info(f'module=liberator, space=httpapi, action=request, requestid={get_request_uuid()}, request_body={reqbody}')
     except:
         pass
 
