@@ -11,17 +11,19 @@
 nglog = { _version = '0.1.0' }
 nglog.color   = false
 nglog.level   = 'info'
-nglog.stacks  = { console = true, file = nil}
+nglog.stacks  = { console=true, file=nil, syslog=nil}
 nglog.host    = nil
 nglog.name    = nil
 
 local attributes = {
-    { name = 'trace',     color = '\27[34m', },
-    { name = 'debug',     color = '\27[36m', },
-    { name = 'info',      color = '\27[32m', },
-    { name = 'warning',   color = '\27[33m', },
-    { name = 'error',     color = '\27[31m', },
-    { name = 'critical',  color = '\27[35m', },
+    { name = 'emerg',     color = '\27[35m', }, -- emerg system is unusable
+    { name = 'alert',     color = '\27[35m', }, -- alert action must be taken immediately
+    { name = 'critical',  color = '\27[35m', }, -- critical conditions
+    { name = 'error',     color = '\27[31m', }, -- error conditions
+    { name = 'warning',   color = '\27[33m', }, -- warning conditions
+    { name = 'notice',    color = '\27[34m', }, -- normal but significant condition
+    { name = 'info',      color = '\27[32m', }, -- informational
+    { name = 'debug',     color = '\27[36m', }, -- debug-level messages
 }
 
 local levels = {}
@@ -33,8 +35,8 @@ for i, attribute in ipairs(attributes) do
     local _LEVEL = attribute.name:upper()
 
     nglog[attribute.name] = function(msg, ...)
-        -- quick fast: if function log level is small than given log level
-        if i < levels[nglog.level] then
+        -- quick fast: if given log level is smaller than function log level
+        if levels[nglog.level] < i then
             return
         end
 
@@ -44,6 +46,13 @@ for i, attribute in ipairs(attributes) do
             logstr = string.format('%s %s %s %s  %s',
                         os.date('%Y-%m-%dT%H:%M:%S%z'), nglog.host, nglog.name, _LEVEL, string.format(msg..'\n', ...)
                     )
+        end
+
+        -- print out to syslog
+        if nglog.stacks.syslog then
+            syslog = require("posix.syslog")
+            syslog.openlog(nglog.name, syslog.LOG_PID, tonumber(nglog.stacks.syslog) or 23)
+            syslog.syslog(i, string.format(msg..'\n', ...))
         end
 
         -- print out log to console

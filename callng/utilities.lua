@@ -15,8 +15,8 @@ redis = require("redis")
 random = math.random
 
 require("callng.configuration")
-nglog = require("callng.nglog")
-nglog.stacks, nglog.host, nglog.name = {console=true, file=LOGDIR..'/callng.log'}, NODEID, 'libresbc'
+log = require("callng.nglog")
+log.stacks, log.host, log.name = {console=false, file=nil, syslog=true}, NODEID, 'libresbc'
 
 unpack = _G.unpack or table.unpack
 __space__ = ' '
