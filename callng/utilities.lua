@@ -7,15 +7,17 @@
 -- All Rights Reserved.
 --
 
-require("callng.configuration")
-
 -- REQUIRE
 socket = require("socket")
 syslog = require("posix.syslog")
 json = require("json")
 redis = require("redis")
 random = math.random
-----
+
+require("callng.configuration")
+nglog = require("callng.nglog")
+nglog.stacks, nglog.host, nglog.name = {console=true, file=LOGDIR..'/callng.log'}, NODEID, 'libresbc'
+
 unpack = _G.unpack or table.unpack
 __space__ = ' '
 __comma__ = ','
@@ -57,37 +59,6 @@ function delogify(...)
     for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
     -- write log
     dlogger(message)
-end
-
---- log utils
-log = {}
-
-function log:debug(text, ...)
-    freeswitch.consoleLog("debug", string.format(text.."\n", ...))
-end
-
-function log:info(text, ...)
-    freeswitch.consoleLog("info", string.format(text.."\n", ...))
-end
-
-function log:notice(text, ...)
-    freeswitch.consoleLog("notice", string.format(text.."\n", ...))
-end
-
-function log:warn(text, ...)
-    freeswitch.consoleLog("warning", string.format(text.."\n", ...))
-end
-
-function log:error(text, ...)
-    freeswitch.consoleLog("err", string.format(text.."\n", ...))
-end
-
-function log:critical(text, ...)
-    freeswitch.consoleLog("crit", string.format(text.."\n", ...))
-end
-
-function log:alert(text, ...)
-    freeswitch.consoleLog("alert", string.format(text.."\n", ...))
 end
 
 -------------------------------------------------------------------------
