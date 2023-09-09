@@ -16,19 +16,19 @@ nglog.host    = nil
 nglog.name    = nil
 
 local attributes = {
-    { name = 'emerg',     color = '\27[35m', }, -- emerg system is unusable
-    { name = 'alert',     color = '\27[35m', }, -- alert action must be taken immediately
-    { name = 'critical',  color = '\27[35m', }, -- critical conditions
-    { name = 'error',     color = '\27[31m', }, -- error conditions
-    { name = 'warning',   color = '\27[33m', }, -- warning conditions
-    { name = 'notice',    color = '\27[34m', }, -- normal but significant condition
-    { name = 'info',      color = '\27[32m', }, -- informational
-    { name = 'debug',     color = '\27[36m', }, -- debug-level messages
+    { name = 'emerg',     color = '\27[35m', }, -- 0 emerg system is unusable
+    { name = 'alert',     color = '\27[35m', }, -- 1 alert action must be taken immediately
+    { name = 'critical',  color = '\27[35m', }, -- 2 critical conditions
+    { name = 'error',     color = '\27[31m', }, -- 3 error conditions
+    { name = 'warning',   color = '\27[33m', }, -- 4 warning conditions
+    { name = 'notice',    color = '\27[34m', }, -- 5 normal but significant condition
+    { name = 'info',      color = '\27[32m', }, -- 6 informational
+    { name = 'debug',     color = '\27[36m', }, -- 7 debug-level messages
 }
 
 local levels = {}
 for i, attribute in ipairs(attributes) do
-    levels[attribute.name] = i
+    levels[attribute.name] = i-1
 end
 
 for i, attribute in ipairs(attributes) do
@@ -36,7 +36,7 @@ for i, attribute in ipairs(attributes) do
 
     nglog[attribute.name] = function(msg, ...)
         -- quick fast: if given log level is smaller than function log level
-        if levels[nglog.level] < i then
+        if levels[nglog.level] < i-1 then
             return
         end
 
@@ -49,10 +49,10 @@ for i, attribute in ipairs(attributes) do
         end
 
         -- print out to syslog
-        if nglog.stacks.syslog then
+        if nglog.stacks.syslog then -- syslog FACILITY = N*8; syslog.LOG_LOCAL6=22*8=176
             syslog = require("posix.syslog")
-            syslog.openlog(nglog.name, syslog.LOG_PID, tonumber(nglog.stacks.syslog) or 23)
-            syslog.syslog(i, string.format(msg..'\n', ...))
+            syslog.openlog(nglog.name, syslog.LOG_PID, tonumber(nglog.stacks.syslog) or 176)
+            syslog.syslog(i-1, string.format(msg..'\n', ...))
         end
 
         -- print out log to console
