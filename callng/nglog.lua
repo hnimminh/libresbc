@@ -10,20 +10,20 @@
 
 nglog = { _version = '0.1.0' }
 nglog.color   = false
-nglog.level   = 'info'
+nglog.level   = 'INFO'
 nglog.stacks  = { console=true, file=nil, syslog=nil}
 nglog.host    = nil
 nglog.name    = nil
 
 local attributes = {
-    { name = 'emerg',     color = '\27[35m', }, -- 0 emerg system is unusable
-    { name = 'alert',     color = '\27[35m', }, -- 1 alert action must be taken immediately
-    { name = 'critical',  color = '\27[35m', }, -- 2 critical conditions
-    { name = 'error',     color = '\27[31m', }, -- 3 error conditions
-    { name = 'warning',   color = '\27[33m', }, -- 4 warning conditions
-    { name = 'notice',    color = '\27[34m', }, -- 5 normal but significant condition
-    { name = 'info',      color = '\27[32m', }, -- 6 informational
-    { name = 'debug',     color = '\27[36m', }, -- 7 debug-level messages
+    { name = 'EMERG',     color = '\27[35m', }, -- 0 emerg system is unusable
+    { name = 'ALERT',     color = '\27[35m', }, -- 1 alert action must be taken immediately
+    { name = 'CRITICAL',  color = '\27[35m', }, -- 2 critical conditions
+    { name = 'ERROR',     color = '\27[31m', }, -- 3 error conditions
+    { name = 'WARNING',   color = '\27[33m', }, -- 4 warning conditions
+    { name = 'NOTICE',    color = '\27[34m', }, -- 5 normal but significant condition
+    { name = 'INFO',      color = '\27[32m', }, -- 6 informational
+    { name = 'DEBUG',     color = '\27[36m', }, -- 7 debug-level messages
 }
 
 local levels = {}
@@ -32,9 +32,8 @@ for i, attribute in ipairs(attributes) do
 end
 
 for i, attribute in ipairs(attributes) do
-    local _LEVEL = attribute.name:upper()
-
-    nglog[attribute.name] = function(msg, ...)
+    local _LEVEL = attribute.name
+    nglog[attribute.name:lower()] = function(msg, ...)
         -- quick fast: if given log level is smaller than function log level
         if levels[nglog.level] < i-1 then
             return
@@ -43,9 +42,7 @@ for i, attribute in ipairs(attributes) do
         -- default log string
         local logstr
         if nglog.stacks.file or not nglog.color then
-            logstr = string.format('%s %s %s %s  %s',
-                        os.date('%Y-%m-%dT%H:%M:%S%z'), nglog.host, nglog.name, _LEVEL, string.format(msg..'\n', ...)
-                    )
+            logstr = string.format('%s %s %s %s  %s', os.date('%Y-%m-%dT%H:%M:%S%z'), nglog.host, nglog.name, _LEVEL, string.format(msg..'\n', ...))
         end
 
         -- print out to syslog
@@ -76,4 +73,3 @@ for i, attribute in ipairs(attributes) do
 end
 
 return nglog
-
