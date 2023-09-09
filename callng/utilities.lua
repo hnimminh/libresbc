@@ -12,12 +12,17 @@ socket = require("socket")
 syslog = require("posix.syslog")
 json = require("json")
 redis = require("redis")
-random = math.random
-
 require("callng.configuration")
 log = require("callng.nglog")
-log.stacks, log.host, log.name = {console=false, file=nil, syslog=true}, NODEID, 'libresbc'
 
+log.stacks = {
+    console =   LOGSTACK_CONSOLE,
+    file    =   LOGSTACK_FILE,
+    syslog  =   LOGSTACK_SYSLOG
+}
+log.level, log.host, log.name = LOGLEVEL, NODEID, 'libresbc'
+
+random = math.random
 unpack = _G.unpack or table.unpack
 __space__ = ' '
 __comma__ = ','

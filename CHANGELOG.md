@@ -17,6 +17,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Add logging configuration envars
 - Consitent log format for multiple stacks
 - Liberator log level refactor
+- Callng log refactor with nglog
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table
