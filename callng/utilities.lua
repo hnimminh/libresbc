@@ -34,34 +34,6 @@ end
 ---------------------****|  FUNDAMENTAL FUNCTION   |****---------------------
 ---------------------******************************--------------------------
 
-function logger(msg)
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
-    syslog.syslog(syslog.LOG_INFO, msg)
-end
-
-function dlogger(msg)
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
-    syslog.syslog(syslog.LOG_DEBUG, msg)
-end
-
-
-function logify(...)
-    local arg = {...}
-    local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
-    -- write log
-    logger(message)
-end
-
-function delogify(...)
-    local arg = {...}
-    local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
-    -- write log
-    dlogger(message)
-end
-
--------------------------------------------------------------------------
 function ismeberof(intable, value)
 	for i=1, #intable do
 		if value == intable[i] then return true end

@@ -109,7 +109,7 @@ local function cdrreport()
     else
         filename = os.date("%Y-%m-%d")..'.cdr.raw.json'
         writefile(LOGDIR..'/cdr/'..filename, cdrjson)
-        logify('module', 'callng', 'space', 'event:cdr', 'action', 'cdrreporter', 'error', 'rdbtimeout', 'data', cdrjson, 'donext', 'writefile', 'filename', filename)
+        log.warning('module=callng, space=event:cdr, action=cdrreporter, error=rdbtimeout, data=%s, donext=writefile, filename=%s', cdrjson, filename)
     end
 end
 
@@ -118,7 +118,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(cdrreport)
 if not result then
-    logger("module=callng, space=event:cdr, action=exception, error="..tostring(error))
+    log.critical("module=callng, space=event:cdr, action=exception, error=%s", error)
 end
 ---- close log ----
 syslog.closelog()

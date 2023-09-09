@@ -101,7 +101,7 @@ function SecurityCheck()
                 KSR.x.exit()
             end
             if KSR.pike.pike_check_req() < 0 then
-                delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'sanity.flooding.detected', 'srcip', srcip, 'useragent', useragent)
+                log.debug('module=callng, space=kami, layer=%s, action=sanity.flooding.detected, srcip=%s, useragent=%s', LAYER, srcip, useragent)
                 if not floodcount then
                     KSR.htable.sht_seti("antiflooding", srcip, 1)
                 end
@@ -111,7 +111,7 @@ function SecurityCheck()
         local failcount = KSR.htable.sht_get("authfailure", srcip)
         if failcount and failcount >= AUTHFAILURE_THRESHOLD then
             if failcount <= AUTHFAILURE_THRESHOLD+3 then
-                delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'sanity.auth.banned', 'srcip', srcip, 'useragent', useragent, 'failcount', failcount)
+                log.debug('module=callng, space=kami, layer=%s, action=sanity.auth.banned, srcip=%s, useragent=%s, failcount=%s', LAYER, srcip, useragent, failcount)
                 KSR.htable.sht_inc("authfailure", srcip)
             end
 			KSR.x.exit()
@@ -140,7 +140,7 @@ function SecurityCheck()
 		KSR.x.exit()
 	end
 	if KSR.sanity.sanity_check(17895, 7)<0 then
-		delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'malformed', 'srcip', srcip, 'useragent', useragent)
+        log.debug('module=callng, space=kami, layer=%s, action=malformed, srcip=%s, useragent=%s', LAYER, srcip, useragent)
 		KSR.x.exit()
 	end
     -- CVE-2018-8828 [Fixed Already]
@@ -195,7 +195,7 @@ function RouteRelay()
 	end
     -- local alias = KSR.nathelper.handle_ruri_alias()
 	local relay = KSR.tm.t_relay()
-	-- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'relay', 'state', relay, 'alias', alias)
+    log.debug('module=callng, space=kami, layer=%s, action=relay, alias=%s', LAYER, alias)
 	if relay<0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -242,13 +242,13 @@ function authenticate()
     local authuser = KSR.kx.get_au()
     local callid = KSR.kx.get_callid()
     local authcheck = -9
-    -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid)
+    log.debug('module=callng, space=kami, layer=%s, action=auth.report, domain=%s, authuser=%s, callid=%s', LAYER, domain, authuser, callid)
     if domain and authuser then
         local code, a1hash = authserect(domain, authuser)
-        -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'code', code, 'a1hash', a1hash)
+        log.debug('module=callng, space=kami, layer=%s, action=auth.report, domain=%s, authuser=%s, callid=%s, code=%s, a1hash=%s', LAYER, domain, authuser, callid, code, a1hash)
         if code == 1 then
             authcheck = KSR.auth.pv_auth_check(domain, a1hash, 21, 0)
-            -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.check', 'domain', domain, 'authuser', authuser, 'callid', callid, 'authcheck', authcheck)
+            log.debug('module=callng, space=kami, layer=%s, action=auth.report, domain=%s, authuser=%s, callid=%s, authcheck=%s', LAYER, domain, authuser, callid, authcheck)
         end
         -- BRUTEFORCE & INTRUSION PREVENTION
         if code <= 0 or authcheck <= 0 then
@@ -277,7 +277,7 @@ function authenticate()
     else
         return authcheck, domain, authuser
     end
-    -- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'auth.report', 'domain', domain, 'authuser', authuser, 'callid', callid, 'state', 'authorised')
+    log.debug('module=callng, space=kami, layer=%s, action=auth.report, domain=%s, authuser=%s, callid=%s, state=authorised', LAYER, domain, authuser, callid)
 end
 
 -- ---------------------------------------------------------------------------------------------------------------------------------
@@ -301,7 +301,7 @@ function RegistrarService()
 	end
 
 	local aorsaved = KSR.registrar.save_uri(LIBRE_USER_LOCATION, "5", "sip:"..authuser.."@"..domain)
-	-- delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'register.report', 'domain', domain, 'authuser', authuser, 'aorsaved', aorsaved)
+    log.debug('module=callng, space=kami, layer=%s, action=register.report, domain=%s, authuser=%s, callid=%s, aorsaved=%s', LAYER, domain, authuser, callid, aorsaved)
 	if aorsaved < 0 then
 		KSR.sl.sl_reply_error()
 	end
@@ -317,7 +317,7 @@ end
 function ProxyThenSwitch()
     local _, domain, authuser = authenticate()
 	KSR.auth.consume_credentials()
-    delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uacincoming', 'domain', domain, 'authuser', authuser, 'callid', KSR.kx.get_callid())
+    log.info('module=callng, space=kami, layer=%s, action=uacincoming, domain=%s, authuser=%s, callid=%s', LAYER, domain, authuser, KSR.kx.get_callid())
     -- ENFORCE DEST[$du] SOCKET[$fs]
     local dstsocket = DOMAIN_POLICIES[domain]['dstsocket']
     KSR.setdsturi('sip:'..dstsocket.ip..':'..dstsocket.port..';transport='..dstsocket.transport)
@@ -346,7 +346,7 @@ function SwitchThenProxy()
         sipuser = KSR.kx.get_ruser()..'@'..DFTDOMAIN
     end
 	local state = KSR.registrar.lookup_uri(LIBRE_USER_LOCATION, 'sip:'..sipuser)
-    delogify('module', 'callng', 'space', 'kami', 'layer', LAYER, 'action', 'uasoutgoing', 'state', state, 'sipuser', sipuser, 'callid', KSR.kx.get_callid())
+    log.info('module=callng, space=kami, layer=%s, action=uasoutgoing, state=%s, sipuser=%s, callid=%s', LAYER, state, sipuser,  KSR.kx.get_callid())
 	if state<0 then
 		KSR.tm.t_newtran()
 		if state==-1 or state==-3 then

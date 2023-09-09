@@ -25,7 +25,7 @@ local function clean_node_capacity()
         end
     end)
     ---
-    logify('module', 'callng', 'space', 'event:startup', 'action', 'clean_node_capacity', 'node', NODEID)
+    log.info('module=callng, space=event:startup, action=clean_node_capacity, node=%s', NODEID)
 end
 
 local function environment()
@@ -33,7 +33,7 @@ local function environment()
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
     local clustername = rdbconn:get('cluster:name')
     freeswitch.setGlobalVariable("CLUSTERNAME", clustername)
-    logify('module', 'callng', 'space', 'event:startup', 'action', 'environment', 'CLUSTERMEMBERS', clustermebers, 'CLUSTERNAME', clustername)
+    log.info('module=callng, space=event:startup, action=environment, CLUSTERNAME=%s, CLUSTERMEMBERS=%s', clustername, clustermebers)
 end
 
 -----------------**********************************--------------------
@@ -52,7 +52,7 @@ end
 ---------------------******************************---------------------
 local result, error = pcall(main)
 if not result then
-    logger("module=callng, space=event:startup, action=exception, error="..tostring(error))
+    log.critical("module=callng, space=event:startup, action=exception, error=%s", error)
 end
 ---- close log ----
 syslog.closelog()
