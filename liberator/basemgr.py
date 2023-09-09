@@ -17,9 +17,9 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
-
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
-                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
+    REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
+)
 from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
 
@@ -389,8 +389,9 @@ def basestartup():
 
         # general lua config
         ngtemplate = _NGLUA.get_template("configuration.j2.lua")
-        ngstream = ngtemplate.render(NODEID=NODEID, REDIS_HOST=REDIS_HOST, REDIS_PORT=REDIS_PORT,
-                                     REDIS_DB=REDIS_DB, REDIS_PASSWORD=REDIS_PASSWORD)
+        ngstream = ngtemplate.render(REDIS_HOST=REDIS_HOST, REDIS_PORT=REDIS_PORT, REDIS_DB=REDIS_DB, REDIS_PASSWORD=REDIS_PASSWORD,
+            NODEID=NODEID, LOGLEVEL=LOGLEVEL, LOGSTACKS=LOGSTACKS,
+        )
         with open(ngcfile, 'w') as ngf:
             ngf.write(ngstream)
 
