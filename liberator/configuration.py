@@ -23,11 +23,17 @@ RUNDIR = '/run/libresbc'
 #-----------------------------------------------------------------------------------------------------
 # LOGGING
 #-----------------------------------------------------------------------------------------------------
-LOGLEVEL = os.getenv('LOGLEVEL')
-_LOGSTACKS = os.getenv('LOGSTACKS')
+LOGLEVEL = 'INFO'
+_LOGLEVEL = os.getenv('LOGLEVEL')
+if _LOGLEVEL:
+    LOGLEVEL = LOGLEVEL.upper()
+    if LOGLEVEL not in ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL']:
+        LOGLEVEL = 'INFO'
+
 LOGSTACKS = ['SYSLOG']
+_LOGSTACKS = os.getenv('LOGSTACKS')
 if _LOGSTACKS:
-    LOGSTACKS = _LOGSTACKS.split(',')
+    LOGSTACKS = _LOGSTACKS.upper().split(',')
     if not any(logstack in LOGSTACKS for logstack in ['FILE', 'SYSLOG', 'CONSOLE']):
         LOGSTACKS = ['SYSLOG']
 
