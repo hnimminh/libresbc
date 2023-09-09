@@ -7,15 +7,22 @@
 -- All Rights Reserved.
 --
 
-require("callng.configuration")
-
 -- REQUIRE
 socket = require("socket")
 syslog = require("posix.syslog")
 json = require("json")
 redis = require("redis")
+require("callng.configuration")
+log = require("callng.nglog")
+
+log.stacks = {
+    console =   LOGSTACK_CONSOLE,
+    file    =   LOGSTACK_FILE,
+    syslog  =   LOGSTACK_SYSLOG
+}
+log.level, log.host, log.name = LOGLEVEL, NODEID, 'libresbc'
+
 random = math.random
-----
 unpack = _G.unpack or table.unpack
 __space__ = ' '
 __comma__ = ','
@@ -32,65 +39,6 @@ end
 ---------------------****|  FUNDAMENTAL FUNCTION   |****---------------------
 ---------------------******************************--------------------------
 
-function logger(msg)
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
-    syslog.syslog(syslog.LOG_INFO, msg)
-end
-
-function dlogger(msg)
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL6)
-    syslog.syslog(syslog.LOG_DEBUG, msg)
-end
-
-
-function logify(...)
-    local arg = {...}
-    local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
-    -- write log
-    logger(message)
-end
-
-function delogify(...)
-    local arg = {...}
-    local message = arg[1]..'='..tostring(arg[2])
-    for i=3,#arg,2 do message = message..', '..arg[i]..'='..tostring(arg[i+1]) end
-    -- write log
-    dlogger(message)
-end
-
---- log utils
-log = {}
-
-function log:debug(text, ...)
-    freeswitch.consoleLog("debug", string.format(text.."\n", ...))
-end
-
-function log:info(text, ...)
-    freeswitch.consoleLog("info", string.format(text.."\n", ...))
-end
-
-function log:notice(text, ...)
-    freeswitch.consoleLog("notice", string.format(text.."\n", ...))
-end
-
-function log:warn(text, ...)
-    freeswitch.consoleLog("warning", string.format(text.."\n", ...))
-end
-
-function log:error(text, ...)
-    freeswitch.consoleLog("err", string.format(text.."\n", ...))
-end
-
-function log:critical(text, ...)
-    freeswitch.consoleLog("crit", string.format(text.."\n", ...))
-end
-
-function log:alert(text, ...)
-    freeswitch.consoleLog("alert", string.format(text.."\n", ...))
-end
-
--------------------------------------------------------------------------
 function ismeberof(intable, value)
 	for i=1, #intable do
 		if value == intable[i] then return true end

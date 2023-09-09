@@ -11,7 +11,6 @@ import traceback
 import re
 import json
 import hashlib
-
 import redis
 import validators
 from pydantic import BaseModel, Field, validator, root_validator, schema
@@ -21,11 +20,10 @@ from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_network as IPvNetwork
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
-
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
                            NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logify, debugy, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
+from utilities import logger, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -91,7 +89,7 @@ try:
     _max_calls_per_second = attributes.get('max_calls_per_second')
     if _max_calls_per_second: CLUSTERS['max_calls_per_second'] = _max_calls_per_second
 except Exception as e:
-    logify(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
+    logger.error(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PREDEFINED INFORMATION
@@ -164,7 +162,7 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=change_cluster, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=change_cluster, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -176,7 +174,7 @@ def get_cluster(response: Response):
         response.status_code, result = 200, CLUSTERS
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -226,7 +224,7 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -268,7 +266,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'netalias', 'sipprofiles': sipprofiles, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -292,7 +290,7 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         # delete action perform only no one use it so no-one use mean no need reload as this not loaded to memory
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -310,7 +308,7 @@ def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -332,7 +330,7 @@ def list_netalias(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -361,7 +359,7 @@ def update_fwset(reqbody: List[Union[IPv4Address, IPv6Address]], response: Respo
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_fwset, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_fwset, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -377,7 +375,7 @@ def get_fwset(response: Response):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=get_fwset, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=get_fwset, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -439,7 +437,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -476,7 +474,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'sipprofiles': sipprofiles, 'name': name, '_name': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -502,7 +500,7 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'acl', 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -520,7 +518,7 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -542,7 +540,7 @@ def list_acl(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -667,7 +665,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'create', 'sipprofile': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -729,7 +727,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'update', 'sipprofile': name, '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -762,7 +760,7 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiasip', 'action': 'delete', '_sipprofile': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -780,7 +778,7 @@ def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -807,7 +805,7 @@ def list_sipprofile(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -851,7 +849,7 @@ def create_preanswer_class(reqbody: PreAnswerModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -882,7 +880,7 @@ def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifi
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -903,7 +901,7 @@ def delete_preanswer_class(response: Response, identifier: str=Path(..., regex=_
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -921,7 +919,7 @@ def detail_preanswer_class(response: Response, identifier: str=Path(..., regex=_
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -948,7 +946,7 @@ def list_preanswer_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1003,7 +1001,7 @@ def create_media_class(reqbody: MediaModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1034,7 +1032,7 @@ def update_media_class(reqbody: MediaModel, response: Response, identifier: str=
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1055,7 +1053,7 @@ def delete_media_class(response: Response, identifier: str=Path(..., regex=_NAME
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1073,7 +1071,7 @@ def detail_media_class(response: Response, identifier: str=Path(..., regex=_NAME
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1100,7 +1098,7 @@ def list_media_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1137,7 +1135,7 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1168,7 +1166,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1189,7 +1187,7 @@ def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_N
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1207,7 +1205,7 @@ def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_N
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1234,7 +1232,7 @@ def list_capacity_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1264,7 +1262,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1297,7 +1295,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1318,7 +1316,7 @@ def delete_translation_class(response: Response, identifier: str=Path(..., regex
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1336,7 +1334,7 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1362,7 +1360,7 @@ def list_translation_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1460,7 +1458,7 @@ def create_manipulation(reqbody: ManipulationModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_manipulation, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_manipulation, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1499,7 +1497,7 @@ def update_manipulation_class(reqbody: ManipulationModel, response: Response, id
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1521,7 +1519,7 @@ def delete_manipulation_class(response: Response, identifier: str=Path(..., rege
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1539,7 +1537,7 @@ def detail_manipulation_class(response: Response, identifier: str=Path(..., rege
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1565,7 +1563,7 @@ def list_manipulation_class(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1646,7 +1644,7 @@ def create_gateway(reqbody: GatewayModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1692,7 +1690,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'sofiagw', 'action': 'update', 'gateway': name, '_gateway': identifier, 'sipprofile': sipprofile, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1714,7 +1712,7 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1732,7 +1730,7 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1759,7 +1757,7 @@ def list_gateway(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -1934,7 +1932,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'create', 'intcon': name, 'sipprofile': sipprofile, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2030,7 +2028,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'update', 'intcon': name, '_intcon': identifier, 'sipprofile': sipprofile, '_sipprofile': _sipprofile, 'gateways': list(gateways.keys()), '_gateways': _gws, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2079,7 +2077,7 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'outbound:intcon', 'action': 'delete', '_intcon': identifier, '_sipprofile': _sipprofile, '_gateways': _gws, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2099,7 +2097,7 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2127,7 +2125,7 @@ def list_outbound_interconnect(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_outbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_outbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2240,7 +2238,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'create', 'intcon': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2335,7 +2333,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'update', 'intcon': name, '_intcon': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2378,7 +2376,7 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'inbound:intcon', 'action': 'delete', '_intcon': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2394,7 +2392,7 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2421,7 +2419,7 @@ def list_inbound_interconnect(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_inbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_inbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2512,7 +2510,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2565,7 +2563,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2601,7 +2599,7 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2658,7 +2656,7 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2686,7 +2684,7 @@ def list_routing_table(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2787,7 +2785,7 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2843,7 +2841,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2884,7 +2882,7 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2942,7 +2940,7 @@ def create_access_domain_policy(reqbody: DomainPolicy, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -2967,7 +2965,7 @@ def update_access_domain_policy(reqbody: DomainPolicy, response: Response):
             rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'policy:domain', 'action': 'update', 'layer': layer, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3002,7 +3000,7 @@ def delete_access_domain_policy(response: Response, domain:str=Path(..., regex=_
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_access_domain_policy, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3025,7 +3023,7 @@ def detail_access_domain_policy(response: Response, domain:str=Path(..., regex=_
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3042,7 +3040,7 @@ def list_access_domain_policy(response: Response):
         result = [getaname(mainkey) for mainkey in mainkeys]
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_access_domain_policy, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3139,7 +3137,7 @@ def create_access_service(reqbody: AccessService, response: Response):
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'create', 'name': name, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3192,7 +3190,7 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'update', 'name': name, '_name': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3220,7 +3218,7 @@ def delete_access_service(response: Response, identifier: str=Path(..., regex=_N
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'access:service', 'action': 'delete', '_name': identifier, 'requestid': requestid}))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3236,7 +3234,7 @@ def detail_access_service(response: Response, identifier: str=Path(..., regex=_N
         result = jsonhash(rdbconn.hgetall(_name_key))
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_access_service, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3262,7 +3260,7 @@ def list_access_service(response: Response):
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_access_service, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_access_service, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3304,7 +3302,7 @@ def create_access_directory_user(reqbody: UserDirectory, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=create_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=create_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3323,7 +3321,7 @@ def update_access_directory_user(reqbody: UserDirectory, response: Response):
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=update_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=update_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3338,7 +3336,7 @@ def delete_access_directory_user(response: Response, domain: str=Path(..., regex
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=delete_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=delete_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3353,7 +3351,7 @@ def detail_access_directory_user(response: Response, domain: str=Path(..., regex
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=detail_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=detail_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -3377,6 +3375,6 @@ def list_access_directory_user(response: Response, domain: str=Path(..., regex=r
         response.status_code, result = 200, data
     except Exception as e:
         response.status_code, result = 500, None
-        logify(f"module=liberator, space=libreapi, action=list_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=libreapi, action=list_access_directory_user, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result

@@ -450,7 +450,7 @@ function normalize(DxLeg, NgVars)
                 end
             elseif action == 'log' then
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-                logify('module', 'callng', 'space', 'callfunc', 'action', 'normalize', 'seshid', NgVars.seshid, 'log', valuestr)
+                log.info('module=callng, space=callfunc, action=normalize, seshid=%s, log=%s', NgVars.seshid, valuestr)
             elseif action == 'hangup' then
                 NgVars.LIBRE_HANGUP_CAUSE = values[1]
                 DxLeg.hangup()
@@ -497,7 +497,7 @@ function manipulate(DxLeg, NgVars)
                 end
             elseif action == 'log' then
                 local valuestr = turnvalues(values, refervar, pattern, DxLeg, NgVars)
-                logify('module', 'callng', 'space', 'callfunc', 'action', 'manipulate', 'seshid', NgVars.seshid, 'log', valuestr)
+                log.info('module=callng, space=callfunc, action=manipulate, seshid=%s, log=%s', NgVars.seshid, valuestr)
             elseif action == 'hangup' then
                 NgVars.LIBRE_HANGUP_CAUSE = values[1]
                 DxLeg.hangup()
@@ -540,7 +540,7 @@ local function curlroute(url, query)
     local p, s
     local ok, err, body, status = curlget( url..'?'..query, {["x-nodeid"] = NODEID})
     if not ok or status~=200 then
-        logify('module', 'callng', 'space', 'callfunc', 'action', 'curlroute', 'url', url, 'query', query, 'error', err)
+        log.error('module=callng, space=callfunc, action=curlroute, url=%s, query=%s, error=%s', url, query, err)
     else
         p, s = unpack(json.decode(body))
     end
@@ -574,7 +574,7 @@ local function httproute(url, query)
     local p, s
     local res, code, _, _, body = httprequest("GET", url..'?'..query, nil, {["x-nodeid"] = NODEID})
     if res==nil or code~=200 then
-        logify('module', 'callng', 'space', 'callfunc', 'action', 'httproute', 'url', url, 'query', query, 'error', code)
+        log.error('module=callng, space=callfunc, action=httproute, url=%s, query=%s, error=%s', url, query, code)
     else
         p, s = unpack(json.decode(table.concat(body)))
     end

@@ -21,7 +21,7 @@ import redis
 from configuration import (_APPLICATION, _SWVERSION, NODEID, SWCODECS, CLUSTERS,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, REDIS_TIMEOUT,
                            LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE, CDRFNAME_INTERVAL, CDRFNAME_FMT)
-from utilities import logify, debugy
+from utilities import logger
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=REDIS_TIMEOUT)
@@ -215,7 +215,7 @@ class CDRHandler(Thread):
         try:
             # parse and refine cdr
             self.refine()
-            logify(f"module=liberator, space=cdr, action=cdrnotifier, uuid={self.uuid}, data={self.cdrdata}")
+            logger.info(f"module=liberator, space=cdr, action=cdrnotifier, uuid={self.uuid}, data={self.cdrdata}")
             # save the cdr to destination
             cdrsaved = True; waiting = 5; attempt = 0
             while attempt < MAXRETRY and not self.stop:
@@ -227,12 +227,12 @@ class CDRHandler(Thread):
                 attempt += 1
                 if cdrsaved:
                     if attempt > MAXRETRY-2:
-                        logify(f"module=liberator, space=cdr, action=savehandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
+                        logger.info(f"module=liberator, space=cdr, action=savehandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
                     break
                 else:
                     backoff = reebackoff(waiting, attempt)
                     if attempt >= MAXRETRY-2:
-                        logify(f"module=liberator, space=cdr, action=savehandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
+                        logger.warning(f"module=liberator, space=cdr, action=savehandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
                     time.sleep(backoff)
 
             # save cdr to local file
@@ -246,16 +246,16 @@ class CDRHandler(Thread):
                 attempt += 1
                 if rcleaned:
                     if attempt > MAXRETRY-2:
-                        logify(f"module=liberator, space=cdr, action=rdbhandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
+                        logger.info(f"module=liberator, space=cdr, action=rdbhandler, state=clear, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}")
                     break
                 else:
                     backoff = reebackoff(waiting, attempt)
                     if attempt >= MAXRETRY-2:
-                        logify(f"module=liberator, space=cdr, action=rdbhandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
+                        logger.warning(f"module=liberator, space=cdr, action=rdbhandler, state=stuck, nodeid={NODEID}, uuid={self.uuid}, attempted={attempt}, backoff={backoff}")
                     time.sleep(backoff)
 
         except Exception as e:
-            logify(f"module=liberator, space=cdr, class=CDRHandler, action=run, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
+            logger.error(f"module=liberator, space=cdr, class=CDRHandler, action=run, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
             time.sleep(5)
         finally: pass
 
@@ -365,7 +365,7 @@ class CDRHandler(Thread):
             if access_srcip: cdrdata['access_srcip'] = access_srcip
             if access_userid: cdrdata['access_userid'] = access_userid
         except Exception as e:
-            logify(f"module=liberator, space=cdr, class=CDRHandler, action=refine, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
+            logger.error(f"module=liberator, space=cdr, class=CDRHandler, action=refine, uuid={self.uuid}, exception={e}, tracings={traceback.format_exc()}")
             cdrdata = {}
         finally:
            self.cdrdata = cdrdata
@@ -374,11 +374,11 @@ class CDRHandler(Thread):
         try:
             filename = f'{cdrtimestamp()}.json'
             cdrjson = json.dumps(self.details)
-            logify(f"module=liberator, space=cdr, action=filesave, nodeid={NODEID}, data={cdrjson}, filename={filename}")
+            logger.info(f"module=liberator, space=cdr, action=filesave, nodeid={NODEID}, data={cdrjson}, filename={filename}")
             with open(f'{LOGDIR}/cdr/{filename}', "a") as jsonfile:
                 jsonfile.write(cdrjson + '\n')
         except Exception as e:
-            logify(f"module=liberator, space=cdr, class=CDRHandler, action=filesave, exception={e}, tracings={traceback.format_exc()}")
+            logger.error(f"module=liberator, space=cdr, class=CDRHandler, action=filesave, exception={e}, tracings={traceback.format_exc()}")
 
     def httpsave(self):
         headers = {'Content-Type': 'application/json', 'X-Signature': f'{_APPLICATION} {_SWVERSION} ({NODEID})'}
@@ -393,10 +393,10 @@ class CDRHandler(Thread):
                 if status==200:
                     shortcdr = {'uuid': self.cdrdata.get('uuid'), 'seshid': self.cdrdata.get('seshid')}
                     end = time.time()
-                    logify(f"module=liberator, space=cdr, class=CDRHandler, action=httpsave, nodeid={NODEID}, endpoint={endpoint}, status={status}, attempt={attempt}, shortcdr={shortcdr}, delay={round(end-start, 3)}")
+                    logger.info(f"module=liberator, space=cdr, class=CDRHandler, action=httpsave, nodeid={NODEID}, endpoint={endpoint}, status={status}, attempt={attempt}, shortcdr={shortcdr}, delay={round(end-start, 3)}")
                     break
             except Exception as e: # once exception occurred, log the error then retry
-                logify(f"module=liberator, space=cdr, class=CDRHandler, action=httpsave, nodeid={NODEID}, endpoint={endpoint}, status={status}, attempt={attempt}, exception={e}, tracings={traceback.format_exc()}")
+                logger.warning(f"module=liberator, space=cdr, class=CDRHandler, action=httpsave, nodeid={NODEID}, endpoint={endpoint}, status={status}, attempt={attempt}, exception={e}, tracings={traceback.format_exc()}")
         # return result
         if status==200: return True
         else: return False
@@ -410,7 +410,7 @@ class CDRHandler(Thread):
             pipe.execute()
             result = True
         except Exception as e:
-            logify(f"module=liberator, space=cdr, class=CDRHandler, action=rclean, exception={e}, tracings={traceback.format_exc()}")
+            logger.error(f"module=liberator, space=cdr, class=CDRHandler, action=rclean, exception={e}, tracings={traceback.format_exc()}")
             result = False
         finally:
             return result
@@ -423,7 +423,7 @@ class CDRMaster(Thread):
         self.setName('CDRMaster')
 
     def run(self):
-        logify(f"module=liberator, space=cdr, action=start_cdr_thread")
+        logger.info(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
         while not self.stop:
             try:
@@ -443,7 +443,7 @@ class CDRMaster(Thread):
                 # wait and try again
                 time.sleep(5)
             except Exception as e:
-                logify(f"module=liberator, space=cdr, class=CDRMaster, action=run, exception={e}, tracings={traceback.format_exc()}")
+                logger.error(f"module=liberator, space=cdr, class=CDRMaster, action=run, exception={e}, tracings={traceback.format_exc()}")
                 time.sleep(2)
             finally: pass
 

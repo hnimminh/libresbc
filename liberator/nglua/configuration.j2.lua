@@ -38,8 +38,12 @@ VIOLATED_BLOCK_TIME = 60*ROLLING_WINDOW_TIME           --- if violate block 6000
 
 SRPT_ENCRYPTION_SUITES = {'AES_CM_128_HMAC_SHA1_80', 'AES_CM_128_HMAC_SHA1_32'}
 
---- LOG DIRECTORY
-LOGDIR = '/var/log/libresbc'
+--- LOG SETTINGS
+LOGDIR              = '/var/log/libresbc'
+LOGLEVEL            = '{{LOGLEVEL}}'
+LOGSTACK_CONSOLE    = {{ 'true' if 'CONSOLE' in LOGSTACKS else 'false' }}
+LOGSTACK_FILE       = {{ "LOGDIR..'/callng.log'" if 'FILE' in LOGSTACKS else 'false' }}
+LOGSTACK_SYSLOG     = {{ 'true' if 'SYSLOG' in LOGSTACKS else 'false' }}
 
 -----------------------------------------------------------------------------------------------------
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'

@@ -6,14 +6,16 @@
 # Portions created by the Initial Developer are Copyright (C) the Initial Developer.
 # All Rights Reserved.
 #
-
-import syslog
+import os
+import sys
 import json
+import time
 import random
+import logging
+from logging.handlers import TimedRotatingFileHandler, SysLogHandler
 from threading import Thread
-from uuid import uuid4
-from hashlib import md5
 from contextvars import ContextVar
+from configuration import LOGDIR, LOGSTACKS, LOGLEVEL, NODEID
 
 # delimiter for data transformation
 _delimiter_ = ','
@@ -22,13 +24,43 @@ _request_uuid_ctx_var: ContextVar[str] = ContextVar('request_uuid', default=None
 def get_request_uuid() -> str:
     return _request_uuid_ctx_var.get()
 
-def logify(msg):
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL7)
-    syslog.syslog(syslog.LOG_INFO, msg)
 
-def debugy(msg):
-    syslog.openlog('libresbc', syslog.LOG_PID, syslog.LOG_LOCAL7)
-    syslog.syslog(syslog.LOG_DEBUG, msg)
+def getlogger(name):
+    FORMATTER = logging.Formatter(f"%(asctime)s.%(msecs)03d{time.strftime('%z')} {NODEID} %(name)s %(process)d %(levelname)s %(message)s", datefmt='%Y-%m-%dT%H:%M:%S')
+
+    _logger = logging.getLogger(name)
+
+    if LOGLEVEL == 'DEBUG':
+        _logger.setLevel(logging.DEBUG)
+    elif LOGLEVEL == 'WARNING':
+        _logger.setLevel(logging.WARNING)
+    elif LOGLEVEL == 'ERROR':
+        _logger.setLevel(logging.ERROR)
+    elif LOGLEVEL == 'CRITICAL':
+        _logger.setLevel(logging.CRITICAL)
+    else:
+        _logger.setLevel(logging.INFO)
+
+    if 'SYSLOG' in LOGSTACKS:
+        syslog_handler = SysLogHandler(facility=SysLogHandler.LOG_LOCAL7, address='/dev/log')
+        syslog_handler.setFormatter(logging.Formatter("%(message)s"))
+        syslog_handler.ident = f'progname[{os.getpid()}]:'
+        _logger.addHandler(syslog_handler)
+    if 'FILE' in LOGSTACKS:
+        file_handler = TimedRotatingFileHandler(f'{LOGDIR}/liberator.log', when='midnight')
+        file_handler.setFormatter(FORMATTER)
+        _logger.addHandler(file_handler)
+    if 'CONSOLE' in LOGSTACKS:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(FORMATTER)
+        _logger.addHandler(console_handler)
+    # with this pattern, it's rarely necessary
+    # to propagate the error up to parent
+    _logger.propagate = False
+    return _logger
+
+logger = getlogger('libresbc')
+
 
 def int2bool(number):
     number = int(number)

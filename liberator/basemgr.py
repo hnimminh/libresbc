@@ -9,20 +9,18 @@
 
 import time
 import traceback
-import random
 import json
 from threading import Thread
 from subprocess import Popen, PIPE
 import os
-
 import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
-
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
-                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT)
-from utilities import logify, debugy, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
+    REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
+)
+from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -158,17 +156,17 @@ def nftupdate(data):
         if stderr:
             result = False
             stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, nftfile={nftfile}, error={stderr}")
+            logger.error(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, nftfile={nftfile}, error={stderr}")
         else:
             old = osrename('/etc/nftables.conf', '/etc/nftables.conf.old')
             new = osrename('/etc/nftables.conf.new', '/etc/nftables.conf')
             if not (old and new):
-                logify(f"module=liberator, space=basemgr, action=osrename, requestid={requestid}, subtasks=rename:{old}:{new}")
+                logger.info(f"module=liberator, space=basemgr, action=osrename, requestid={requestid}, subtasks=rename:{old}:{new}")
             else:
-                logify(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, result=success")
+                logger.info(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=nftupdate, data={data}, exception={e}, traceback={traceback.format_exc()}")
+        logger.critical(f"module=liberator, space=basemgr, action=nftupdate, data={data}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -191,12 +189,12 @@ def nftsets(setname, ops, srcips, bantime=None):
         if stderr:
             result = False
             stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=nftsets, error={stderr}")
+            logger.error(f"module=liberator, space=basemgr, action=nftsets, error={stderr}")
         else:
-            logify(f"module=liberator, space=basemgr, action=nftsets, ops={ops}, setname={setname}, srcips={srcips}, result=success")
+            logger.info(f"module=liberator, space=basemgr, action=nftsets, ops={ops}, setname={setname}, srcips={srcips}, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
+        logger.critical(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -222,11 +220,11 @@ def fsinstance(data):
         if stderr and not stderr.endswith('Backgrounding.'):
             result = False
             stderr = stderr.replace('\n', '')
-            logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
-        else: logify(f"module=liberator, space=basemgr, action=fsinstance.fsrun, result=success")
+            logger.error(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
+        else: logger.info(f"module=liberator, space=basemgr, action=fsinstance.fsrun, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
+        logger.critical(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -258,11 +256,11 @@ def fssocket(data):
                         _result = True
                     else:
                         _result = False
-                        logify(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
+                        logger.warning(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                     result = bool(result and _result)
-        logify(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
+        logger.info(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
     except Exception as e:
-        logify(f"module=liberator, space=basemgr, action=fssocket, data={data}, exception={e}, tracings={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=basemgr, action=fssocket, data={data}, exception={e}, tracings={traceback.format_exc()}")
     finally:
         if fs and fs.connected: fs.stop()
         return result
@@ -296,12 +294,12 @@ def kaminstance(data):
             _, stderr = bdecode(kamend.communicate())
             if stderr:
                 stderr = stderr.replace('\n', '')
-                logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
-            else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
+                logger.warning(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
+            else: logger.info(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
 
             cfgdel = osdelete(_cfgfile)
             luadel = osdelete(_luafile)
-            logify(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
+            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
         # ------------------------------------------------------------
         # LAUNCH THE NEW INSTANCE
         # ------------------------------------------------------------
@@ -350,11 +348,11 @@ def kaminstance(data):
             if stderr:
                 result = False
                 stderr = stderr.replace('\n', '')
-                logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, cfgfile={cfgfile}, error={stderr}")
-            else: logify(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
+                logger.error(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, cfgfile={cfgfile}, error={stderr}")
+            else: logger.info(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
     except Exception as e:
         result = False
-        logify(f"module=liberator, space=basemgr, action=kaminstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
+        logger.critical(f"module=liberator, space=basemgr, action=kaminstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
 
@@ -365,16 +363,16 @@ def kaminstance(data):
 @threaded
 def rdbinstance():
     try:
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
+        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
         rdbrun = Popen(['/usr/bin/redis-server', '--port', '0', '--pidfile', RDB_PIDFILE, '--unixsocket', RDB_USOCKET, '--unixsocketperm', '755',
                         '--dbfilename', 'libresbc.rdb', '--dir', ETCDIR, '--loglevel', 'warning'])
         _, stderr = bdecode(rdbrun.communicate())
         if stderr:
-            logify(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
+            logger.error(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
         else:
-            logify(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, result=success")
+            logger.info(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, result=success")
     except Exception as e:
-        logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+        logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -386,13 +384,14 @@ def basestartup():
     result = False
     ngcfile = '../callng/configuration.lua'
     try:
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
+        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
 
         # general lua config
         ngtemplate = _NGLUA.get_template("configuration.j2.lua")
-        ngstream = ngtemplate.render(NODEID=NODEID, REDIS_HOST=REDIS_HOST, REDIS_PORT=REDIS_PORT,
-                                     REDIS_DB=REDIS_DB, REDIS_PASSWORD=REDIS_PASSWORD)
+        ngstream = ngtemplate.render(REDIS_HOST=REDIS_HOST, REDIS_PORT=REDIS_PORT, REDIS_DB=REDIS_DB, REDIS_PASSWORD=REDIS_PASSWORD,
+            NODEID=NODEID, LOGLEVEL=LOGLEVEL, LOGSTACKS=LOGSTACKS,
+        )
         with open(ngcfile, 'w') as ngf:
             ngf.write(ngstream)
 
@@ -406,10 +405,10 @@ def basestartup():
     except redis.RedisError as e:
         time.sleep(10)
     except Exception as e:
-        logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+        logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
         time.sleep(5)
     finally:
-        logify(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'completed' if result else 'dropped'}")
+        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'completed' if result else 'dropped'}")
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -423,7 +422,7 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
         _CLUSTER_   = 'cluster'
         _NETALIAS_  = 'netalias'
@@ -441,7 +440,7 @@ class BaseEventHandler(Thread):
                 pubsub = rdbconn.pubsub()
                 pubsub.subscribe([CHANGE_CFG_CHANNEL, NODEID_CHANNEL])
                 for message in pubsub.listen():
-                    # logify(f'module=liberator, space=basemgr, action=report, message={message}')
+                    logger.info(f'module=liberator, space=basemgr, action=report, message={message}')
                     msgtype = message.get("type")
                     if msgtype == "message":
                         data = json.loads(message.get("data"))
@@ -530,7 +529,7 @@ class BaseEventHandler(Thread):
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
-                logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+                logger.error(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
                 time.sleep(2)
             finally:
                 if pubsub in locals():
@@ -547,7 +546,7 @@ class SecurityEventHandler(Thread):
         self.setName('SecurityEventHandler')
 
     def run(self):
-        logify(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
         # portions
         _kamiauthfailure = 'kami:authfailure'
         _kamiattackavoid = 'kami:attackavoid'
@@ -586,7 +585,7 @@ class SecurityEventHandler(Thread):
             except redis.RedisError as e:
                 time.sleep(5)
             except Exception as e:
-                logify(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
+                logger.error(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
                 time.sleep(2)
             finally:
                 if pubsub in locals():

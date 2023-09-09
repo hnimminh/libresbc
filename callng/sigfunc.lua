@@ -46,6 +46,6 @@ end
 function secpublish(topic, srcip, bantime, layer, useragent, authuser, violated)
     local data = json.encode({portion='kami:'..topic, srcips={srcip}, bantime=bantime, layer=layer, useragent=useragent, authuser=authuser, violated=violated})
     rdbconn:publish(SECURITY_CHANNEL, data)
-    logify('module', 'callng', 'space', 'kami', 'action', 'secpublish', 'channel', SECURITY_CHANNEL, 'data', data)
+    log.info('module=callng, space=kami, action=secpublish, channel=%s, data=%s', SECURITY_CHANNEL, data)
 end
 
