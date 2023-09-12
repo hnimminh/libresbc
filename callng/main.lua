@@ -232,7 +232,7 @@ local function main()
                 local _sip_network_ip = OutLeg:getVariable("sip_network_ip")
                 local _sofia_profile_name = OutLeg:getVariable("sofia_profile_name")
                 local _sip_call_id = OutLeg:getVariable("sip_call_id")
-                log.info('module=callng, space=main, action=report, seshid=%s, uuid=%s, context=%, direction=%s, sipprofile=%s, ruri=%s, from_user=%s, to_user=%s, destination_number=%s, remote_ip=%s, callid=%s',
+                log.info('module=callng, space=main, action=report, seshid=%s, uuid=%s, context=%s, direction=%s, sipprofile=%s, ruri=%s, from_user=%s, to_user=%s, destination_number=%s, remote_ip=%s, callid=%s',
                     NgVars.seshid, _real_uuid, _context, _direction, _sofia_profile_name, _sip_req_uri, _sip_from_user, _sip_to_user, _destination_number, _sip_network_ip, _sip_call_id)
 
                 --- BRIDGE 2 LEGs
