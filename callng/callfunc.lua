@@ -326,10 +326,9 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 function boolstr(str)
     if str == 'true' then
-        return false
-    else
         return true
     end
+    return false
 end
 
 
@@ -358,6 +357,7 @@ function ifverify(conditions, DxLeg, NgVars)
             else
                 sublogic = false
             end
+            log.debug('ifverify, pattern=%s, refervar=%s, refervalue=%s, sublogic=%s, logic=%s ', pattern, refervar, refervalue, sublogic, logic)
             -- logic break
             if logic == 'AND' then
                 if sublogic == false then
@@ -423,11 +423,11 @@ function normalize(DxLeg, NgVars)
         local manipulations = jsonhash(rdbconn:hgetall('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
         -- check the condition
-        local positive = ifverify(conditions, DxLeg)
+        local positive = ifverify(conditions, DxLeg, NgVars)
         -- run action
-        local maniactions = manipulations.actions
+        local maniactions = manipulations.actions or {}
         if positive == false then
-            maniactions = manipulations.antiactions
+            maniactions = manipulations.antiactions or {}
         end
         for j=1,#maniactions do
             local action = maniactions[j].action
@@ -470,11 +470,11 @@ function manipulate(DxLeg, NgVars)
         local manipulations = jsonhash(rdbconn:hgetall('class:manipulation:'..classes[i]))
         local conditions = manipulations.conditions
         -- check the condition
-        local positive = ifverify(conditions)
+        local positive = ifverify(conditions, DxLeg, NgVars)
         -- run action
-        local maniactions = manipulations.actions
+        local maniactions = manipulations.actions or {}
         if positive == false then
-            maniactions = manipulations.antiactions
+            maniactions = manipulations.antiactions or {}
         end
         for j=1,#maniactions do
             local action = maniactions[j].action
