@@ -47,7 +47,8 @@ const APIGuide = {
                 "PCMU",
                 "OPUS",
                 "G729",
-                "AMR-WB"
+                "AMR-WB",
+                "GSM"
             ]
         }
     },

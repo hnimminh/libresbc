@@ -960,6 +960,7 @@ class CodecEnum(str, Enum):
     G729 = "G729"
     AMR = "AMR"
     AMRWB = "AMR-WB"
+    GSM = "GSM"
 
 
 class NegotiationMode(str, Enum):
