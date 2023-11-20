@@ -20,6 +20,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Callng log refactor with nglog
 - Fix normalization rule logic revert
 - Add GSM codec to support list
+- Add progress_time, progress_media_time to CDR
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table

@@ -278,6 +278,8 @@ class CDRHandler(Thread):
             start_time = fmtime(self.details.get('start_time'))
             answer_time  = fmtime(self.details.get('answer_time'))
             end_time = fmtime(self.details.get('end_time'))
+            progress_time = fmtime(self.details.get('progress_time'))
+            progress_media_time = fmtime(self.details.get('progress_media_time'))
             duration = self.details.get('duration', 0)
             # sip address
             sip_network_ip = self.details.get('sip_network_ip')
@@ -344,6 +346,8 @@ class CDRHandler(Thread):
                 'start_time': start_time,
                 'answer_time': answer_time,
                 'end_time': end_time,
+                'progress_time': progress_time,
+                'progress_media_time': progress_media_time,
                 'duration': duration,
                 'sip_network_ip': sip_network_ip,
                 'sip_network_port': sip_network_port,
