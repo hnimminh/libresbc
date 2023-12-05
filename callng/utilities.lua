@@ -154,6 +154,50 @@ function jsonhash(data)
     return data
 end
 
+----------------------------------------------------------------------------
+
+-- CURL REQUEST
+function curlget(url, headers)
+    local status, body
+    local curl = require("cURL")
+    local c = curl.easy{
+        url = url,
+        httpheader = headers,
+        [curl.OPT_TIMEOUT] = 5,
+        writefunction = function(r) body = r end
+    }
+
+    local ok, err = pcall(function() c:perform() end)
+    if not ok then
+        return ok, err, body, status
+    end
+    status = c:getinfo_response_code()
+    c:close()
+    return ok, err, body, status
+end
+
+-- HTTP REQUEST
+local function httprequest(method, url, payload, headers)
+    local http
+    if startswith(url, "https") then
+        http = require("ssl.https")
+    else
+        http = require("socket.http")
+    end
+    http.TIMEOUT = 5
+
+    local body = {}
+    local ltn12 = require("ltn12")
+    local result, code, headers, status = http.request{
+        url = url,
+        method = method,
+        headers = headers,
+        source = ltn12.source.string(payload),
+        sink = ltn12.sink.table(body)
+    }
+
+    return result, code, headers, status, body
+end
 
 ----------------------------------------------------------------------------
 function arraycomplement(ai, aj)
