@@ -56,6 +56,7 @@ LOGSTACKS           = (os.getenv('LOGSTACKS') or EMPTYSTRING):upper()
 LOGSTACK_CONSOLE    = string.find(LOGSTACKS, 'CONSOLE')
 LOGSTACK_FILE       = string.find(LOGSTACKS, 'FILE') and LOGDIR..'/callng.log'
 LOGSTACK_SYSLOG     = string.find(LOGSTACKS, 'SYSLOG')
+LOGSTACK_SWITCH     = string.find(LOGSTACKS, 'SWITCH')
 
 -----------------------------------------------------------------------------------------------------
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'

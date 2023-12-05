@@ -21,6 +21,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Fix normalization rule logic revert
 - Add GSM codec to support list
 - Add progress_time, progress_media_time to CDR
+- Add switch built-in log function (logstack default as switch)
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table
