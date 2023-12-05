@@ -19,6 +19,7 @@
   * [[Routing]]
   * [[Security]]
   * [[Cluster]]
+* [[CDR ‐ Call Detail Record]]
 * [[Configuration Examples]]
 * [[Architecture|Home#architecture]]
 * [[FAQ|Home#frequent-asked-questions]]
