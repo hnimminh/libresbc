@@ -22,6 +22,8 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Add GSM codec to support list
 - Add progress_time, progress_media_time to CDR
 - Add switch built-in log function (logstack default as switch)
+- EOL liberator provision callng config
+- Change config provision method from pre-process to bindings
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table

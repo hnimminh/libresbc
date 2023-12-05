@@ -1,19 +1,12 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
-  <X-PRE-PROCESS cmd="set" data="fsxmlapi=http://127.0.0.1:8080/cfgapi/fsxml"/>
   <X-PRE-PROCESS cmd="set" data="dblocation=/dev/shm"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESLHOST:-{{eslhost}}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESLPOST:-{{eslport}}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESLPASSWORD:-{{eslpassword}}})"/>
   <!-- BEGIN: CONFIGURATION SECTION -->
   <section name="configuration" description="Various Configuration">
     <!-- ACL ACCESS CONTROL LIST -->
-    <configuration name="acl.conf" description="Network Lists">
-      <network-lists>
-        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/acl"/>
-        <list name="loopback.auto" default="deny">
-          <node type="allow" cidr="127.0.0.1/32"/>
-          <node type="allow" cidr="::1/128"/>
-       </list>
-      </network-lists>
-    </configuration>
     <!-- CONSOLE LOGGER -->
     <configuration name="console.conf" description="Console Logger">
       <mappings>
@@ -25,18 +18,13 @@
       </settings>
     </configuration>
     <!-- DISTRIBUTOR -->
-    <configuration name="distributor.conf" description="Distributor Configuration">
-      <lists>
-        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/distributor"/>
-      </lists>
-    </configuration>
     <!-- EVENT SOCKET -->
     <configuration name="event_socket.conf" description="Socket Client">
       <settings>
         <param name="nat-map" value="false"/>
-        <param name="listen-ip" value="{{eslhost}}"/>
-        <param name="listen-port" value="{{eslport}}"/>
-        <param name="password" value="{{eslpassword}}"/>
+        <param name="listen-ip" value="$${eslhost}"/>
+        <param name="listen-port" value="$${eslport}"/>
+        <param name="password" value="$${eslpassword}"/>
       </settings>
     </configuration>
     <!--- LOGFILE -->
@@ -64,6 +52,8 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value="/usr/share/lua/5.2/?.lua"/> -->
+        <param name="xml-handler-script" value="callng/provisioner.lua"/>
+        <param name="xml-handler-bindings" value="directory|configuration"/>
         <param name="startup-script" value="callng/event.startup.lua"/>
         <hook event="CHANNEL_CREATE" script="callng/event.capacity.lua"/>
         <hook event="CHANNEL_UUID" script="callng/event.capacity.lua"/>
@@ -77,13 +67,7 @@
       <modules>
         <load module="mod_console"/>
         <load module="mod_logfile"/>
-        <load module="mod_sofia"/>
-        <load module="mod_distributor"/>
         <load module="mod_event_socket"/>
-        <load module="mod_lua"/>
-        <load module="mod_commands"/>
-        <load module="mod_dptools"/>
-        <load module="mod_dialplan_xml"/>
         <load module="mod_bcg729"/>
         <load module="mod_amr"/>
         <load module="mod_amrwb"/>
@@ -91,6 +75,12 @@
         <load module="mod_sndfile"/>
         <load module="mod_opus"/>
         <load module="mod_flite"/>
+        <load module="mod_lua"/>
+        <load module="mod_sofia"/>
+        <load module="mod_distributor"/>
+        <load module="mod_commands"/>
+        <load module="mod_dptools"/>
+        <load module="mod_dialplan_xml"/>
       </modules>
     </configuration>
     <!--- CODECS -->
@@ -126,23 +116,11 @@
       </settings>
     </configuration>
     <!--- SOFIA SIP -->
-    <configuration name="sofia.conf" description="sofia Endpoint">
-      <global_settings>
-        <param name="log-level" value="0"/>
-        <param name="debug-presence" value="0"/>
-      </global_settings>
-      <profiles>
-        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/sip-setting"/>
-      </profiles>
-    </configuration>
     <!--- SPANDSP  -->
     <configuration name="spandsp.conf" description="FAX application configuration">
     </configuration>
     <!-- FREESWITCH DEFAULT CONFIGURATION -->
     <configuration name="switch.conf" description="Core Configuration">
-      <settings>
-        <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/switch"/>
-      </settings>
     </configuration>
   </section>
   <!-- END: CONFIGURATION SECTION -->
@@ -186,9 +164,5 @@
     </context>
   </section>
   <!-- END: DIALPLAN SECTION -->
-  <!-- BEGIN: DIRECTORY SECTION -->
-  <section name="directory" description="User Directory">
-    <X-PRE-PROCESS cmd="exec" data="curl $${fsxmlapi}/directory"/>
-  </section>
-  <!-- END: DIRECTORY SECTION -->
+  <!-- BEGIN: DIRECTORY SECTION :END -->
 </document>
