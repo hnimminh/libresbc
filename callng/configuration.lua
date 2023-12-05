@@ -13,6 +13,12 @@ if not NODEID then
     os.exit()
 end
 
+-- LIBERATOR
+LIBERATOR_CFGAPI_URL = os.getenv("LIBERATOR_CFGAPI_URL")
+if not LIBERATOR_CFGAPI_URL then
+    LIBERATOR_CFGAPI_URL = "http://127.0.0.1:8080/cfgapi/fsxml"
+end
+
 --- REDIS ENDPOINT
 REDIS_HOST = os.getenv("REDIS_HOST")
 if not REDIS_HOST then REDIS_HOST = "127.0.0.1" end
@@ -24,7 +30,6 @@ REDIS_DB = os.getenv("REDIS_DB")
 if not REDIS_DB then REDIS_DB = 0 end
 
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
-if not REDIS_PASSWORD then REDIS_PASSWORD = nil end
 
 SCAN_COUNT = 1000
 REDIS_TIMEOUT = 5
@@ -56,6 +61,7 @@ LOGSTACKS           = (os.getenv('LOGSTACKS') or EMPTYSTRING):upper()
 LOGSTACK_CONSOLE    = string.find(LOGSTACKS, 'CONSOLE')
 LOGSTACK_FILE       = string.find(LOGSTACKS, 'FILE') and LOGDIR..'/callng.log'
 LOGSTACK_SYSLOG     = string.find(LOGSTACKS, 'SYSLOG')
+LOGSTACK_SWITCH     = string.find(LOGSTACKS, 'SWITCH')
 
 -----------------------------------------------------------------------------------------------------
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'

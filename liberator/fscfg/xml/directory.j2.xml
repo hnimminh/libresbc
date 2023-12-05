@@ -1,3 +1,6 @@
+<?xml version="1.0"?>
+<document type="freeswitch/xml">
+  <section name="directory" description="User Directory">
     {% for realm, users in directories.items() -%}
     <domain name="{{realm}}">
       {%- for user in users %}
@@ -13,4 +16,5 @@
       {%- endfor %}
     </domain>
     {%- endfor %}
-
+  </section>
+</document>

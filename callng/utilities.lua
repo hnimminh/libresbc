@@ -13,14 +13,13 @@ syslog = require("posix.syslog")
 json = require("json")
 redis = require("redis")
 require("callng.configuration")
-log = require("callng.nglog")
-
-log.stacks = {
+nglog = require("callng.nglog")
+nglog.stacks = {
     console =   LOGSTACK_CONSOLE,
     file    =   LOGSTACK_FILE,
     syslog  =   LOGSTACK_SYSLOG
 }
-log.level, log.host, log.name = LOGLEVEL, NODEID, 'libresbc'
+nglog.level, nglog.host, nglog.name = LOGLEVEL, NODEID, 'libresbc'
 
 random = math.random
 unpack = _G.unpack or table.unpack
@@ -154,6 +153,67 @@ function jsonhash(data)
     return data
 end
 
+----------------------------------------------------------------------------
+--- switch log
+log = {
+    debug    = function(text, ...) freeswitch.consoleLog("debug",   string.format(text.."\n", ...)) end,
+    info     = function(text, ...) freeswitch.consoleLog("info",    string.format(text.."\n", ...)) end,
+    notice   = function(text, ...) freeswitch.consoleLog("notice",  string.format(text.."\n", ...)) end,
+    warning  = function(text, ...) freeswitch.consoleLog("warning", string.format(text.."\n", ...)) end,
+    error    = function(text, ...) freeswitch.consoleLog("err",     string.format(text.."\n", ...)) end,
+    critical = function(text, ...) freeswitch.consoleLog("crit",    string.format(text.."\n", ...)) end,
+    alert    = function(text, ...) freeswitch.consoleLog("alert",   string.format(text.."\n", ...)) end
+}
+
+-- back to nglog
+if LOGSTACK_CONSOLE or LOGSTACK_FILE or LOGSTACK_SYSLOG then
+    log = nglog
+end
+
+----------------------------------------------------------------------------
+
+-- CURL REQUEST
+function curlget(url, headers)
+    local status, body
+    local curl = require("cURL")
+    local c = curl.easy{
+        url = url,
+        httpheader = headers,
+        [curl.OPT_TIMEOUT] = 5,
+        writefunction = function(r) body = r end
+    }
+
+    local ok, err = pcall(function() c:perform() end)
+    if not ok then
+        return ok, err, body, status
+    end
+    status = c:getinfo_response_code()
+    c:close()
+    return ok, err, body, status
+end
+
+-- HTTP REQUEST
+local function httprequest(method, url, payload, headers)
+    local http
+    if startswith(url, "https") then
+        http = require("ssl.https")
+    else
+        http = require("socket.http")
+    end
+    http.TIMEOUT = 5
+
+    local body = {}
+    local ltn12 = require("ltn12")
+    local result, code, headers, status = http.request{
+        url = url,
+        method = method,
+        headers = headers,
+        source = ltn12.source.string(payload),
+        sink = ltn12.sink.table(body)
+    }
+
+    return result, code, headers, status, body
+end
 
 ----------------------------------------------------------------------------
 function arraycomplement(ai, aj)
