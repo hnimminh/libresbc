@@ -13,12 +13,6 @@ if not NODEID then
     os.exit()
 end
 
--- LIBERATOR
-LIBERATOR_CFGAPI_URL = os.getenv("LIBERATOR_CFGAPI_URL")
-if not LIBERATOR_CFGAPI_URL then
-    LIBERATOR_CFGAPI_URL = "http://127.0.0.1:8080/cfgapi/fsxml"
-end
-
 --- REDIS ENDPOINT
 REDIS_HOST = os.getenv("REDIS_HOST")
 if not REDIS_HOST then REDIS_HOST = "127.0.0.1" end

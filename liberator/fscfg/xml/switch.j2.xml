@@ -1,15 +1,7 @@
-<?xml version="1.0"?>
-<document type="freeswitch/xml">
-  <section name="configuration">
-    <!-- <configuration name="switch.conf" description="Core Configuration"> -->
-    <configuration name="post_load_switch.conf" description="Core Configuration">
-      <settings>
+<include>
         <param name="core-db-name" value="/dev/shm/libresbc_core.db"/>
         <param name="max-sessions" value="{{switchattributes.max_concurrent_calls}}"/>
         <param name="sessions-per-second" value="{{switchattributes.max_calls_per_second}}"/>
         <param name="rtp-start-port" value="{{switchattributes.rtp_start_port}}"/>
         <param name="rtp-end-port" value="{{switchattributes.rtp_end_port}}"/>
-      </settings>
-    </configuration>
-  </section>
-</document>
+</include>
