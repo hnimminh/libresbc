@@ -1,8 +1,4 @@
-<?xml version="1.0"?>
-<document type="freeswitch/xml">
-  <section name="configuration" description="Various Configuration">
-    <configuration name="distributor.conf" description="Distributor Configuration">
-      <lists>
+<include>
         {%- for intconname, gateways in interconnections.items() %}
         <list name="{{intconname}}">
           {%- for gateway, weight in gateways.items() %}{% if weight %}
@@ -10,7 +6,4 @@
           {%- endfor %}
         </list>
         {%- endfor %}
-      </lists>
-    </configuration>
-  </section>
-</document>
+</include>

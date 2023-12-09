@@ -1,23 +1,41 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
-  <X-PRE-PROCESS cmd="set" data="dblocation=/dev/shm"/>
+  <X-PRE-PROCESS cmd="exec-set" data="fsxmlapi=(echo ${LIBERATOR_CFGAPI_URL:-http://127.0.0.1:8080/cfgapi/fsxml})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="loglevel=(echo ${LOGLEVEL:-INFO})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESLHOST:-{{eslhost}}})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESLPOST:-{{eslport}}})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESLPASSWORD:-{{eslpassword}}})"/>
+  <X-PRE-PROCESS cmd="set" data="devshm=/dev/shm"/>
   <!-- BEGIN: CONFIGURATION SECTION -->
   <section name="configuration" description="Various Configuration">
     <!-- ACL ACCESS CONTROL LIST -->
+    <configuration name="acl.conf" description="Network Lists">
+      <network-lists>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/acl $${fsxmlapi}/acl"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/acl"/>
+        <list name="loopback.auto" default="deny">
+          <node type="allow" cidr="127.0.0.1/32"/>
+          <node type="allow" cidr="::1/128"/>
+       </list>
+      </network-lists>
+    </configuration>
     <!-- CONSOLE LOGGER -->
     <configuration name="console.conf" description="Console Logger">
       <mappings>
         <map name="all" value="console,debug,info,notice,warning,err,crit,alert"/>
       </mappings>
       <settings>
-        <param name="colorize" value="true"/>
-        <param name="loglevel" value="warning"/>
+        <param name="colorize" value="false"/>
+        <param name="loglevel" value="$${loglevel}"/>
       </settings>
     </configuration>
     <!-- DISTRIBUTOR -->
+    <configuration name="distributor.conf" description="Distributor Configuration">
+      <lists>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/distributor $${fsxmlapi}/distributor"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/distributor"/>
+      </lists>
+    </configuration>
     <!-- EVENT SOCKET -->
     <configuration name="event_socket.conf" description="Socket Client">
       <settings>
@@ -52,8 +70,6 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value="/usr/share/lua/5.2/?.lua"/> -->
-        <param name="xml-handler-script" value="callng/provisioner.lua"/>
-        <param name="xml-handler-bindings" value="directory|configuration"/>
         <param name="startup-script" value="callng/event.startup.lua"/>
         <hook event="CHANNEL_CREATE" script="callng/event.capacity.lua"/>
         <hook event="CHANNEL_UUID" script="callng/event.capacity.lua"/>
@@ -116,11 +132,25 @@
       </settings>
     </configuration>
     <!--- SOFIA SIP -->
+    <configuration name="sofia.conf" description="sofia Endpoint">
+      <global_settings>
+        <param name="log-level" value="0"/>
+        <param name="debug-presence" value="0"/>
+      </global_settings>
+      <profiles>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${fsxmlapi}/sip-setting"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/sipsetting"/>
+      </profiles>
+    </configuration>
     <!--- SPANDSP  -->
     <configuration name="spandsp.conf" description="FAX application configuration">
     </configuration>
     <!-- FREESWITCH DEFAULT CONFIGURATION -->
     <configuration name="switch.conf" description="Core Configuration">
+      <settings>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/switch $${fsxmlapi}/switch"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/switch"/>
+      </settings>
     </configuration>
   </section>
   <!-- END: CONFIGURATION SECTION -->
@@ -164,5 +194,10 @@
     </context>
   </section>
   <!-- END: DIALPLAN SECTION -->
-  <!-- BEGIN: DIRECTORY SECTION :END -->
+  <!-- BEGIN: DIRECTORY SECTION -->
+  <section name="directory" description="User Directory">
+    <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/directory $${fsxmlapi}/directory"/>
+    <X-PRE-PROCESS cmd="include" data="$${devshm}/directory"/>
+  </section>
+  <!-- END: DIRECTORY SECTION -->
 </document>

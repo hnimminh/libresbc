@@ -1,12 +1,4 @@
-<?xml version="1.0"?>
-<document type="freeswitch/xml">
-  <section name="configuration" description="Various Configuration">    
-    <configuration name="sofia.conf" description="sofia Endpoint">
-      <global_settings>
-        <param name="log-level" value="0"/>
-        <param name="debug-presence" value="0"/>
-      </global_settings>
-      <profiles>
+<include>
         {% for profilename, sipprofile in sipprofiles.items() -%}
         <profile name="{{profilename}}">
           <gateways>
@@ -124,7 +116,4 @@
           </settings>
         </profile>
         {%- endfor %}
-      </profiles>
-    </configuration>        
-  </section>
-</document>
+</include>
