@@ -29,8 +29,9 @@ SCAN_COUNT = 1000
 REDIS_TIMEOUT = 5
 
 ---  CONSTANT
-INBOUND = 'inbound'
-OUTBOUND = 'outbound'
+LIBRESBC    = 'libresbc'
+INBOUND     = 'inbound'
+OUTBOUND    = 'outbound'
 
 --- ROUTING ACTION
 QUERY = 'query'
@@ -51,11 +52,10 @@ SRPT_ENCRYPTION_SUITES = {'AES_CM_128_HMAC_SHA1_80', 'AES_CM_128_HMAC_SHA1_32'}
 --- LOG SETTINGS
 LOGDIR              = '/var/log/libresbc'
 LOGLEVEL            = (os.getenv('LOGLEVEL') or 'INFO'):upper()
-LOGSTACKS           = (os.getenv('LOGSTACKS') or EMPTYSTRING):upper()
+LOGSTACKS           = (os.getenv('LOGSTACKS') or 'SYSLOG'):upper()                  -- SYSLOG as defautl since history
 LOGSTACK_CONSOLE    = string.find(LOGSTACKS, 'CONSOLE')
-LOGSTACK_FILE       = string.find(LOGSTACKS, 'FILE') and LOGDIR..'/callng.log'
-LOGSTACK_SYSLOG     = string.find(LOGSTACKS, 'SYSLOG')
-LOGSTACK_SWITCH     = string.find(LOGSTACKS, 'SWITCH')
+LOGSTACK_FILE       = string.find(LOGSTACKS, 'FILE') and LOGDIR..'/callng.log'      -- default log file
+LOGSTACK_SYSLOG     = string.find(LOGSTACKS, 'SYSLOG') and 176                      -- syslog.LOG_LOCAL6=22*8=176
 
 -----------------------------------------------------------------------------------------------------
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'

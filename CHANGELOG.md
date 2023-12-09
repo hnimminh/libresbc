@@ -22,6 +22,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Add GSM codec to support list
 - Add progress_time, progress_media_time to CDR
 - Add switch built-in log function (logstack default as switch)
+- Support embeded system to nglog #135
 - EOL liberator provision callng config
 - Enhance config provision method from pre-process/include #132
 

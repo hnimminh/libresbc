@@ -14,6 +14,7 @@ nglog.level   = 'INFO'
 nglog.stacks  = { console=true, file=nil, syslog=nil}
 nglog.host    = nil
 nglog.name    = nil
+nglog.emlt    = nil -- embeded log function table
 
 local attributes = {
     { name = 'EMERG',     color = '\27[35m', }, -- 0 emerg system is unusable
@@ -47,9 +48,25 @@ for i, attribute in ipairs(attributes) do
 
         -- print out to syslog
         if nglog.stacks.syslog then -- syslog FACILITY = N*8; syslog.LOG_LOCAL6=22*8=176
-            syslog = require("posix.syslog")
+            local syslog = require("posix.syslog")
             syslog.openlog(nglog.name, syslog.LOG_PID, tonumber(nglog.stacks.syslog) or 176)
             syslog.syslog(i-1, string.format(msg..'\n', ...))
+        end
+
+        -- print out log to file
+        if nglog.stacks.file then
+            local fp = io.open(nglog.stacks.file, 'a')
+            fp:write(logstr)
+            fp:close()
+        end
+
+        -- print out log to embeded console
+        if nglog.emlt then
+            local emlfn = nglog.emlt[_LEVEL:lower()]
+            if emlfn then
+                emlfn(msg, ...)
+            end
+            return  -- no need built-in console log
         end
 
         -- print out log to console
@@ -63,12 +80,6 @@ for i, attribute in ipairs(attributes) do
             end
         end
 
-        -- print out log to file
-        if nglog.stacks.file then
-            local fp = io.open(nglog.stacks.file, 'a')
-            fp:write(logstr)
-            fp:close()
-        end
     end
 end
 
