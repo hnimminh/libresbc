@@ -25,6 +25,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Support embeded system to nglog #135
 - EOL liberator provision callng config
 - Enhance config provision method from pre-process/include #132
+- Single all-in-one docker image #110
 
 ## [v0.7.0] - 2023-08-027
 - Fix jumps routing table
