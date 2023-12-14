@@ -37,6 +37,21 @@ if _LOGSTACKS:
     if not any(logstack in LOGSTACKS for logstack in ['FILE', 'SYSLOG', 'CONSOLE']):
         LOGSTACKS = ['SYSLOG']
 
+# run inside container
+_CONTAINERIZED = os.getenv('LIBRE_CONTAINERIZED')
+CONTAINERIZED = False
+if _CONTAINERIZED and _CONTAINERIZED.upper() in ['TRUE', '1', 'YES']:
+    CONTAINERIZED = True
+
+_LIBRE_REDIS = os.getenv('LIBRE_REDIS')
+LIBRE_REDIS = False
+if _LIBRE_REDIS and _LIBRE_REDIS.upper() in ['TRUE', '1', 'YES']:
+    LIBRE_REDIS = True
+
+_BUILTIN_FIREWALL = os.getenv('LIBRE_BUILTIN_FIREWALL')
+BUILTIN_FIREWALL = True
+if _BUILTIN_FIREWALL and _BUILTIN_FIREWALL.upper() in ['FALSE', '0', 'NO']:
+    BUILTIN_FIREWALL = False
 #-----------------------------------------------------------------------------------------------------
 # RBD UNIX SOCKET LOCALIZE INSTANCE
 #-----------------------------------------------------------------------------------------------------

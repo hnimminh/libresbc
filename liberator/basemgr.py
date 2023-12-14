@@ -11,7 +11,7 @@ import time
 import traceback
 import json
 from threading import Thread
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, run as SubRun
 import os
 import redis
 import redfs
@@ -19,6 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
     REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
+    CONTAINERIZED, BUILTIN_FIREWALL, LIBRE_REDIS,
 )
 from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
@@ -56,6 +57,10 @@ _DFTBANTIME = 900
 
 @threaded
 def nftupdate(data):
+    if not BUILTIN_FIREWALL:
+        logger.info(f"module=liberator, space=basemgr, action=nftupdate, message=[skip action since buitin firewall is disabled]")
+        return
+
     result = True
     try:
         requestid = data.get('requestid')
@@ -174,6 +179,10 @@ def nftupdate(data):
 _nftdelimiter_ = ', '
 @threaded
 def nftsets(setname, ops, srcips, bantime=None):
+    if not BUILTIN_FIREWALL:
+        logger.info(f"module=liberator, space=basemgr, action=nftsets, message=[skip action since buitin firewall is disabled]")
+        return
+
     result = True
     try:
         if bantime:
@@ -212,11 +221,18 @@ def fsinstance(data):
         xmltemplate = _FSXML.get_template("xml/freeswitch.xml")
         xmlstream = xmltemplate.render(eslhost=ESL_HOST, eslport=ESL_PORT, eslpassword=ESL_SECRET)
         with open(xmlfile, 'w') as fsf: fsf.write(xmlstream)
+
         clitemplate = _FSXML.get_template("etc/fs_cli.conf")
         clistream = clitemplate.render(eslhost=ESL_HOST, eslport=ESL_PORT, eslpassword=ESL_SECRET)
         with open(clifile, 'w') as clif: clif.write(clistream)
+
+        if CONTAINERIZED:
+            SubRun(['/usr/local/bin/freeswitch'])
+            return
+
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
+
         if stderr and not stderr.endswith('Backgrounding.'):
             result = False
             stderr = stderr.replace('\n', '')
@@ -285,7 +301,7 @@ def kaminstance(data):
         # TEARDOWN THE EXISTENT INSTANCE
         # ------------------------------------------------------------
         if _layer:
-            pidkill = '/bin/pkill'
+            pidkill = '/usr/bin/pkill'
             _pidfile = f'{PIDDIR}/{_layer}.pid'
             _cfgfile = f'{CFGDIR}/{_layer}.cfg'
             _luafile = f'{CFGDIR}/{_layer}.lua'
@@ -362,10 +378,14 @@ def kaminstance(data):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
 def rdbinstance():
+    if not LIBRE_REDIS:
+        logger.info(f"module=liberator, space=basemgr, action=rdbinstance, message=[skip action since buitin redis is disabled]")
+        return
+
     try:
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
-        rdbrun = Popen(['/usr/bin/redis-server', '--port', '0', '--pidfile', RDB_PIDFILE, '--unixsocket', RDB_USOCKET, '--unixsocketperm', '755',
-                        '--dbfilename', 'libresbc.rdb', '--dir', ETCDIR, '--loglevel', 'warning'])
+        rdbrun = Popen(['/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', '6379', '--pidfile', '/run/redis/redis.pid', '--unixsocket',
+                        '/run/redis/redis.sock', '--unixsocketperm', '755', '--dbfilename', 'libresbc.rdb', '--dir', '/run/redis', '--loglevel', 'warning'])
         _, stderr = bdecode(rdbrun.communicate())
         if stderr:
             logger.error(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
@@ -385,7 +405,7 @@ def basestartup():
     try:
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
-
+        rdbinstance()
         fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
