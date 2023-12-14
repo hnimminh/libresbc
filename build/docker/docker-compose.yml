@@ -1,0 +1,32 @@
+# https://runnable.com/docker/docker-compose-networking
+# https://dockerlabs.collabnix.com/docker/cheatsheet
+# https://github.com/compose-spec/compose-spec/blob/master/spec.md]
+#
+# rsync -avzh -e ssh libresbc/{callng,build,liberator} REMOTE:/root/libresbc/
+# cp /root/libresbc/build/docker/docker-compose.yml /root/libresbc/
+# docker-compose down && docker-compose up -d
+#
+version: "3.3"
+services:
+  libresbc:
+    hostname: devsbc
+    container_name: libresbc
+    restart: always
+    image: hnimminh/libresbc:latest
+    volumes:
+      - ./liberator:/opt/libresbc/liberator
+      - ./callng:/opt/libresbc/callng
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - SYS_NICE
+    tty: true
+    labels:
+      - libresbc.version=0.7.0
+      - libresbc.debian=bullseye
+      - libresbc.freeswitch=1.10.9
+      - libresbc.kamailio=5.7.1
+    env_file:
+      - libre.env
+    environment:
+      SBC_VERSION: 0.7.0
