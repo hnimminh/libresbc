@@ -119,8 +119,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 * Customisability: Make it do what you want
 * Capability: Carrier-grade 
 
-## Roadmap 
-Detail of product roadmap and upcomming features is described [here](https://github.com/hnimminh/libresbc/issues/123)
+## [Roadmap](https://github.com/hnimminh/libresbc/issues/123) 
 
 
 ## Architecture
