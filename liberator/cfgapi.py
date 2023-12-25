@@ -14,8 +14,8 @@ import redis
 import validators
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
-from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
-                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
+from configuration import (CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
+                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
 from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
 
 
@@ -116,9 +116,12 @@ def distributor(request: Request, response: Response):
         return result
 
 
-@cfgrouter.get("/cfgapi/fsxml/sip-setting", include_in_schema=False)
-def sip(request: Request, response: Response):
+@cfgrouter.get("/cfgapi/fsxml/sip-setting/{nodeid}", include_in_schema=False)
+def sip(request: Request, response: Response, nodeid: str):
     try:
+        if not rdbconn.sismember('cluster:members', nodeid):
+            response.status_code, result = 404, str(); return
+
         pipe = rdbconn.pipeline()
         fsgvars = list()
         # get netalias
@@ -128,7 +131,7 @@ def sip(request: Request, response: Response):
         details = pipe.execute()
         netaliases = dict()
         for netaliasname, detail in zip(netaliasnames, details):
-            addresses = [address for address in fieldjsonify(detail) if address.get('member') == NODEID][0]
+            addresses = [address for address in fieldjsonify(detail) if address.get('member') == nodeid][0]
             netaliases.update({netaliasname: addresses})
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}
@@ -195,8 +198,8 @@ def sip(request: Request, response: Response):
         rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
-                                            {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
-                                            media_type="application/xml")
+                                        {"request": request, "sipprofiles": sipprofiles},
+                                        media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
