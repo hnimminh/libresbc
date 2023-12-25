@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
+
+## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
 - Clean unused pipe in get domain-policy
 - Set default value for cluster hashmap
@@ -27,7 +29,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Enhance config provision method from pre-process/include #132
 - Single all-in-one docker image #110
 
-## [v0.7.0] - 2023-08-027
+## [v0.7.0] - 2023-08-27
 - Fix jumps routing table
 - Update CaptAgent to 6.4.1
 - PreAnswer validation
