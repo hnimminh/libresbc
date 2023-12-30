@@ -40,6 +40,10 @@
             <param name="sip-trace" value="no"/>
             <param name="sip-capture" value="no"/>
             <param name="shutdown-on-fail" value="true"/>
+            {%- if crcs.capability %}
+            <param name="track-calls" value="true"/>
+            <param name="odbc-dsn" value="pgsql://host={{crcs.host}} port={{crcs.port}} dbname={{crcs.database}} user={{crcs.username}} password={{crcs.password}} options='-c client_min_messages=NOTICE' application_name='libresbc'" />
+            {%- endif %}
             {#- <!-- MSG PARSE--> #}
             <param name="parse-all-invite-headers" value="{{sipprofile.parse_all_invite_headers|default('true')}}"/>{% if sipprofile.p_asserted_id_parse is defined %}
             <param name="p-asserted-id-parse" value="{{sipprofile.p_asserted_id_parse|default('default')}}"/>{% endif %}

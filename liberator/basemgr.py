@@ -227,7 +227,7 @@ def fsinstance(data):
         with open(clifile, 'w') as clif: clif.write(clistream)
 
         if CONTAINERIZED:
-            SubRun(['/usr/local/bin/freeswitch'])
+            SubRun(['/usr/local/bin/freeswitch', '-reincarnate'])
             return
 
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
