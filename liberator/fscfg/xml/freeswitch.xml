@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
   <X-PRE-PROCESS cmd="exec-set" data="fsxmlapi=(echo ${LIBERATOR_CFGAPI_URL:-http://127.0.0.1:8080/cfgapi/fsxml})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="nodeid=(echo ${NODEID:-{{NODEID}}})"/>
   <X-PRE-PROCESS cmd="exec-set" data="loglevel=(echo ${LOGLEVEL:-INFO})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESLHOST:-{{eslhost}}})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESLPOST:-{{eslport}}})"/>
@@ -70,15 +71,21 @@
     <configuration name="lua.conf" description="LUA Configuration">
       <settings>
         <!-- <param name="module-directory" value="/usr/share/lua/5.2/?.lua"/> -->
-        <param name="startup-script" value="callng/event.startup.lua"/>
+        <param name="startup-script" value="callng/event.initiation.lua"/>
         <hook event="CHANNEL_CREATE" script="callng/event.capacity.lua"/>
         <hook event="CHANNEL_UUID" script="callng/event.capacity.lua"/>
         <hook event="CHANNEL_DESTROY" script="callng/event.capacity.lua"/>
         <hook event="CHANNEL_HANGUP_COMPLETE" script="callng/event.cdr.lua"/>
+        <hook event="STARTUP" script="callng/event.startup.lua"/>
         <hook event="CUSTOM" subclass="sofia::register_failure" script="callng/event.unauth.lua"/>
       </settings>
     </configuration>
     <!--- MODULES -->
+    <configuration name="pre_load_modules.conf" description="Modules">
+      <modules>
+        <load module="mod_pgsql"/>
+      </modules>
+    </configuration>
     <configuration name="modules.conf" description="Modules">
       <modules>
         <load module="mod_console"/>
@@ -150,6 +157,7 @@
       <settings>
         <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/switch $${fsxmlapi}/switch"/>
         <X-PRE-PROCESS cmd="include" data="$${devshm}/switch"/>
+        <param name="switchname" value="$${nodeid}"/>
       </settings>
     </configuration>
   </section>

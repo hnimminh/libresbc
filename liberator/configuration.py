@@ -108,6 +108,19 @@ ESL_HOST = '127.0.0.1'
 ESL_PORT = 8021
 
 #-----------------------------------------------------------------------------------------------------
+# CALL RECOVERY CAPABILITY
+#-----------------------------------------------------------------------------------------------------
+_CRC_CAPABILITY = os.getenv('CRC_CAPABILITY')
+CRC_CAPABILITY = False
+if _CRC_CAPABILITY and _CRC_CAPABILITY.upper() in ['TRUE', '1', 'YES']:
+    CRC_CAPABILITY = True
+CRC_PGSQL_HOST = os.getenv('CRC_PGSQL_HOST')
+CRC_PGSQL_PORT = os.getenv('CRC_PGSQL_PORT')
+CRC_PGSQL_DATABASE = os.getenv('CRC_PGSQL_DATABASE')
+CRC_PGSQL_USERNAME = os.getenv('CRC_PGSQL_USERNAME')
+CRC_PGSQL_PASSWORD = os.getenv('CRC_PGSQL_PASSWORD')
+
+#-----------------------------------------------------------------------------------------------------
 # HTTPCDR DATA
 #-----------------------------------------------------------------------------------------------------
 HTTPCDR_ENDPOINTS = os.getenv('HTTPCDR_ENDPOINTS')

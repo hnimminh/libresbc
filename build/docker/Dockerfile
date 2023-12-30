@@ -21,7 +21,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
 # languages
     python3 python3-dev python3-pip python-setuptools liblua5.2-dev lua5.2 luarocks lua-curl\
 # mods
-    libavformat-dev libswscale-dev libavresample-dev \
+    libavformat-dev libswscale-dev libavresample-dev libpq-dev\
     libsndfile1-dev libflac-dev libogg-dev libvorbis-dev flite1-dev \
 # kams
     flex gdb libxml2-dev libunistring-dev libhiredis-dev
@@ -70,4 +70,5 @@ WORKDIR /opt/libresbc/liberator
 CMD ["/usr/bin/python3", "/opt/libresbc/liberator/main.py"]
 
 # docker build --platform linux/amd64 -t hnimminh/libresbc:latest -f build/docker/Dockerfile .
+# docker tag hnimminh/libresbc:latest hnimminh/libresbc:0.7.1.a
 # docker run --env-file ../libre.env --cap-add NET_ADMIN --cap-add SYS_NICE --network host --name libresbc hnimminh/libresbc:latest
