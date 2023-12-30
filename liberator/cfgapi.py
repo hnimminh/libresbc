@@ -15,6 +15,7 @@ import validators
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
 from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
+                           CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
 
@@ -32,12 +33,21 @@ cfgrouter = APIRouter()
 # template location
 fstpl = Jinja2Templates(directory="fscfg/xml")
 
+# call recovery settings
+crcs = {
+    'capability': CRC_CAPABILITY,
+    'host': CRC_PGSQL_HOST,
+    'port': CRC_PGSQL_PORT,
+    'database': CRC_PGSQL_DATABASE,
+    'username': CRC_PGSQL_USERNAME,
+    'password': CRC_PGSQL_PASSWORD,
+}
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @cfgrouter.get("/cfgapi/fsxml/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
     try:
         result = fstpl.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "switchattributes": CLUSTERS},
+                                            {"request": request, "switchattributes": CLUSTERS, 'crcs': crcs},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
@@ -195,7 +205,7 @@ def sip(request: Request, response: Response):
         rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
-                                            {"request": request, "sipprofiles": sipprofiles, 'netaliases': netaliases, 'NODEID': NODEID},
+                                            {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs, 'NODEID': NODEID},
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:
