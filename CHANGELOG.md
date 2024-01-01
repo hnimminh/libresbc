@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
--  Support call recovery capability (HA) #140
+- Support call recovery capability (HA) #140
 
 
 ## [v0.7.1] - 2023-12-25
