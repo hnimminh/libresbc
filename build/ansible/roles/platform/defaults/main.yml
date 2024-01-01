@@ -1,0 +1,3 @@
+libre_debian_version: '{{debian_codename|default("buster")}}'
+libre_freeswitch_version: '{{freeswitch_version|default("v1.10.6")}}' # v1.10.11-libre-a
+libre_kamailio_version: '{{kamailio_version|default("5.5.1")}}' # 5.7.1

@@ -9,6 +9,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [Unreleased] - TBA
 - Support call recovery capability (HA) #140
+- Support config build as var for kamailio/freeswitch
 
 
 ## [v0.7.1] - 2023-12-25
