@@ -14,9 +14,9 @@ import redis
 import validators
 from fastapi import APIRouter, Request, Response
 from fastapi.templating import Jinja2Templates
-from configuration import (NODEID, CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
+from configuration import (CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
-                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
+                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
 from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
 
 
@@ -126,9 +126,12 @@ def distributor(request: Request, response: Response):
         return result
 
 
-@cfgrouter.get("/cfgapi/fsxml/sip-setting", include_in_schema=False)
-def sip(request: Request, response: Response):
+@cfgrouter.get("/cfgapi/fsxml/sip-setting/{nodeid}", include_in_schema=False)
+def sip(request: Request, response: Response, nodeid: str):
     try:
+        if not rdbconn.sismember('cluster:members', nodeid):
+            response.status_code, result = 404, str(); return
+
         pipe = rdbconn.pipeline()
         fsgvars = list()
         # get netalias
@@ -138,7 +141,7 @@ def sip(request: Request, response: Response):
         details = pipe.execute()
         netaliases = dict()
         for netaliasname, detail in zip(netaliasnames, details):
-            addresses = [address for address in fieldjsonify(detail) if address.get('member') == NODEID][0]
+            addresses = [address for address in fieldjsonify(detail) if address.get('member') == nodeid][0]
             netaliases.update({netaliasname: addresses})
         # get the maping siprofile and data
         # {profilename1: profiledata1, profilename2: profiledata2}

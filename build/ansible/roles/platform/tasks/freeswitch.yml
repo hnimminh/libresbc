@@ -20,8 +20,8 @@
     line: "{{item}}"
     create: yes
   with_items:
-    - deb [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{debian_codename|default('buster')}} main
-    - deb-src [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{debian_codename|default('buster')}} main
+    - deb [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{libre_debian_version}} main
+    - deb-src [signed-by=/usr/share/keyrings/signalwire-freeswitch-repo.gpg] https://freeswitch.signalwire.com/repo/deb/debian-release/ {{libre_debian_version}} main
 
 - name: Run the equivalent of "apt-get update" as a separate step
   apt:
@@ -33,22 +33,18 @@
     pkg: freeswitch
     state: build-dep
 
-- name: Download freeswith source code and checksum
-  get_url:
-    url: https://github.com/signalwire/freeswitch/archive/refs/tags/v1.10.6.tar.gz
-    dest: /usr/local/src/freeswitch-1.10.6.tar.gz
-    checksum: md5:371b3001bf0871bbf8666e1f1c2d5e1f
-
-- name: Unarchive tar the freeswitch release
-  unarchive:
-    src: /usr/local/src/freeswitch-1.10.6.tar.gz
-    dest: /usr/local/src
-    remote_src: yes
+- name: Git clone freeswith source code
+  git:
+    repo: https://github.com/hnimminh/freeswitch.git
+    dest: /usr/local/src/freeswitch
+    recursive: no
+    clone: yes
+    version: '{{libre_freeswitch_version}}'
 
 - name: copy freeswitch module file
   copy:
     src: modules.conf
-    dest: /usr/local/src/freeswitch-1.10.6/modules.conf
+    dest: /usr/local/src/freeswitch/modules.conf
     owner: root
     group: root
     mode: 0644
@@ -80,19 +76,19 @@
     remote_src: yes
   with_items:
     - src: /usr/include/opencore-amrwb/dec_if.h
-      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amrwb/dec_if.h
+      dst: /usr/local/src/freeswitch/src/mod/codecs/mod_amrwb/dec_if.h
     - src: /usr/include/vo-amrwbenc/enc_if.h
-      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amrwb/enc_if.h
+      dst: /usr/local/src/freeswitch/src/mod/codecs/mod_amrwb/enc_if.h
     - src: /usr/include/opencore-amrnb/interf_enc.h
-      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amr/interf_enc.h
+      dst: /usr/local/src/freeswitch/src/mod/codecs/mod_amr/interf_enc.h
     - src: /usr/include/opencore-amrnb/interf_dec.h
-      dst: /usr/local/src/freeswitch-1.10.6/src/mod/codecs/mod_amr/interf_dec.h
+      dst: /usr/local/src/freeswitch/src/mod/codecs/mod_amr/interf_dec.h
 
 - name: build freeswitch
   shell: ./bootstrap.sh -j && ./configure -C --prefix=/usr/local --with-rundir=/run/freeswitch --with-logfiledir=/var/log/freeswitch/ --enable-64 --with-openssl && make && make install
   args:
     executable: /bin/bash
-    chdir: /usr/local/src/freeswitch-1.10.6
+    chdir: /usr/local/src/freeswitch
 
 - name: Delete default configuration folder
   file:

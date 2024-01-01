@@ -90,7 +90,7 @@ _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 
 NODEID = os.getenv('NODEID')
 CLUSTERS = {
     'name': 'defaults',
-    'members': [NODEID],
+    'members': [NODEID] if NODEID else [],
     "rtp_start_port": 16384,
     "rtp_end_port": 32767,
     "max_calls_per_second": 60,

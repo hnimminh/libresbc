@@ -33,10 +33,10 @@ COPY build/ansible/roles/platform/files/modules.conf /opt/libresbc/modules.conf
 
 # FREESWITCH
 RUN git clone https://github.com/signalwire/libks /usr/src/libs/libks && \
-    git clone --branch v1.13.15 https://github.com/freeswitch/sofia-sip.git /usr/src/libs/sofia-sip && \
+    git clone --branch v1.13.17 https://github.com/freeswitch/sofia-sip.git /usr/src/libs/sofia-sip && \
     git clone https://github.com/freeswitch/spandsp /usr/src/libs/spandsp && \
     git clone https://github.com/signalwire/signalwire-c /usr/src/libs/signalwire-c && \
-    git clone --branch v1.10.9 https://github.com/signalwire/freeswitch.git /usr/src/freeswitch && \
+    git clone --branch v1.10.11-libre-a https://github.com/hnimminh/freeswitch.git /usr/src/freeswitch && \
     cp /usr/include/opencore-amrwb/dec_if.h /usr/src/freeswitch/src/mod/codecs/mod_amrwb/dec_if.h && \
     cp /usr/include/vo-amrwbenc/enc_if.h /usr/src/freeswitch/src/mod/codecs/mod_amrwb/enc_if.h && \
     cp /usr/include/opencore-amrnb/interf_enc.h /usr/src/freeswitch/src/mod/codecs/mod_amr/interf_enc.h && \
