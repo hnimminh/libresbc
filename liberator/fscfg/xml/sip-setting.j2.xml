@@ -11,7 +11,8 @@
               <param name="from-domain" value="{{gateway.from_domain}}"/>{% endif %}
               <param name="password" value="{{gateway.password}}"/>{% if gateway.extension is defined %}
               <param name="extension" value="{{gateway.extension}}"/>{% endif %}
-              <param name="proxy" value="{{gateway.proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>
+              <param name="proxy" value="{{gateway.proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>{% if gateway.outbound_proxy is defined %}
+              <param name="outbound-proxy" value="{{gateway.outbound_proxy}}:{{gateway.port}};transport={{gateway.transport}}"/>{% endif %}
               <param name="register" value="{{gateway.do_register|lower}}"/>{% if gateway.register_proxy is defined %}
               <param name="register-proxy" value="{{gateway.register_proxy}}"/>{% endif %}{% if gateway.register_transport is defined %}
               <param name="register-transport" value="{{gateway.register_transport}}"/>{% endif %}{% if gateway.retry_seconds is defined %}
