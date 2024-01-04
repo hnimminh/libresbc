@@ -208,7 +208,7 @@ def sip(request: Request, response: Response, nodeid: str):
         rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
-                                            {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs, 'NODEID': NODEID},
+                                            {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs },
                                             media_type="application/xml")
         response.status_code = 200
     except Exception as e:

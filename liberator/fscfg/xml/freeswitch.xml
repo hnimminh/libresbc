@@ -145,7 +145,7 @@
         <param name="debug-presence" value="0"/>
       </global_settings>
       <profiles>
-        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${fsxmlapi}/sip-setting"/>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${fsxmlapi}/sip-setting/$${nodeid}" />
         <X-PRE-PROCESS cmd="include" data="$${devshm}/sipsetting"/>
       </profiles>
     </configuration>

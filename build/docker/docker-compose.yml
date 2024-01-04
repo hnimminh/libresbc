@@ -22,11 +22,11 @@ services:
       - SYS_NICE
     tty: true
     labels:
-      - libresbc.version=0.7.1.a
+      - libresbc.version=0.7.1.b
       - libresbc.debian=bullseye
       - libresbc.freeswitch=1.10.9
       - libresbc.kamailio=5.7.1
     env_file:
       - libre.env
     environment:
-      SBC_VERSION: 0.7.1.a
+      SBC_VERSION: 0.7.1.b

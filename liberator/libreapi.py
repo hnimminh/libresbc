@@ -1593,6 +1593,7 @@ class GatewayModel(BaseModel):
     password: str = Field(default='libre@secret', min_length=1, max_length=128, description='auth password')
     extension: Optional[str] = Field(max_length=256, description='extension for inbound calls, use username as default')
     proxy: str = Field(min_length=1, max_length=256, description='farend proxy ip address or domain, use realm as default')
+    outbound_proxy: Optional[str] = Field(min_length=1, max_length=256, description='proxy address for outbound call, use proxy as default')
     port: int = Field(default=5060, ge=0, le=65535, description='farend destination port')
     transport: TransportEnum = Field(default='udp', description='farend transport protocol')
     do_register: bool = Field(default=False, description='register to farend endpoint, false mean no register')
@@ -1625,7 +1626,7 @@ class GatewayModel(BaseModel):
                 values.pop(key, None)
 
         for key, value in values.items():
-            if key in ['realm', 'proxy', 'from_domain', 'register_proxy']:
+            if key in ['realm', 'proxy', 'from_domain', 'register_proxy', 'outbound_proxy']:
                 if not validators.domain(value) and not validators.ipv4(value) and not validators.ipv6(value):
                     raise ValueError(f'{key} must be IPv4/IPv6 address or Domain')
         return values
