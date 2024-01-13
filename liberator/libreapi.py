@@ -54,7 +54,7 @@ _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_]+$'
 _ID_ = r'^[a-zA-Z0-9][a-zA-Z0-9_]+$'
 _SRNAME_ = r'^_[a-zA-Z0-9_]+$'
 _REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
-_DIAL_ = r'^[a-zA-Z0-9_\-+#*@]*$'
+_DIAL_ = r'^[a-zA-Z0-9_\-+#*@\.]*$'
 # ROUTING
 _QUERY = 'query'
 _BLOCK = 'block'
