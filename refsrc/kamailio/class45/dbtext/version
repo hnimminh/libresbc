@@ -1,5 +1,0 @@
-table_name(str) table_version(int)
-domain:2
-domain_attrs:1
-rtpengine:1
-uacreg:4

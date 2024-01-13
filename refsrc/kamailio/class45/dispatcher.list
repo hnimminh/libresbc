@@ -1,2 +1,0 @@
-# line format
-# setid(int) destination(sip uri) flags(int,opt) priority(int,opt) attributes(str,opt)
