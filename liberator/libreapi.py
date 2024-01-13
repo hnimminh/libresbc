@@ -1955,8 +1955,10 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         manipulation_classes = data.get('manipulation_classes')
         nodes = set(data.get('nodes'))
         # verification
-        nameid = f'out:{name}'; name_key = f'intcon:{nameid}'
-        _nameid = f'out:{identifier}'; _name_key = f'intcon:{_nameid}'
+        nameid = f'out:{name}'
+        name_key = f'intcon:{nameid}'
+        _nameid = f'out:{identifier}'
+        _name_key = f'intcon:{_nameid}'
         if not rdbconn.exists(_name_key):
             response.status_code, result = 403, {'error': 'nonexistent outbound interconnection identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
@@ -1969,7 +1971,6 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sipaddrs = _data.get('sipaddrs')
         _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # transaction block
         pipe.multi()
@@ -2010,16 +2011,21 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
             engagements = rdbconn.smembers(_engaged_key)
             for engagement in engagements:
                 if engagement.startswith('table'):
-                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
-                    if _endpoints:
-                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
-                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
+                    routes = rdbconn.hget(f'routing:{engagement}', 'routes')
+                    if routes:
+                        _routes = routes.replace(identifier, name)
+                        pipe.hset(f'routing:{engagement}', 'routes', _routes)
                 if engagement.startswith('record'):
-                    _endpoints = fieldjsonify(rdbconn.hget(f'routing:{engagement}', 'endpoints'))
-                    _action = rdbconn.hget(f'routing:{engagement}', 'action')
-                    if _endpoints and _action==_ROUTE:
-                        endpoints = [name if endpoint == identifier else endpoint for endpoint in _endpoints]
-                        pipe.hset(f'routing:{engagement}', 'endpoints', fieldredisify(endpoints))
+                    if engagement.startswith(':compare:'):
+                        routes = rdbconn.hgetall(f'routing:{engagement}')
+                        for k, v in routes:
+                            _v = v.replace(identifier, name)
+                            pipe.hset(f'routing:{engagement}', k, _v)
+                    else:
+                        routes = rdbconn.get(f'routing:{engagement}')
+                        if routes:
+                            _routes = routes.replace(identifier, name)
+                            pipe.set(f'routing:{engagement}', _routes)
             if rdbconn.exists(_engaged_key):
                 pipe.rename(_engaged_key, engaged_key)
             pipe.delete(_name_key)
