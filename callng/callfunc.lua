@@ -8,9 +8,9 @@
 --
 
 require("callng.utilities")
----------------------******************************--------------------------
----------------------****|  CALL RELATED FUNCTION   |****---------------------
----------------------******************************--------------------------
+---------------------***********************************---------------------
+---------------------****|  CALL RELATED FUNCTION  |****---------------------
+---------------------***********************************---------------------
 
 -- FREESWITCH API
 fsapi = freeswitch.API()
@@ -262,6 +262,10 @@ end
 --- gateway connection param
 function getgw(name)
     local proxy, _port, transport = unpack(rdbconn:hmget('base:gateway:'..name, {'proxy', 'port', 'transport'}))
+    if not proxy or not _port or not transport then
+        log.warning('module=callng, space=main, name=%s, proxy=%s, _port=%s, transport=%s', name, proxy, _port, transport)
+    end
+    if not _port then _port = ':int:5060' end
     return proxy, tonumber(_port:sub(6,#_port)), transport
 end
 ---------------------------------------------------------------------------------------------------------------------------------------------
