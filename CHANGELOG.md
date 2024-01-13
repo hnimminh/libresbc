@@ -13,6 +13,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Gateway support specify outbound proxy
 - Add multiple domain to ngvars
 - Remove refsrc out of codebase
+- Fix rename outbound interconnection #146
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
