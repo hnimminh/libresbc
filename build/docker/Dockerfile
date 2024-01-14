@@ -70,5 +70,5 @@ WORKDIR /opt/libresbc/liberator
 CMD ["/usr/bin/python3", "/opt/libresbc/liberator/main.py"]
 
 # docker build --platform linux/amd64 -t hnimminh/libresbc:latest -f build/docker/Dockerfile .
-# docker tag hnimminh/libresbc:latest hnimminh/libresbc:0.7.1.b
+# docker tag hnimminh/libresbc:latest hnimminh/libresbc:0.7.1.c
 # docker run --env-file ../libre.env --cap-add NET_ADMIN --cap-add SYS_NICE --network host --name libresbc hnimminh/libresbc:latest
