@@ -953,15 +953,14 @@ def list_preanswer_class(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # MEDIA CLASS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-class CodecEnum(str, Enum):
-    PCMA = "PCMA"
-    PCMU = "PCMU"
-    OPUS = "OPUS"
-    G729 = "G729"
-    AMR = "AMR"
-    AMRWB = "AMR-WB"
-    GSM = "GSM"
-
+def codecs_allow(codecs):
+    for codec in codecs:
+        if not re.match("^([A-Z0-9_-])+(@(8|16|32|48)000h)?(@(1|2|3|4|6|8|10|12)0i)?$", codec):
+            raise ValueError(f'{codec} is invalid codec setting format')
+        codecname = codec.split('@')[0]
+        if codecname not in SWCODECS:
+            raise ValueError(f'{codec} is invalid codec; permitted: {SWCODECS}')
+    return codecs
 
 class NegotiationMode(str, Enum):
     generous = 'generous'
@@ -981,12 +980,14 @@ class DtmfModeEnum(str, Enum):
 class MediaModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of Media class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    codecs: List[CodecEnum] = Field(min_items=1, max_item=len(SWCODECS), description='sorted list of codec')
+    codecs: List[str] = Field(min_items=1, max_item=len(SWCODECS), description=f'sorted list of codec. Support {SWCODECS}')
     codec_negotiation: NegotiationMode = Field(default='generous', description='codec negotiation mode, generous: refer remote, greedy: refer local,  scrooge: enforce local')
     media_mode: MediaModeEnum = Field(default='transcode', description='media processing mode')
     dtmf_mode: DtmfModeEnum = Field(default='rfc2833', description='Dual-tone multi-frequency mode')
     cng: bool = Field(default=False, description='comfort noise generate')
     vad: bool = Field(default=False, description='voice active detection, no transmit data when no party speaking')
+    # validate
+    _validcodec = validator('codecs')(codecs_allow)
 
 
 @librerouter.post("/libreapi/class/media", status_code=200)

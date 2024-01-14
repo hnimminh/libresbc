@@ -14,6 +14,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Add multiple domain to ngvars
 - Remove refsrc out of codebase
 - Fix rename outbound interconnection #146
+- Specify codecs with sample-rate and ptime #149
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
