@@ -19,7 +19,8 @@
               <param name="retry-seconds" value="{{gateway.retry_seconds}}" />{% endif %}{% if gateway.expire_seconds is defined %}
               <param name="expire-seconds" value="{{gateway.expire_seconds}}" />{% endif %}
               <param name="caller-id-in-from" value="{{gateway.caller_id_in_from|lower}}"/>{% if gateway.cid_type is defined %}
-              <param name="cid-type" value="{{gateway.cid_type}}"/>{% endif %}{% if gateway.extension_in_contact is defined %}
+              <param name="cid-type" value="{{gateway.cid_type}}"/>{% endif %}{% if gateway.simple_contact is defined %}
+              <param name="simple-contact" value="{{gateway.simple_contact|lower}}"/>{% endif %}{% if gateway.extension_in_contact is defined %}
               <param name="extension-in-contact" value="{{gateway.extension_in_contact|lower}}"/>{% endif %}{% if gateway.contact_params is defined %}
               <param name="contact-params" value="{{gateway.contact_params}}"/>{% endif %}{% if gateway.contact_host is defined %}
               <param name="contact-host" value="{{gateway.contact_host}}"/>{% endif %}{% if gateway.ping is defined %}

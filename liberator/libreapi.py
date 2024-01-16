@@ -1606,6 +1606,7 @@ class GatewayModel(BaseModel):
     cid_type: Optional[CidTypeEnum] = Field(description='callerid header mechanism: rpid, pid, none')
     contact_params: Optional[str] = Field(min_length=1, max_length=256, description='extra sip params to send in the contact')
     contact_host: Optional[str] = Field(min_length=1, max_length=256, description='host part in contact header', hidden_field=True)
+    simple_contact: Optional[bool] = Field(description='set contact header in simple format')
     extension_in_contact: Optional[bool] = Field(description='put the extension in the contact')
     ping: Optional[int] = Field(ge=5, le=3600, description='the period (second) to send SIP OPTION')
     ping_max: Optional[int] = Field(ge=1, le=31, description='number of success pings to declaring a gateway up')
@@ -1617,9 +1618,6 @@ class GatewayModel(BaseModel):
     def gateway_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
-            if key == 'do_register' and not value:
-                removekey(['register_proxy', 'register_transport', 'expire_seconds', 'retry_seconds'], values)
-
             if key == 'ping' and not value:
                 removekey(['ping_max', 'ping_min', 'contact_in_ping', 'ping_user_agent'], values)
 
