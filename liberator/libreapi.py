@@ -974,6 +974,7 @@ class MediaModeEnum(str, Enum):
 
 class DtmfModeEnum(str, Enum):
     rfc2833 = 'rfc2833'
+    rfc2833f = 'rfc2833f'
     info = 'info'
     none = 'none'
 

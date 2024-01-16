@@ -154,6 +154,12 @@ function inMediaProcess(name, DxLeg)
     DxLeg:setVariable("codec_string", join(medias.codecs))
     DxLeg:setVariable("rtp_codec_negotiation", medias.codec_negotiation)
     DxLeg:setVariable("dtmf_type", medias.dtmf_mode)
+    if medias.dtmf_mode == 'rfc2833f' then
+        DxLeg:setVariable("NDLB_line_flash_16", "true")
+    end
+    if medias.dtmf_mode == 'rfc2833' then
+        DxLeg:setVariable("NDLB_line_flash_16", "false")
+    end
 
     if medias.media_mode == 'bypass' then
         DxLeg:setVariable("bypass_media", "true")
@@ -179,6 +185,12 @@ function outMediaProcess(name, DxLeg)
     DxLeg:execute("export", "nolocal:absolute_codec_string="..join(medias.codecs))
     DxLeg:execute("export", "nolocal:rtp_codec_negotiation="..medias.codec_negotiation)
     DxLeg:execute("export", "nolocal:dtmf_type="..medias.dtmf_mode)
+    if medias.dtmf_mode == 'rfc2833f' then
+        DxLeg:execute("export", "nolocal:NDLB_line_flash_16=true")
+    end
+    if medias.dtmf_mode == 'rfc2833' then
+        DxLeg:execute("export", "nolocal:NDLB_line_flash_16=false")
+    end
 
     if medias.media_mode == 'bypass' then
         DxLeg:execute("export", "nolocal:bypass_media=true")
