@@ -23,8 +23,7 @@ from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
                            NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
-from utilities import logger, get_request_uuid, int2bool, bool2int, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey
-
+from utilities import logger, get_request_uuid, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey, isjson
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=10, timeout=5)
@@ -1412,6 +1411,11 @@ class ManiAction(BaseModel):
             if not values:
                 _maniacts.pop('refervar', None)
                 _maniacts.pop('pattern', None)
+            if targetvar == 'LIBRE_HCAUSE_HMAP':
+                if len(values)!=1:
+                    raise ValueError('values length must be 1 when targetvar=LIBRE_HCAUSE_HMAP')
+                if not isjson(values[0]):
+                    raise ValueError('values[0] must be json format when targetvar=LIBRE_HCAUSE_HMAP')
         else: #{log,hangup,sleep}
             _maniacts.pop('targetvar', None)
             if not values:

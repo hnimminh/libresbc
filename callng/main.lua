@@ -17,7 +17,8 @@ local function main()
     local OutLeg = nil
     NgVars.seshid = fsapi:execute('create_uuid')
     NgVars.ENCRYPTION_SUITES = table.concat(SRPT_ENCRYPTION_SUITES, ':')
-    NgVars.LIBRE_HANGUP_CAUSE = 'NONE'
+    NgVars.LIBRE_HANGUP_CAUSE = __empty__
+    NgVars.LIBRE_HCAUSE_HMAP = __empty__
     local HANGUP_CAUSE = 'NORMAL_CLEARING'
     --- CALL PROCESSING
     if ( InLeg:ready() ) then
@@ -119,7 +120,7 @@ local function main()
         --------------------------------------------------------------------
         ----- OUTLEG
         --------------------------------------------------------------------
-        local _uuid
+        local _uuid, dialstatus
         local routes = (NgVars.route1==NgVars.route2) and {NgVars.route1} or {NgVars.route1, NgVars.route2}
         for attempt=1, #routes do
             _uuid = fsapi:execute('create_uuid')
@@ -211,7 +212,7 @@ local function main()
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dstnumber, InLeg)
 
             -- check leg status
-            local dialstatus = OutLeg:hangupCause()
+            dialstatus = OutLeg:hangupCause()
             log.info('module=callng, space=main, action=verify_state, seshid=%s, uuid=%s, attempt=%s, gateway=%s, status=%s', NgVars.seshid, _uuid, attempt, gateway, dialstatus)
 
             if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then break end
@@ -252,6 +253,26 @@ local function main()
                 log.warning('module=callng, space=main, action=callstate, seshid=%s, info=outbound.leg.not.connected', NgVars.seshid)
             end
         end
+
+        -----------------------------------------------------------
+        --- OVERWRITE HANGUP CAUSE
+        -----------------------------------------------------------
+        if #NgVars.LIBRE_HCAUSE_HMAP > 0 then
+            local LIBRE_HCAUSE_HMAP = json.decode(NgVars.LIBRE_HCAUSE_HMAP)
+            local _bhcause = InLeg:getVariable("last_bridge_proto_specific_hangup_cause")
+            local bhcause
+            if _bhcause and string.match(_bhcause, "^sip:[456][0-9][0-9]$") then
+                bhcause = _bhcause:sub(-3)
+            end
+            local ahcause = LIBRE_HCAUSE_HMAP[bhcause] or LIBRE_HCAUSE_HMAP.default
+            if bhcause and ahcause then
+                NgVars.LIBRE_HANGUP_CAUSE = ahcause
+                InLeg:setVariable("sip_ignore_remote_cause", "true")
+                InLeg:execute("respond", ahcause)
+                log.info('module=callng, space=main, action=overwrite, seshid=%s, uuid=%s, bhcause=%s, ahcause=%s', NgVars.seshid, uuid, bhcause, ahcause)
+            end
+        end
+
         -----------------------------------------------------------
         --- HANGUP ONCE DONE
         -----------------------------------------------------------

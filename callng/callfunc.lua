@@ -411,6 +411,9 @@ function turnvalues(values, refervar, pattern, DxLeg, NgVars)
             else
                 arrayinsert(replacements, value)
             end
+        -- special json
+        elseif startswith(value, '{') and endswith(value, '}') then
+            arrayinsert(replacements, value)
         -- get from ngvars / channel var / fixed str
         else
             local repl = NgVars[value]

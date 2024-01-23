@@ -160,6 +160,13 @@ def jsonhash(data: dict) -> dict:
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+def isjson(string):
+    try:
+        json.loads(string)
+    except ValueError as e:
+        return False
+    return True
+
 def listify(string, delimiter=':') -> list:
     assert isinstance(string, str)
     return string.split(delimiter)

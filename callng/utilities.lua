@@ -27,6 +27,7 @@ random = math.random
 unpack = _G.unpack or table.unpack
 __space__ = ' '
 __comma__ = ','
+__empty__ = ''
 ----------------------------------------------------------------------------
 -- REDIS CONNECTION
 rdbconn = nil
@@ -108,6 +109,10 @@ end
 
 function startswith(originstr, startstr)
     return originstr:sub(1, #startstr) == startstr
+end
+
+function endswith(originstr, endstr)
+    return originstr:sub(-#endstr) == endstr
 end
 
 function randompick(intable)
