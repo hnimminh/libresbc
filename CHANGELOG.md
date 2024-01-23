@@ -17,7 +17,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Specify codecs with sample-rate and ptime #149
 - Support simple-contact format (v1.10.11-libre-b) 
 - Support switching rfc2833 fmtp=0-15/16
-- Add capability of overwrite SIP repsonse
+- Add capability of overwrite SIP response #150
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
