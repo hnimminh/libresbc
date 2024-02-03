@@ -92,14 +92,22 @@ def nftupdate(data):
             rtp_ip_version = IPvAddress(rtp_ip).version
 
             intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
+
+            # collect farend rtp ip addr per profile
             for intconnameid in intconnameids:
                 pipe.hget(f'intcon:{intconnameid}', 'rtpaddrs')
             rtpaddrstrlist = pipe.execute()
-
             farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
             _farendrtpaddrs = [ip for ip in farendrtpaddrs if IPvNetwork(ip).version==rtp_ip_version and not IPvNetwork(ip).is_loopback]
 
-            farendsipaddrs = rdbconn.smembers(f'farendsipaddrs:in:{profilename}')
+            # collect farend sip ip addr per profile
+            # there is a SET of farend sip ip addr redis-key=[farendsipaddrs:in:{profilename}]
+            # but it only for INBOUND then do same as farend rtp ip addr
+            # sipaddrs field for outbound is supported later (then need to handle null)
+            for intconnameid in intconnameids:
+                pipe.hget(f'intcon:{intconnameid}', 'sipaddrs')
+            sipaddrstrlist = pipe.execute()
+            farendsipaddrs = set([sipaddr for sipaddrstr in sipaddrstrlist if sipaddrstr for sipaddr in fieldjsonify(sipaddrstr)])
             _farendsipaddrs = [ip for ip in farendsipaddrs if IPvNetwork(ip).version==sip_ip_version and not IPvNetwork(ip).is_loopback]
 
             sipprofiles[profilename] = {
@@ -110,6 +118,7 @@ def nftupdate(data):
                 f'farendrtpaddrv{rtp_ip_version}s': _farendrtpaddrs,
                 f'farendsipaddrv{sip_ip_version}s': _farendsipaddrs
             }
+        logger.debug(f"module=liberator, space=basemgr, action=nftupdate, sipprofiles={sipprofiles}")
 
         # ACCESS LAYERS
         layernames = rdbconn.smembers('nameset:access:service')
@@ -147,6 +156,7 @@ def nftupdate(data):
                 layerdata.update({'whiteipv6s': whiteipv6s, 'blackipv6s': blackipv6s})
 
             accesslayers[layername] = layerdata
+        logger.debug(f"module=liberator, space=basemgr, action=nftupdate, accesslayers={accesslayers}")
 
         # RULE FILE
         template = _NFT.get_template("nftables.j2.conf")

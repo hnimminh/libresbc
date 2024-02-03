@@ -1846,7 +1846,8 @@ class OutboundInterconnection(BaseModel):
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
-    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=20, description='a set of IPv4/IPv6 Network that use for RTP')
+    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=32, description='a set of IPv4/IPv6 sip signalling addresses that use for SIP')
+    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=32, description='a set of IPv4/IPv6 Network that use for RTP')
     media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
     translation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of translation class')
@@ -1915,6 +1916,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
+        sipaddrs = set(data.get('sipaddrs'))
         media_class = data.get('media_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1925,7 +1927,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent outbound interconnection'}; return
         # processing
-        data.pop('gateways'); data.update({'rtpaddrs': rtpaddrs, 'nodes': nodes })
+        data.pop('gateways'); data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
@@ -1956,6 +1958,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
+        sipaddrs = set(data.get('sipaddrs'))
         media_class = data.get('media_class')
         capacity_class = data.get('capacity_class')
         translation_classes = data.get('translation_classes')
@@ -1997,7 +2000,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
 
         pipe.delete(f'{_name_key}:_gateways')
         # processing: adding new-one
-        data.pop('gateways'); data.update({'rtpaddrs': rtpaddrs, 'nodes': nodes })
+        data.pop('gateways'); data.update({'sipaddrs': sipaddrs, 'rtpaddrs': rtpaddrs, 'nodes': nodes })
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'engagement:sipprofile:{sipprofile}', nameid)
         for node in nodes: pipe.sadd(f'engagement:node:{node}', nameid)
@@ -2070,7 +2073,6 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
         _capacity_class = _data.get('capacity_class')
         _translation_classes = _data.get('translation_classes')
         _manipulation_classes = _data.get('manipulation_classes')
-        _sipaddrs = _data.get('sipaddrs')
         _gateways = jsonhash(rdbconn.hgetall(f'{_name_key}:_gateways'))
         # processing: removing old-one
         pipe.srem(f'engagement:sipprofile:{_sipprofile}', _nameid)
@@ -2172,8 +2174,8 @@ class InboundInterconnection(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     routing: str = Field(description='routing table that will be used by this inbound interconnection')
-    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=1, max_item=16, description='set of sip signalling addresses that use for SIP')
-    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=20, description='a set of IPv4/IPv6 Network that use for RTP')
+    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=1, max_item=32, description='a set of IPv4/IPv6 sip signalling addresses that use for SIP')
+    rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=32, description='a set of IPv4/IPv6 Network that use for RTP')
     ringready: bool = Field(default=False, description='response 180 ring indication')
     media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')

@@ -170,6 +170,8 @@ const APIGuide = {
             "name": "outbound_interconnection_name",
             "desc": "description",
             "sipprofile": "sip_profile_name",
+            "sipaddrs": [
+                "farend_sip_media_ip_network_address"],
             "rtpaddrs": [
                 "farend_rtp_media_ip_network_address"
             ],
