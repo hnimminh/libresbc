@@ -219,22 +219,26 @@ local function main()
             if _nshcause and string.match(_nshcause, "^sip:[1-6][0-9][0-9]$") then
                 nshcause = _nshcause:sub(-3)
             end
-            local NOFAILOVER_SIP_CODES = get_nofailover_sip_codes(NgVars.route)
-            log.info('module=callng, space=main, action=verify_state, seshid=%s, uuid=%s, attempt=%s, route=%s, gateway=%s, status=%s, nshcause=%s, NOFAILOVER_SIP_CODES=%s',
-                NgVars.seshid, _uuid, attempt, NgVars.route, gateway, dialstatus, nshcause, json.encode(NOFAILOVER_SIP_CODES))
 
-            -- do failover by SIP response code
-            if (ismeberof(NOFAILOVER_SIP_CODES, nshcause)) then
-                log.notice('module=callng, space=main, action=nofailover, seshid=%s, uuid=%s, route=%s, nshcause=%s', NgVars.seshid, _uuid, NgVars.route, nshcause)
-                break
-            end
+            log.info('module=callng, space=main, action=verify_state, seshid=%s, uuid=%s, attempt=%s, route=%s, gateway=%s, status=%s, nshcause=%s',
+                NgVars.seshid, _uuid, attempt, NgVars.route, gateway, dialstatus, nshcause)
 
             -- do failover by call dial status
             local NOFAILOVER_CALL_STATE = {'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}
             if #NgVars.LIBRE_NOFAILOVER_CALL_STATE > 0 then
                 NOFAILOVER_CALL_STATE = json.decode(NgVars.LIBRE_NOFAILOVER_CALL_STATE)
             end
-            if (ismeberof(NOFAILOVER_CALL_STATE, dialstatus)) then break end
+            if (ismeberof(NOFAILOVER_CALL_STATE, dialstatus)) then
+                break
+            end
+
+            -- do failover by SIP response code
+            local NOFAILOVER_SIP_CODES = get_nofailover_sip_codes(NgVars.route)
+            if (ismeberof(NOFAILOVER_SIP_CODES, nshcause)) then
+                log.notice('module=callng, space=main, action=nofailover, seshid=%s, uuid=%s, route=%s, nshcause=%s, NOFAILOVER_SIP_CODES=%s',
+                    NgVars.seshid, _uuid, NgVars.route, nshcause, json.encode(NOFAILOVER_SIP_CODES))
+                break
+            end
 
             ::ENDFAILOVER::
         end
