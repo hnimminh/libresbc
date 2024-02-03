@@ -19,6 +19,7 @@ local function main()
     NgVars.ENCRYPTION_SUITES = table.concat(SRPT_ENCRYPTION_SUITES, ':')
     NgVars.LIBRE_HANGUP_CAUSE = __empty__
     NgVars.LIBRE_HCAUSE_HMAP = __empty__
+    NgVars.LIBRE_NOFAILOVER_CALL_STATE = __empty__
     local HANGUP_CAUSE = 'NORMAL_CLEARING'
     --- CALL PROCESSING
     if ( InLeg:ready() ) then
@@ -85,22 +86,22 @@ local function main()
         --------------------------------------------------------------------
 
         -- routing
-        local routingrules
+        local routingrules, navigator
         local routingname = InLeg:getVariable("x-routing-plan")
-        NgVars.route1, NgVars.route2, routingrules = routing_query(routingname, NgVars)
+        navigator, NgVars.routes, routingrules = routing_query(routingname, NgVars)
 
         local routingrulestr = 'no.matching.route.found'
         if (#routingrules > 0) then routingrulestr = rulejoin(routingrules) end
 
-        log.info('module=callng, space=main, action=routing_query, seshid=%s, uuid=%s, intconname=%s, routingname=%s, NgVars=%s, route1=%s, route2=%s, routingrules=%s',
-                NgVars.seshid, uuid, NgVars.intconname, routingname,  json.encode(NgVars), NgVars.route1, NgVars.route2, routingrulestr)
+        log.info('module=callng, space=main, action=routing_query, seshid=%s, uuid=%s, intconname=%s, routingname=%s, NgVars=%s, routingrules=%s',
+                NgVars.seshid, uuid, NgVars.intconname, routingname,  json.encode(NgVars), routingrulestr)
 
-        if not (NgVars.route1 and NgVars.route2) then
+        if not next(NgVars.routes) then
             HANGUP_CAUSE = 'NO_ROUTE_DESTINATION'; NgVars.LIBRE_HANGUP_CAUSE = 'ROUTE_NOT_FOUND'; goto ENDSESSION    -- SIP 404 NO_ROUTE_DESTINATION
         end
 
         -- blocking call checking
-        if (NgVars.route1 == BLOCK) or (NgVars.route2 == BLOCK) then
+        if ismeberof(NgVars.routes, BLOCK) then
             log.info('module=callng, space=main, action=hangup_as_block, seshid=%s, uuid=%s, intconname=%s', NgVars.seshid, uuid, NgVars.intconname)
             HANGUP_CAUSE = 'CALL_REJECTED'; NgVars.LIBRE_HANGUP_CAUSE = 'BLOCK_CALL'; goto ENDSESSION  -- SIP 603 Decline
         end
@@ -120,8 +121,9 @@ local function main()
         --------------------------------------------------------------------
         ----- OUTLEG
         --------------------------------------------------------------------
-        local _uuid, dialstatus
-        local routes = (NgVars.route1==NgVars.route2) and {NgVars.route1} or {NgVars.route1, NgVars.route2}
+        local _uuid, dialstatus, nshcause
+        local routes = tosets(NgVars.routes)
+        if navigator then table.insert(routes, 1, navigator) end
         for attempt=1, #routes do
             _uuid = fsapi:execute('create_uuid')
             NgVars.route = routes[attempt]
@@ -211,11 +213,31 @@ local function main()
                     NgVars.seshid, _uuid, NgVars.route, _sipprofile, gateway, algorithm, forceroute)
             OutLeg = freeswitch.Session("sofia/gateway/"..gateway.."/"..NgVars._dstnumber, InLeg)
 
-            -- check leg status
+            --------------------------------------------------------------------
+            -- FAILOVER
+            --------------------------------------------------------------------
             dialstatus = OutLeg:hangupCause()
-            log.info('module=callng, space=main, action=verify_state, seshid=%s, uuid=%s, attempt=%s, gateway=%s, status=%s', NgVars.seshid, _uuid, attempt, gateway, dialstatus)
+            local _nshcause = InLeg:getVariable("last_bridge_proto_specific_hangup_cause")
+            if _nshcause and string.match(_nshcause, "^sip:[1-6][0-9][0-9]$") then
+                nshcause = _nshcause:sub(-3)
+            end
+            local NOFAILOVER_SIP_CODES = get_nofailover_sip_codes(NgVars.route)
+            log.info('module=callng, space=main, action=verify_state, seshid=%s, uuid=%s, attempt=%s, route=%s, gateway=%s, status=%s, nshcause=%s, NOFAILOVER_SIP_CODES=%s',
+                NgVars.seshid, _uuid, attempt, NgVars.route, gateway, dialstatus, nshcause, json.encode(NOFAILOVER_SIP_CODES))
 
-            if (ismeberof({'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}, dialstatus)) then break end
+            -- do failover by SIP response code
+            if (ismeberof(NOFAILOVER_SIP_CODES, nshcause)) then
+                log.notice('module=callng, space=main, action=nofailover, seshid=%s, uuid=%s, route=%s, nshcause=%s', NgVars.seshid, _uuid, NgVars.route, nshcause)
+                break
+            end
+
+            -- do failover by call dial status
+            local NOFAILOVER_CALL_STATE = {'SUCCESS', 'NO_ANSWER', 'USER_BUSY', 'NORMAL_CLEARING', 'ORIGINATOR_CANCEL'}
+            if #NgVars.LIBRE_NOFAILOVER_CALL_STATE > 0 then
+                NOFAILOVER_CALL_STATE = json.decode(NgVars.LIBRE_NOFAILOVER_CALL_STATE)
+            end
+            if (ismeberof(NOFAILOVER_CALL_STATE, dialstatus)) then break end
+
             ::ENDFAILOVER::
         end
 
@@ -259,17 +281,12 @@ local function main()
         -----------------------------------------------------------
         if #NgVars.LIBRE_HCAUSE_HMAP > 0 then
             local LIBRE_HCAUSE_HMAP = json.decode(NgVars.LIBRE_HCAUSE_HMAP)
-            local _bhcause = InLeg:getVariable("last_bridge_proto_specific_hangup_cause")
-            local bhcause
-            if _bhcause and string.match(_bhcause, "^sip:[456][0-9][0-9]$") then
-                bhcause = _bhcause:sub(-3)
-            end
-            local ahcause = LIBRE_HCAUSE_HMAP[bhcause] or LIBRE_HCAUSE_HMAP.default
-            if bhcause and ahcause then
-                NgVars.LIBRE_HANGUP_CAUSE = ahcause
+            local hcause = LIBRE_HCAUSE_HMAP[nshcause] or LIBRE_HCAUSE_HMAP.default
+            if hcause and nshcause then
+                NgVars.LIBRE_HANGUP_CAUSE = hcause
                 InLeg:setVariable("sip_ignore_remote_cause", "true")
-                InLeg:execute("respond", ahcause)
-                log.info('module=callng, space=main, action=overwrite, seshid=%s, uuid=%s, bhcause=%s, ahcause=%s', NgVars.seshid, uuid, bhcause, ahcause)
+                InLeg:execute("respond", hcause)
+                log.info('module=callng, space=main, action=overwrite, seshid=%s, uuid=%s, hcause=%s, nshcause=%s', NgVars.seshid, uuid, hcause, nshcause)
             end
         end
 

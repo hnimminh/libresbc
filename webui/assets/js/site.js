@@ -181,6 +181,7 @@ const APIGuide = {
                 "none"
             ],
             "cid_type": "none",
+            "nofailover_sip_codes": [],
             "distribution": "weight_based",
             "gateways": [
               {
@@ -280,6 +281,7 @@ const APIGuide = {
             "name": "routing_table_name",
             "desc": "description",
             "action": "route/block/query/httpr",
+            "navigator": null,
             "variables": ["cidnumber", "cidname", "dstnumber", "intconname", "realm"],
             "routes": {
                 "primary": "primary_endpoint",

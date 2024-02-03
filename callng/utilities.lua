@@ -119,6 +119,17 @@ function randompick(intable)
     return intable[random(#intable)]
 end
 
+function tosets(array)
+    local hash = {}
+    local result = {}
+    for _,v in ipairs(array) do
+        if not hash[v] then
+            result[#result+1] = v
+            hash[v] = true
+        end
+    end
+    return result
+end
 
 function fieldjsonify(data)
     if type(data)=='string' then

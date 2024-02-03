@@ -13,7 +13,7 @@ import json
 import hashlib
 import redis
 import validators
-from pydantic import BaseModel, Field, validator, root_validator, schema
+from pydantic import BaseModel, Field, validator, root_validator, schema, constr
 from pydantic.fields import ModelField
 from typing import Optional, List, Dict, Union, Any
 from enum import Enum
@@ -1411,11 +1411,11 @@ class ManiAction(BaseModel):
             if not values:
                 _maniacts.pop('refervar', None)
                 _maniacts.pop('pattern', None)
-            if targetvar == 'LIBRE_HCAUSE_HMAP':
+            if targetvar in ['LIBRE_HCAUSE_HMAP', 'LIBRE_NOFAILOVER_CALL_STATE']:
                 if len(values)!=1:
-                    raise ValueError('values length must be 1 when targetvar=LIBRE_HCAUSE_HMAP')
+                    raise ValueError('values length must be 1 when targetvar=LIBRE_*')
                 if not isjson(values[0]):
-                    raise ValueError('values[0] must be json format when targetvar=LIBRE_HCAUSE_HMAP')
+                    raise ValueError('values[0] must be json format when targetvar=LIBRE_*')
         else: #{log,hangup,sleep}
             _maniacts.pop('targetvar', None)
             if not values:
@@ -1814,6 +1814,8 @@ HASHCALLID = 'hash_callid'
 HASHIPADDR = 'hash_src_ip'
 HASHDESTNO = 'hash_destination_number'
 
+SIPCode = constr(regex="^[1-6][0-9][0-9]$")
+
 class Distribution(str, Enum):
     weight_based = WEIGHTBASE
     round_robin = ROUNDROBIN
@@ -1851,6 +1853,7 @@ class OutboundInterconnection(BaseModel):
     manipulation_classes: List[str] = Field(default=[], min_items=0, max_item=5, description='a set of manipulations class')
     privacy: List[PrivacyEnum] = Field(default=['auto'], min_items=1, max_item=3, description='privacy header')
     cid_type: Optional[CallerIDType] = Field(default='auto', description='callerid header mechanism: rpid, pid, none')
+    nofailover_sip_codes: Optional[List[SIPCode]] = Field(default=[], min_items=0, max_item=32, description='a set of sip response code that stop failover')
     nodes: List[str] = Field(default=['_ALL_'], min_items=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
@@ -2019,6 +2022,9 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
                     if routes:
                         _routes = routes.replace(identifier, name)
                         pipe.hset(f'routing:{engagement}', 'routes', _routes)
+                    navigator = rdbconn.hget(f'routing:{engagement}', 'navigator')
+                    if navigator and navigator == identifier:
+                        pipe.hset(f'routing:{engagement}', 'navigator', name)
                 if engagement.startswith('record'):
                     if engagement.startswith(':compare:'):
                         routes = rdbconn.hgetall(f'routing:{engagement}')
@@ -2463,11 +2469,15 @@ class RoutingTableModel(BaseModel):
     variables: Optional[List[str]] = Field(min_items=1, max_items=5, description='sip variable for routing base, eg: cidnumber, cidname, dstnumber, intconname, realm')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection; {_HTTPR} - find nexthop by HTTP GET')
     routes: Optional[RouteModel] = Field(description='route model data')
+    navigator: Optional[str] = Field(regex=_NAME_, max_length=32, description='reference (clearip/youmail) sip entity of route')
     # validation
     @root_validator()
     def routing_table_agreement(cls, values):
         values = jsonable_encoder(values)
         action = values.get('action')
+        navigator = values.get('navigator')
+        if not navigator:
+            values.pop('navigator', None)
         if action==_ROUTE:
             values.pop('variables', None)
             routes = values.get('routes', None)
@@ -2486,6 +2496,8 @@ class RoutingTableModel(BaseModel):
             variables = values.get('variables')
             if not variables:
                 raise ValueError(f'{_QUERY} action require at variables param')
+            if navigator and not rdbconn.exists(f'intcon:out:{navigator}'):
+                raise ValueError('nonexistent outbound interconnect')
             values['variables'] = variables[:1]
         elif action==_HTTPR:
             variables = values.get('variables')
@@ -2498,6 +2510,7 @@ class RoutingTableModel(BaseModel):
         else:
             values.pop('routes', None)
             values.pop('variables', None)
+            values.pop('navigator', None)
 
         return values
 
@@ -2518,6 +2531,9 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         if routes and isinstance(routes, list):
             for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
+        navigator = data.get('navigator')
+        if navigator:
+            pipe.sadd(f'engagement:intcon:out:{navigator}', nameid)
         pipe.execute()
         response.status_code, result = 200, {'passed': True}
     except Exception as e:
@@ -2545,18 +2561,25 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         # get current data
         _data = jsonhash(rdbconn.hgetall(_name_key))
         _routes = _data.get('routes')
+        _navigator = _data.get('navigator')
         # transaction block
         pipe.multi()
         if _routes and isinstance(_routes, list):
             for _route in _routes[:2]:
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
+        if _navigator:
+            pipe.srem(f'engagement:intcon:out:{_navigator}', _nameid)
 
         data = jsonable_encoder(reqbody)
         routes = data.get('routes')
+        navigator = data.get('navigator')
         pipe.hmset(name_key, redishash(data))
         if routes and isinstance(routes, list):
             for route in routes[:2]:
                 pipe.sadd(f'engagement:intcon:out:{route}', nameid)
+        if navigator:
+            pipe.sadd(f'engagement:intcon:out:{navigator}', nameid)
+
         # remove unintended field
         for field in _data:
             if field not in data:
@@ -2605,6 +2628,9 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
         if _routes and isinstance(_routes, list):
             for _route in _routes[:2]:
                 pipe.srem(f'engagement:intcon:out:{_route}', _nameid)
+        _navigator = rdbconn.hget(_name_key, 'navigator')
+        if _navigator:
+            pipe.srem(f'engagement:intcon:out:{_navigator}', _nameid)
         pipe.delete(_engaged_key)
         pipe.delete(_name_key)
         pipe.execute()

@@ -25,6 +25,14 @@ function is_intcon_enable(name, direction)
     return fieldjsonify(rdbconn:hget(intconkey(name, direction), 'enable'))
 end
 
+function get_nofailover_sip_codes(name)
+    local sip_codes = rdbconn:hget(intconkey(name, OUTBOUND), 'nofailover_sip_codes')
+    if sip_codes then
+        return fieldjsonify(sip_codes)
+    end
+    return {}
+end
+
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- CONCURENT CALL
 ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -536,14 +544,14 @@ function pchoice(a, b, p)
 end
 
 local function curlroute(url, query)
-    local p, s
+    local _routes = {}
     local ok, err, body, status = curlget( url..'?'..query, {["x-nodeid"] = NODEID})
     if not ok or status~=200 then
         log.error('module=callng, space=callfunc, action=curlroute, url=%s, query=%s, error=%s', url, query, err)
     else
-        p, s = unpack(json.decode(body))
+        _routes = json.decode(body)
     end
-    return p, s
+    return _routes
 end
 
 local function httproute(url, query)
@@ -561,26 +569,31 @@ end
 
 function routing_query(tablename, routingdata)
     local routingrules = {}
-    local primary, secondary, load
+    local navigator, primary, secondary, load
     ---
     repeat
         -- routing table process
         local routevalue = nil
         local schema = jsonhash(rdbconn:hgetall('routing:table:'..tablename))
         -- return immediately if invalid schema
-        if (not next(schema)) then return nil, nil, routingrules end
+        if (not next(schema)) then
+            return nil, {}, routingrules
+        end
         arrayinsert(routingrules, tablename)
         local schema_action = schema.action
+        navigator = schema.navigator
         if schema_action == BLOCK then
-            return BLOCK, BLOCK, routingrules
+            return navigator, {BLOCK}, routingrules
         elseif schema_action == ROUTE then
             primary, secondary = pchoice(schema.routes[1], schema.routes[2], tonumber(schema.routes[3]))
-            return primary, secondary, routingrules
+            return navigator, {primary, secondary}, routingrules
         elseif schema_action == QUERY then
             local variable = schema.variables[1]
             local value = routingdata[variable]
             -- return immediately if invalid schema
-            if (not value) then return nil, nil, routingrules end
+            if (not value) then
+                return navigator, {}, routingrules
+            end
             -- route lookup {eq, ne, gt, lt}
             local hashroute = rdbconn:hgetall('routing:record:'..tablename..':compare:')
             if next(hashroute) then
@@ -632,29 +645,30 @@ function routing_query(tablename, routingdata)
                 arrayinsert(params, variable..'='..routingdata[variable])
             end
             local query = join(params, '&')
-            primary, secondary = curlroute(schema.routes, query)
-            return primary, secondary, {'routing.via.http'}
+            local _routes = curlroute(schema.routes, query)
+            return navigator, _routes, {'routing.via.http'}
         else
-            return nil, nil, routingrules
+            return navigator, {}, routingrules
         end
+
         -- routing record process
         if routevalue then
             local action, p, s, l = unpack(split(routevalue, ':'))
             if action == BLOCK then
-                return BLOCK, BLOCK, routingrules
+                return navigator, {BLOCK}, routingrules
             elseif action == JUMPS then
                 tablename, _ = pchoice(p, s, tonumber(l))
                 goto REQUERYROUTE
             elseif action == ROUTE then
                 primary, secondary = pchoice(p, s, tonumber(l))
-                return primary, secondary, routingrules
+                return navigator, {primary, secondary}, routingrules
             else
-                return nil, nil, routingrules
+                return navigator, {}, routingrules
             end
         end
         ::REQUERYROUTE::
     until (ismeberof(routingrules, tablename) or (#routingrules >= 10) or (primary))
-    return primary, secondary, routingrules
+    return navigator, {primary, secondary}, routingrules
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------
