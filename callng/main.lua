@@ -45,8 +45,16 @@ local function main()
             'realm=%s, intconname=%s, call_id=%s, transport=%s, caller_name=%s, caller_number=%s, destination_number=%s',
             NgVars.seshid, uuid, context, sipprofile, network_ip, NgVars.realm, NgVars.intconname, call_id, transport, caller_name, caller_number, destination_number
         )
+        --------------------------------------------------------------------
+        ----- PRESETTING
+        --------------------------------------------------------------------
+        InLeg:execute("export", "sip_copy_custom_headers=false")
+        InLeg:setVariable("continue_on_fail", "true")
+        InLeg:setVariable("hangup_after_bridge", "true")
+        InLeg:setVariable("call_timeout", "0")
+        InLeg:setVariable("fax_enable_t38", "true")
         -----------------------------------------------------------
-        ---- IN LEG: INTIAL VAR
+        ---- IN LEG: INITIATE VAR
         -----------------------------------------------------------
         InLeg:execute("export", "X-LIBRE-SESHID="..NgVars.seshid)
         InLeg:setVariable("X-LIBRE-INTCONNAME", NgVars.intconname)
@@ -108,16 +116,6 @@ local function main()
         --------------------------------------------------------------------
         if InLeg:getVariable("x-ringready") then InLeg:execute('ring_ready') end
         earlyMediaProcess(NgVars.intconname, InLeg)
-        --------------------------------------------------------------------
-        ----- PRESETTING
-        --------------------------------------------------------------------
-        InLeg:execute("export", "sip_copy_custom_headers=false")
-        InLeg:setVariable("continue_on_fail", "true")
-        InLeg:setVariable("hangup_after_bridge", "true")
-        InLeg:setVariable("call_timeout", "0")
-        InLeg:setVariable("fax_enable_t38", "true")
-        -- InLeg:execute("export", "media_timeout=".._MAX_SILENT_TIMEOUT)
-        -- InLeg:execute("sched_hangup", "+"..MAX_CALL_DURATION.." allotted_timeout")
         --------------------------------------------------------------------
         ----- OUTLEG
         --------------------------------------------------------------------

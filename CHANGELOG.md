@@ -19,6 +19,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Support switching rfc2833 fmtp=0-15/16
 - Add capability of overwrite SIP response #150
 - Integrate 3rd-party SIP protection service (ClearIP, Youmail..) #147
+- Ability to customize preset variables
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
