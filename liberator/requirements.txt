@@ -1,5 +1,5 @@
 requests==2.31.0
-fastapi==0.95.0
+fastapi==0.109.1
 typing==3.7.4.1
 pydantic==1.8.2
 uvicorn==0.11.7
