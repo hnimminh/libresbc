@@ -1846,7 +1846,7 @@ class OutboundInterconnection(BaseModel):
     sipprofile: str = Field(description='a sip profile nameid that interconnection engage to')
     distribution: Distribution = Field(default='round_robin', description='The dispatcher algorithm to selects a destination from addresses set')
     gateways: List[DistributedGatewayModel] = Field(min_items=1, max_item=10, description='gateways list used for this interconnection')
-    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=32, description='a set of IPv4/IPv6 sip signalling addresses that use for SIP')
+    sipaddrs: List[Union[IPv4Network, IPv6Network]] = Field(default=[], min_items=0, max_item=32, description='a set of IPv4/IPv6 sip signalling addresses that use for SIP')
     rtpaddrs: List[Union[IPv4Network, IPv6Network]] = Field(min_items=0, max_item=32, description='a set of IPv4/IPv6 Network that use for RTP')
     media_class: str = Field(description='nameid of media class')
     capacity_class: str = Field(description='nameid of capacity class')
