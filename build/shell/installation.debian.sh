@@ -4,8 +4,8 @@
 #       lua-lang: https://www.lua.org/
 #       luarocks: https://luarocks.org/
 #------------------------------------------------------------------------------------------------------------
-app-get install -y liblua5.2-dev lua5.2
-app-get install -y luarocks
+apt-get install -y liblua5.2-dev lua5.2
+apt-get install -y luarocks
 /usr/bin/luarocks install luaposix 35.0-1
 /usr/bin/luarocks install luaredis 2.1.0-0
 /usr/bin/luarocks install http 0.3-0
