@@ -21,6 +21,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Integrate 3rd-party SIP protection service (ClearIP, Youmail..) #147
 - Ability to customize preset variables
 - Handle nft outbound interconnection
+- Ability to generate MOH with libretone
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121

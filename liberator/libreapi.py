@@ -574,6 +574,8 @@ class SIPProfileModel(BaseModel):
     apply_proxy_acl: Optional[str] = Field(description='set the network that apply for SIP proxy, refer from predefined acl (no-remove-protection)', hidden_field=True)
     parse_all_invite_headers: Optional[bool] = Field(description='parse all header from SIP INVITE', hidden_field=True)
     p_asserted_id_parse: Optional[str] = Field(description='method to parse PAI header default/user-only/user-domain/verbatim', hidden_field=True)
+    disable_moh: Optional[bool] = Field(description='turn off music-on-hold feature or play music while call on hold', hidden_field=True)
+    proxy_hold: Optional[bool] = Field(description='re-INVITE for hold/unhold is proxied to other end', hidden_field=True)
     addrdetect: AddressDetect = Field(default='autonat', description='Mechanism to detect & advertise IP address SBC behide the NAT')
     enable_100rel: bool = Field(default=True, description='Reliability - PRACK message as defined in RFC3262')
     ignore_183nosdp: bool = Field(default=True, description='Just ignore SIP 183 without SDP body')

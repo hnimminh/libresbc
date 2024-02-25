@@ -79,9 +79,10 @@
             --> #}
             <param name="inbound-codec-negotiation" value="generous"/>
             <param name="inbound-late-negotiation" value="true"/> {# <!-- outbound profile need to be in late negotiation --> #}
-            <param name="disable-hold" value="true"/> {# <!-- turn of music-on-hold feature --> #}
-            {#- <!-- <param name="hold-music" value="$${hold_music}"/> -->#}
-            <param name="proxy-hold" value="true"/> {# <!-- re-INVITE for hold/unhold is proxied to other end --> #}
+            {# <!-- <param name="renegotiate-codec-on-hold" value="true"/> --> #}
+            <param name="disable-hold" value="{{sipprofile.disable_moh|default('true')}}"/> {# <!-- turn off music-on-hold feature --> #}
+            <param name="hold-music" value="$${hold_music}"/>
+            <param name="proxy-hold" value="{{sipprofile.proxy_hold|default('true')}}"/> {# <!-- re-INVITE for hold/unhold is proxied to other end --> #}
             <param name="suppress-cng" value="true"/> {# <!-- Not use cng at the moment --> #}
             <param name="pass-callee-id" value="false" /> {# <!-- Disable sending X-FS-Support header --> #}
             <param name="stun-enabled" value="false"/> {# <!-- disable stun --> #}
