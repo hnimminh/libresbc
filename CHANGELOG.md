@@ -22,6 +22,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Ability to customize preset variables
 - Handle nft outbound interconnection
 - Ability to generate MOH with libretone
+- Remove deprecated script installation.debian.sh
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
