@@ -23,6 +23,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Handle nft outbound interconnection
 - Ability to generate MOH with libretone
 - Remove deprecated script installation.debian.sh
+- Upgrate lib Jinja2==3.0.1->3.1.3, fastapi==0.95.0->.110.3
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
