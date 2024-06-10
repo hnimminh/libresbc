@@ -24,6 +24,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - Ability to generate MOH with libretone
 - Remove deprecated script installation.debian.sh
 - Upgrate lib Jinja2==3.0.1->3.1.3, fastapi==0.95.0->.110.3, pydantic==1.8.2->1.10.15, requests==2.31.0->2.32.2, Jinja2==3.1.3->3.1.4
+- Add hyphen - into _NAME_ patten #83
 
 ## [v0.7.1] - 2023-12-25
 - Fix UI access layer #121
