@@ -4,7 +4,7 @@
         <param name="sessions-per-second" value="{{switchattributes.max_calls_per_second}}"/>
         <param name="rtp-start-port" value="{{switchattributes.rtp_start_port}}"/>
         <param name="rtp-end-port" value="{{switchattributes.rtp_end_port}}"/>
-        {%- if crcs.capability %}
+        {%- if crcs.capability and crcs.host and crcs.port and crcs.database and crcs.username and crcs.password %}
         <param name="core-db-dsn" value="pgsql://host={{crcs.host}} port={{crcs.port}} dbname={{crcs.database}} user={{crcs.username}} password={{crcs.password}} options='-c client_min_messages=NOTICE' application_name='libresbc'" />
         {%- endif %}
 </include>
