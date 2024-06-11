@@ -89,7 +89,7 @@ func init() {
       +-+-+-+-+-+-+-+-+ +-+-+-+-+-+
 
       Open Source Session Border Controler
-      LibreSBC - v0.7.1.e
+      LibreSBC - v0.7.1.f
 
       Listen    %s
       LibreSBC  %s
