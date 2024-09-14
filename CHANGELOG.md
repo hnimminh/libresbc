@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
+## [v0.8.0] - 2024-09-14
+- Support Debian 12 (bookworm)
+
 ## [v0.7.2] - 2024-09-14
 - Support call recovery capability (HA) #140
 - Support config build as var for kamailio/freeswitch

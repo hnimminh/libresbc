@@ -1,12 +1,12 @@
-requests==2.32.2
-fastapi==0.110.3
+requests==2.32.3
+fastapi==0.114.2
 typing==3.7.4.1
 pydantic==1.10.15
-uvicorn==0.11.7
+uvicorn==0.30.6
 Jinja2==3.1.4
 aiofiles==0.5.0
-redis==4.4.4
+redis==5.0.8
 contextvars==2.4
 schedule==0.6.0
 redfs==0.0.4rc0
-validators==0.18.2
+validators==0.34.0

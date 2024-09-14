@@ -43,10 +43,23 @@
     - reload logrotate
     - restart rsyslog
 
+## BOOKWORM
+- name: variable libre_python_binary
+  set_fact:
+    libre_python_binary: "{% if ansible_distribution_major_version|int >= 12 %}{{dstdir}}/venv/bin/python3{% else %}/usr/bin/python3{% endif %}"
+- name: Update python lib/package for venv
+  pip:
+    requirements: "{{dstdir}}/liberator/requirements.txt"
+    virtualenv: "{{dstdir}}/venv"
+    virtualenv_command: /usr/bin/python3 -m venv
+  when: ansible_distribution_major_version|int >= 12
+## BOOKWORM
+
 - name: Install specified python requirements
   pip:
     requirements: "{{dstdir}}/liberator/requirements.txt"
     executable: pip3
+  when: ansible_distribution_major_version|int < 12
 
 - name: Create a directory if it does not exist
   file:

@@ -9,7 +9,7 @@ User=root
 Group=root
 EnvironmentFile={{dstdir}}/libre.env
 WorkingDirectory={{dstdir}}/liberator
-ExecStart=/usr/bin/python3 {{dstdir}}/liberator/main.py
+ExecStart={{libre_python_binary}} {{dstdir}}/liberator/main.py
 
 SyslogIdentifier=libresbc
 SyslogFacility=5
