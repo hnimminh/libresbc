@@ -243,7 +243,7 @@ def fsinstance(data):
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
 
-        if stderr and not stderr.endswith('Backgrounding.'):
+        if stderr and not stderr.endswith('Backgrounding.\n'):
             result = False
             stderr = stderr.replace('\n', '')
             logger.error(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
@@ -325,7 +325,8 @@ def kaminstance(data):
 
             cfgdel = osdelete(_cfgfile)
             luadel = osdelete(_luafile)
-            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
+            piddel = osdelete(_pidfile)
+            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}, piddel={piddel}")
         # ------------------------------------------------------------
         # LAUNCH THE NEW INSTANCE
         # ------------------------------------------------------------
@@ -395,7 +396,7 @@ def rdbinstance():
     try:
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
         rdbrun = Popen(['/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', '6379', '--pidfile', '/run/redis/redis.pid', '--unixsocket',
-                        '/run/redis/redis.sock', '--unixsocketperm', '755', '--dbfilename', 'libresbc.rdb', '--dir', '/run/redis', '--loglevel', 'warning'])
+                        '/run/redis/redis.sock', '--unixsocketperm', '755', '--appendfilename', 'libresbc.aof', '--dir', '/var/redis',  '--appendonly', 'yes', '--loglevel', 'warning'])
         _, stderr = bdecode(rdbrun.communicate())
         if stderr:
             logger.error(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
@@ -409,6 +410,7 @@ def rdbinstance():
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _NGLUA = Environment(loader=FileSystemLoader('nglua'))
+_REDIS_TIMEOUT = 50 #seconds
 @threaded
 def basestartup():
     result = False
@@ -416,6 +418,16 @@ def basestartup():
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
         rdbinstance()
+        for t in range(1, _REDIS_TIMEOUT//5):
+            try:
+                if rdbconn.ping():
+                    break
+            except redis.ConnectionError:
+                logger.info(f"module=liberator, space=basemgr, action=rdbinstance, result=Waiting for Redis (attempt {t})...")
+                time.sleep(5)
+        if not rdbconn.ping():
+            logger.error(f'module=liberator, space=basemgr, action=exception, result="Redis has not started in {_REDIS_TIMEOUT} seconds. Other modules can not be loaded."')
+            return
         fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
@@ -423,8 +435,6 @@ def basestartup():
             data.update({'layer': layer, '_layer': layer})
             kaminstance(data)
         result = True
-    except redis.RedisError as e:
-        time.sleep(10)
     except Exception as e:
         logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
         time.sleep(5)
