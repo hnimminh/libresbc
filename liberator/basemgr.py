@@ -315,6 +315,7 @@ def kaminstance(data):
             _pidfile = f'{PIDDIR}/{_layer}.pid'
             _cfgfile = f'{CFGDIR}/{_layer}.cfg'
             _luafile = f'{CFGDIR}/{_layer}.lua'
+            _tlsfile = f'{CFGDIR}/{layer}.tls.cfg'
 
             kamend = Popen([pidkill, '-F', _pidfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamend.communicate())
@@ -325,8 +326,9 @@ def kaminstance(data):
 
             cfgdel = osdelete(_cfgfile)
             luadel = osdelete(_luafile)
+            tlsdel = osdelete(_tlsfile)
             piddel = osdelete(_pidfile)
-            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}, piddel={piddel}")
+            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}, tlsdel={tlsdel}, piddel={piddel}")
         # ------------------------------------------------------------
         # LAUNCH THE NEW INSTANCE
         # ------------------------------------------------------------
@@ -336,6 +338,7 @@ def kaminstance(data):
             pidfile = f'{PIDDIR}/{layer}.pid'
             cfgfile = f'{CFGDIR}/{layer}.cfg'
             luafile = f'{CFGDIR}/{layer}.lua'
+            tlsfile = f'{CFGDIR}/{layer}.tls.cfg'
 
             kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
             netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
@@ -369,6 +372,11 @@ def kaminstance(data):
             luatemplate = _KAM.get_template("layer.j2.lua")
             luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), dftdomain=dftdomain)
             with open(luafile, 'w') as lf: lf.write(luastream)
+            # TLS configuration
+            if 'tls' in kamcfgs.get('transports'):
+                tlstemplate = _KAM.get_template("layer.j2.tls.cfg")
+                tlsstream = tlstemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer)
+                with open(tlsfile, 'w') as tf: tf.write(tlsstream)
 
             kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamrun.communicate())
