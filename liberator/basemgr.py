@@ -18,9 +18,9 @@ import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
-    REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
-    CONTAINERIZED, BUILTIN_FIREWALL, LIBRE_REDIS,
-)
+                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
+                           CONTAINERIZED, BUILTIN_FIREWALL, LIBRE_REDIS, LIBRE_WEBUI,
+                           )
 from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
 
@@ -413,6 +413,26 @@ def rdbinstance():
     except Exception as e:
         logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# WEB USER INTERFACE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@threaded
+def webui():
+    if not LIBRE_WEBUI:
+        logger.info(f"module=liberator, space=basemgr, action=webui, message=[skip action since Web UI is disabled]")
+        return
+
+    try:
+        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=webui, state=initiating")
+        webuirun = Popen(['/opt/libresbc/webui/webuisrv', '-libresbc', 'http://127.0.0.1:8080'])
+        _, stderr = bdecode(webuirun.communicate())
+        if stderr:
+            logger.error(f"module=liberator, space=basemgr, action=webui, error={stderr}")
+        else:
+            logger.info(f"module=liberator, space=basemgr, action=webui, result=success")
+    except Exception as e:
+        logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
@@ -436,6 +456,7 @@ def basestartup():
         if not rdbconn.ping():
             logger.error(f'module=liberator, space=basemgr, action=exception, result="Redis has not started in {_REDIS_TIMEOUT} seconds. Other modules can not be loaded."')
             return
+        webui()
         fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
