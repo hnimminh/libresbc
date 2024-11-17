@@ -53,7 +53,7 @@ schema.field_schema = field_schema
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_-]+$'
 _ID_ = r'^[a-zA-Z0-9][a-zA-Z0-9_]+$'
 _SRNAME_ = r'^_[a-zA-Z0-9_]+$'
-_REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
+_REALM_ = r'^[a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9_\-+#*@\.]*$'
 # ROUTING
 _QUERY = 'query'
@@ -2957,8 +2957,8 @@ class DomainPolicy(BaseModel):
     def policy(cls, kvs):
         kvs = jsonable_encoder(kvs)
         domain = kvs.get('domain')
-        if not validators.domain(domain):
-            raise ValueError('Invalid domain name, please refer rfc1035')
+        if not validators.domain(domain) and not validators.ipv4(domain):
+            raise ValueError('Domain must be rfc1035 domain name or an IP address')
         src_socket = kvs.get('srcsocket')
         srcsocket = f'{src_socket["transport"]}:{src_socket["ip"]}:{src_socket["port"]}'
         dst_socket = kvs.get('dstsocket')
@@ -3353,8 +3353,8 @@ class UserDirectory(BaseModel):
     @root_validator
     def user_directory_validation(cls, kvs):
         domain = kvs.get('domain')
-        if not validators.domain(domain):
-            raise ValueError('Invalid domain name, please refer rfc1035')
+        if not validators.domain(domain) and not validators.ipv4(domain):
+            raise ValueError('Domain must be rfc1035 domain name or an IP address')
         if not rdbconn.exists(f'access:policy:{domain}'):
             raise ValueError('Undefined domain')
         return kvs
@@ -3429,7 +3429,7 @@ def detail_access_directory_user(response: Response, domain: str=Path(..., regex
         return result
 
 @librerouter.get("/libreapi/access/directory/user/{domain}", status_code=200)
-def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z][a-z0-9_\-\.]+$|^\*$')):
+def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z0-9_\-\.]+$|^\*$')):
     result = None
     try:
         pipe = rdbconn.pipeline()
