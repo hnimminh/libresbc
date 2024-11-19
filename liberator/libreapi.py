@@ -3150,8 +3150,8 @@ class AccessService(BaseModel):
         kvs = jsonable_encoder(kvs)
         domains = kvs.get('domains')
         for domain in domains:
-            if not validators.domain(domain):
-                raise ValueError('Invalid domain name, please refer rfc1035')
+            if not validators.domain(domain) and not validators.ipv4(domain):
+                raise ValueError('Domain must be rfc1035 domain name or an IP address')
             if not rdbconn.exists(f'access:policy:{domain}'):
                 raise ValueError('Undefined domain')
         sip_address = kvs.get('sip_address')
