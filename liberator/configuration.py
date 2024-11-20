@@ -48,6 +48,11 @@ LIBRE_REDIS = False
 if _LIBRE_REDIS and _LIBRE_REDIS.upper() in ['TRUE', '1', 'YES']:
     LIBRE_REDIS = True
 
+_LIBRE_WEBUI = os.getenv('LIBRE_WEBUI')
+LIBRE_WEBUI = False
+if _LIBRE_WEBUI and _LIBRE_WEBUI.upper() in ['TRUE', '1', 'YES']:
+    LIBRE_WEBUI = True
+
 _BUILTIN_FIREWALL = os.getenv('LIBRE_BUILTIN_FIREWALL')
 BUILTIN_FIREWALL = True
 if _BUILTIN_FIREWALL and _BUILTIN_FIREWALL.upper() in ['FALSE', '0', 'NO']:

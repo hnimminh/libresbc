@@ -18,9 +18,9 @@ import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
 from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL, ESL_HOST, ESL_PORT,
-    REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
-    CONTAINERIZED, BUILTIN_FIREWALL, LIBRE_REDIS,
-)
+                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT, LOGLEVEL, LOGSTACKS,
+                           CONTAINERIZED, BUILTIN_FIREWALL, LIBRE_REDIS, LIBRE_WEBUI,
+                           )
 from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
 
 
@@ -243,7 +243,7 @@ def fsinstance(data):
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
 
-        if stderr and not stderr.endswith('Backgrounding.'):
+        if stderr and not stderr.endswith('Backgrounding.\n'):
             result = False
             stderr = stderr.replace('\n', '')
             logger.error(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
@@ -315,6 +315,7 @@ def kaminstance(data):
             _pidfile = f'{PIDDIR}/{_layer}.pid'
             _cfgfile = f'{CFGDIR}/{_layer}.cfg'
             _luafile = f'{CFGDIR}/{_layer}.lua'
+            _tlsfile = f'{CFGDIR}/{layer}.tls.cfg'
 
             kamend = Popen([pidkill, '-F', _pidfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamend.communicate())
@@ -325,7 +326,9 @@ def kaminstance(data):
 
             cfgdel = osdelete(_cfgfile)
             luadel = osdelete(_luafile)
-            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
+            tlsdel = osdelete(_tlsfile)
+            piddel = osdelete(_pidfile)
+            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}, tlsdel={tlsdel}, piddel={piddel}")
         # ------------------------------------------------------------
         # LAUNCH THE NEW INSTANCE
         # ------------------------------------------------------------
@@ -335,6 +338,7 @@ def kaminstance(data):
             pidfile = f'{PIDDIR}/{layer}.pid'
             cfgfile = f'{CFGDIR}/{layer}.cfg'
             luafile = f'{CFGDIR}/{layer}.lua'
+            tlsfile = f'{CFGDIR}/{layer}.tls.cfg'
 
             kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
             netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
@@ -368,6 +372,11 @@ def kaminstance(data):
             luatemplate = _KAM.get_template("layer.j2.lua")
             luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), dftdomain=dftdomain)
             with open(luafile, 'w') as lf: lf.write(luastream)
+            # TLS configuration
+            if 'tls' in kamcfgs.get('transports'):
+                tlstemplate = _KAM.get_template("layer.j2.tls.cfg")
+                tlsstream = tlstemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer)
+                with open(tlsfile, 'w') as tf: tf.write(tlsstream)
 
             kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
             _, stderr = bdecode(kamrun.communicate())
@@ -395,7 +404,7 @@ def rdbinstance():
     try:
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
         rdbrun = Popen(['/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', '6379', '--pidfile', '/run/redis/redis.pid', '--unixsocket',
-                        '/run/redis/redis.sock', '--unixsocketperm', '755', '--dbfilename', 'libresbc.rdb', '--dir', '/run/redis', '--loglevel', 'warning'])
+                        '/run/redis/redis.sock', '--unixsocketperm', '755', '--appendfilename', 'libresbc.aof', '--dir', '/var/redis',  '--appendonly', 'yes', '--loglevel', 'warning'])
         _, stderr = bdecode(rdbrun.communicate())
         if stderr:
             logger.error(f"module=liberator, space=basemgr, action=rdbinstance.rdbrun, error={stderr}")
@@ -404,11 +413,32 @@ def rdbinstance():
     except Exception as e:
         logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
 
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# WEB USER INTERFACE
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+@threaded
+def webui():
+    if not LIBRE_WEBUI:
+        logger.info(f"module=liberator, space=basemgr, action=webui, message=[skip action since Web UI is disabled]")
+        return
+
+    try:
+        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=webui, state=initiating")
+        webuirun = Popen(['/opt/libresbc/webui/webuisrv', '-libresbc', 'http://127.0.0.1:8080'])
+        _, stderr = bdecode(webuirun.communicate())
+        if stderr:
+            logger.error(f"module=liberator, space=basemgr, action=webui, error={stderr}")
+        else:
+            logger.info(f"module=liberator, space=basemgr, action=webui, result=success")
+    except Exception as e:
+        logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # BASE RESOURCE STARTUP
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 _NGLUA = Environment(loader=FileSystemLoader('nglua'))
+_REDIS_TIMEOUT = 50 #seconds
 @threaded
 def basestartup():
     result = False
@@ -416,6 +446,17 @@ def basestartup():
         logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
         rdbinstance()
+        for t in range(1, _REDIS_TIMEOUT//5):
+            try:
+                if rdbconn.ping():
+                    break
+            except redis.ConnectionError:
+                logger.info(f"module=liberator, space=basemgr, action=rdbinstance, result=Waiting for Redis (attempt {t})...")
+                time.sleep(5)
+        if not rdbconn.ping():
+            logger.error(f'module=liberator, space=basemgr, action=exception, result="Redis has not started in {_REDIS_TIMEOUT} seconds. Other modules can not be loaded."')
+            return
+        webui()
         fsinstance(data)
         nftupdate(data)
         layers = rdbconn.smembers('nameset:access:service')
@@ -423,8 +464,6 @@ def basestartup():
             data.update({'layer': layer, '_layer': layer})
             kaminstance(data)
         result = True
-    except redis.RedisError as e:
-        time.sleep(10)
     except Exception as e:
         logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
         time.sleep(5)
