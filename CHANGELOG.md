@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
+## [v1.0.0] - TBA
+
 ## [v0.8.0] - 2024-09-14
 - Support Debian 12 (bookworm)
 
