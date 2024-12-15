@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <document type="freeswitch/xml">
-  <X-PRE-PROCESS cmd="exec-set" data="fsxmlapi=(echo ${LIBERATOR_CFGAPI_URL:-http://127.0.0.1:8080/cfgapi/fsxml})"/>
-  <X-PRE-PROCESS cmd="exec-set" data="nodeid=(echo ${NODEID:-{{NODEID}}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="fsxmlapi=(echo ${LIBERATOR_CFGAPI_URL:-http://127.0.0.1:8080})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="nodeid=(echo ${NODEID:-NODEDFT})"/>
   <X-PRE-PROCESS cmd="exec-set" data="loglevel=(echo ${LOGLEVEL:-INFO})"/>
-  <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESLHOST:-{{eslhost}}})"/>
-  <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESLPOST:-{{eslport}}})"/>
-  <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESLPASSWORD:-{{eslpassword}}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESL_HOST:-127.0.0.1})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESL_POST:-8021}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESL_PASSWORD:-LIBRESBC})"/>
   <X-PRE-PROCESS cmd="set" data="hold_music={loops=-1}tone_stream://%(250,0,350);%(250,0,440);%(250,0,530);%(300,0,700);%(400,0,800);%(300,0,900);%(250,0,600);%(160,0,440)"/>
   <X-PRE-PROCESS cmd="set" data="devshm=/dev/shm"/>
   <!-- BEGIN: CONFIGURATION SECTION -->
@@ -13,7 +13,7 @@
     <!-- ACL ACCESS CONTROL LIST -->
     <configuration name="acl.conf" description="Network Lists">
       <network-lists>
-        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/acl $${fsxmlapi}/acl"/>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/acl $${fsxmlapi}/cfgapi/fsxml/acl"/>
         <X-PRE-PROCESS cmd="include" data="$${devshm}/acl"/>
         <list name="loopback.auto" default="deny">
           <node type="allow" cidr="127.0.0.1/32"/>
@@ -34,7 +34,7 @@
     <!-- DISTRIBUTOR -->
     <configuration name="distributor.conf" description="Distributor Configuration">
       <lists>
-        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/distributor $${fsxmlapi}/distributor"/>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/distributor $${fsxmlapi}/cfgapi/fsxml/distributor"/>
         <X-PRE-PROCESS cmd="include" data="$${devshm}/distributor"/>
       </lists>
     </configuration>
@@ -147,7 +147,7 @@
         <param name="debug-presence" value="0"/>
       </global_settings>
       <profiles>
-        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${fsxmlapi}/sip-setting/$${nodeid}" />
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${fsxmlapi}/cfgapi/fsxml/sip-setting/$${nodeid}" />
         <X-PRE-PROCESS cmd="include" data="$${devshm}/sipsetting"/>
       </profiles>
     </configuration>
@@ -157,7 +157,7 @@
     <!-- FREESWITCH DEFAULT CONFIGURATION -->
     <configuration name="switch.conf" description="Core Configuration">
       <settings>
-        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/switch $${fsxmlapi}/switch"/>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/switch $${fsxmlapi}/cfgapi/fsxml/switch"/>
         <X-PRE-PROCESS cmd="include" data="$${devshm}/switch"/>
         <param name="switchname" value="$${nodeid}"/>
       </settings>
@@ -206,7 +206,7 @@
   <!-- END: DIALPLAN SECTION -->
   <!-- BEGIN: DIRECTORY SECTION -->
   <section name="directory" description="User Directory">
-    <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/directory $${fsxmlapi}/directory"/>
+    <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/directory $${fsxmlapi}/cfgapi/fsxml/directory"/>
     <X-PRE-PROCESS cmd="include" data="$${devshm}/directory"/>
   </section>
   <!-- END: DIRECTORY SECTION -->
