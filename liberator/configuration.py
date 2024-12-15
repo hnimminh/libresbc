@@ -12,7 +12,7 @@ import os
 #-----------------------------------------------------------------------------------------------------
 _APPLICATION = 'LIBRESBC'
 _DESCRIPTION = 'Open Source Session Border Controller for Large-Scale Voice Infrastructures'
-_SWVERSION = 'v0.7.2'
+_SWVERSION = 'v1.0.0'
 #-----------------------------------------------------------------------------------------------------
 # LIBRE
 #-----------------------------------------------------------------------------------------------------
@@ -102,14 +102,25 @@ CHANGE_CFG_CHANNEL = 'CHANGE_CFG_CHANNEL'
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'
 NODEID_CHANNEL = f'{NODEID.upper()}_CHANNEL'
 #-----------------------------------------------------------------------------------------------------
-# CALL ENGINE EVENT SOCKET
+# CALL ENGINE
 #-----------------------------------------------------------------------------------------------------
+# EVENT SOCKET
 ESL_HOST = '127.0.0.1'
-ESL_PORT = 8021
+_ESL_HOST = os.getenv('ESL_HOST')
+if _ESL_HOST:
+    ESL_HOST = _ESL_HOST
 
-#-----------------------------------------------------------------------------------------------------
+ESL_PORT = 8021
+_ESL_PORT = os.getenv('ESL_PORT')
+if _ESL_PORT and _ESL_PORT.isdigit():
+    ESL_PORT = _ESL_PORT
+
+ESL_PASSWORD = 'LIBRESBC'
+_ESL_PASSWORD = os.getenv('ESL_PASSWORD')
+if _ESL_PASSWORD:
+    ESL_PASSWORD = _ESL_PASSWORD
+
 # CALL RECOVERY CAPABILITY
-#-----------------------------------------------------------------------------------------------------
 _CRC_CAPABILITY = os.getenv('CRC_CAPABILITY')
 CRC_CAPABILITY = False
 if _CRC_CAPABILITY and _CRC_CAPABILITY.upper() in ['TRUE', '1', 'YES']:
