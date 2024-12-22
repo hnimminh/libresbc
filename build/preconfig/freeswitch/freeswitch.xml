@@ -1,1 +1,213 @@
-liberator/fscfg/xml/freeswitch.xml
+<?xml version="1.0"?>
+<document type="freeswitch/xml">
+  <X-PRE-PROCESS cmd="env-set" data="nodeid=$NODEID"/>
+  <X-PRE-PROCESS cmd="exec-set" data="liberator_api_url=(echo ${LIBERATOR_API_URL:-http://127.0.0.1:8080})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="loglevel=(echo ${LOGLEVEL:-INFO})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESL_HOST:-127.0.0.1})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESL_PORT:-8021}})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESL_PASSWORD:-LIBRESBC})"/>
+  <X-PRE-PROCESS cmd="set" data="hold_music={loops=-1}tone_stream://%(250,0,350);%(250,0,440);%(250,0,530);%(300,0,700);%(400,0,800);%(300,0,900);%(250,0,600);%(160,0,440)"/>
+  <X-PRE-PROCESS cmd="set" data="devshm=/dev/shm"/>
+  <!-- BEGIN: CONFIGURATION SECTION -->
+  <section name="configuration" description="Various Configuration">
+    <!-- ACL ACCESS CONTROL LIST -->
+    <configuration name="acl.conf" description="Network Lists">
+      <network-lists>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/acl $${liberator_api_url}/cfgapi/fsxml/acl"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/acl"/>
+        <list name="loopback.auto" default="deny">
+          <node type="allow" cidr="127.0.0.1/32"/>
+          <node type="allow" cidr="::1/128"/>
+       </list>
+      </network-lists>
+    </configuration>
+    <!-- CONSOLE LOGGER -->
+    <configuration name="console.conf" description="Console Logger">
+      <mappings>
+        <map name="all" value="console,debug,info,notice,warning,err,crit,alert"/>
+      </mappings>
+      <settings>
+        <param name="colorize" value="false"/>
+        <param name="loglevel" value="$${loglevel}"/>
+      </settings>
+    </configuration>
+    <!-- DISTRIBUTOR -->
+    <configuration name="distributor.conf" description="Distributor Configuration">
+      <lists>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/distributor $${liberator_api_url}/cfgapi/fsxml/distributor"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/distributor"/>
+      </lists>
+    </configuration>
+    <!-- EVENT SOCKET -->
+    <configuration name="event_socket.conf" description="Socket Client">
+      <settings>
+        <param name="nat-map" value="false"/>
+        <param name="listen-ip" value="$${eslhost}"/>
+        <param name="listen-port" value="$${eslport}"/>
+        <param name="password" value="$${eslpassword}"/>
+      </settings>
+    </configuration>
+    <!--- LOGFILE -->
+    <configuration name="logfile.conf" description="File Logging">
+      <settings>
+        <param name="rotate-on-hup" value="true"/>
+      </settings>
+      <profiles>
+        <profile name="default">
+          <settings>
+            <!-- At this length in bytes rotate the log file (0 for never) -->
+            <param name="rollover" value="104857600"/>
+            	<!-- Maximum number of log files to keep before wrapping -->
+              <!-- If this parameter is enabled, the log filenames will not include a date stamp -->
+              <param name="maximum-rotate" value="32"/>
+            <param name="uuid" value="true" />
+          </settings>
+          <mappings>
+            <map name="all" value="console,info,notice,warning,err,crit,alert"/>
+          </mappings>
+        </profile>
+      </profiles>
+    </configuration>
+    <!--- AWESOME LUA -->
+    <configuration name="lua.conf" description="LUA Configuration">
+      <settings>
+        <!-- <param name="module-directory" value="/usr/share/lua/5.2/?.lua"/> -->
+        <param name="startup-script" value="callng/event.initiation.lua"/>
+        <hook event="CHANNEL_CREATE" script="callng/event.capacity.lua"/>
+        <hook event="CHANNEL_UUID" script="callng/event.capacity.lua"/>
+        <hook event="CHANNEL_DESTROY" script="callng/event.capacity.lua"/>
+        <hook event="CHANNEL_HANGUP_COMPLETE" script="callng/event.cdr.lua"/>
+        <hook event="STARTUP" script="callng/event.startup.lua"/>
+        <hook event="CUSTOM" subclass="sofia::register_failure" script="callng/event.unauth.lua"/>
+      </settings>
+    </configuration>
+    <!--- MODULES -->
+    <configuration name="pre_load_modules.conf" description="Modules">
+      <modules>
+        <load module="mod_pgsql"/>
+      </modules>
+    </configuration>
+    <configuration name="modules.conf" description="Modules">
+      <modules>
+        <load module="mod_console"/>
+        <load module="mod_logfile"/>
+        <load module="mod_event_socket"/>
+        <load module="mod_bcg729"/>
+        <load module="mod_amr"/>
+        <load module="mod_amrwb"/>
+        <load module="mod_spandsp"/>
+        <load module="mod_sndfile"/>
+        <load module="mod_tone_stream"/>
+        <load module="mod_opus"/>
+        <load module="mod_flite"/>
+        <load module="mod_lua"/>
+        <load module="mod_sofia"/>
+        <load module="mod_distributor"/>
+        <load module="mod_commands"/>
+        <load module="mod_dptools"/>
+        <load module="mod_dialplan_xml"/>
+      </modules>
+    </configuration>
+    <!--- CODECS -->
+    <configuration name="amr.conf">
+      <settings>
+        <param name="default-bitrate" value="7"/>
+        <param name="volte" value="1"/>
+        <param name="adjust-bitrate" value="0"/>
+        <param name="force-oa" value="0"/>
+      </settings>
+    </configuration>
+    <configuration name="amrwb.conf">
+      <settings>
+        <param name="default-bitrate" value="8"/>
+        <param name="volte" value="1"/>
+        <param name="adjust-bitrate" value="0"/>
+        <param name="force-oa" value="0"/>
+        <param name="mode-set-overwrite" value="0"/>
+      </settings>
+    </configuration>
+    <configuration name="opus.conf">
+      <settings>
+        <param name="use-vbr" value="1"/>
+        <param name="use-dtx" value="1"/>
+        <param name="complexity" value="10"/>
+        <param name="packet-loss-percent" value="10"/>
+        <param name="keep-fec-enabled" value="1"/>
+        <param name="use-jb-lookahead" value="1"/>
+        <param name="maxaveragebitrate" value="64000"/>
+        <param name="maxplaybackrate" value="48000"/>
+        <param name="sprop-maxcapturerate" value="48000"/>
+        <param name="adjust-bitrate" value="1"/>
+      </settings>
+    </configuration>
+    <!--- SOFIA SIP -->
+    <configuration name="sofia.conf" description="sofia Endpoint">
+      <global_settings>
+        <param name="log-level" value="0"/>
+        <param name="debug-presence" value="0"/>
+      </global_settings>
+      <profiles>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/sipsetting $${liberator_api_url}/cfgapi/fsxml/sip-setting/$${nodeid}" />
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/sipsetting"/>
+      </profiles>
+    </configuration>
+    <!--- SPANDSP  -->
+    <configuration name="spandsp.conf" description="FAX application configuration">
+    </configuration>
+    <!-- FREESWITCH DEFAULT CONFIGURATION -->
+    <configuration name="switch.conf" description="Core Configuration">
+      <settings>
+        <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/switch $${liberator_api_url}/cfgapi/fsxml/switch"/>
+        <X-PRE-PROCESS cmd="include" data="$${devshm}/switch"/>
+        <param name="switchname" value="$${nodeid}"/>
+      </settings>
+    </configuration>
+  </section>
+  <!-- END: CONFIGURATION SECTION -->
+  <!-- BEGIN: DIALPLAN SECTION -->
+  <section name="dialplan" description="Regex/XML Dialplan">
+    <context name="redirected">
+      <extension name="any_to_any">
+        <condition field="destination_number" expression="^.+$">
+          <action application="lua" data="callng/redirection.lua"/>
+          <anti-action application="hangup" data="CALL_REJECTED"/>
+        </condition>
+      </extension>
+    </context>
+    <context name="carrier">
+      <extension name="carrier_to_any">
+        <condition regex="all">
+          <action application="lua" data="callng/main.lua"/>
+          <anti-action application="hangup" data="CALL_REJECTED"/>
+          <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
+        </condition>
+      </extension>
+    </context>
+    <context name="core">
+      <extension name="core_to_any">
+        <condition regex="all">
+          <action application="lua" data="callng/main.lua"/>
+          <anti-action application="hangup" data="CALL_REJECTED"/>
+          <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
+        </condition>
+      </extension>
+    </context>
+    <context name="access">
+      <extension name="access_to_any">
+        <condition regex="all">
+          <!-- <regex field="${acl(${network_addr} ACL)}" expression="true"/> -->
+          <action application="lua" data="callng/main.lua"/>
+          <anti-action application="hangup" data="CALL_REJECTED"/>
+          <anti-action application="log" data="WARNING: YOU SHOULD NOT FOUND THIS MESSAGE, SO PLEASE CHECK THE FIREWALL"/>
+        </condition>
+      </extension>
+    </context>
+  </section>
+  <!-- END: DIALPLAN SECTION -->
+  <!-- BEGIN: DIRECTORY SECTION -->
+  <section name="directory" description="User Directory">
+    <X-PRE-PROCESS cmd="exec" data="curl -so $${devshm}/directory $${liberator_api_url}/cfgapi/fsxml/directory"/>
+    <X-PRE-PROCESS cmd="include" data="$${devshm}/directory"/>
+  </section>
+  <!-- END: DIRECTORY SECTION -->
+</document>
