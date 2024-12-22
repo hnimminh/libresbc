@@ -13,5 +13,4 @@ LABEL maintainer="Minh Minh <hnimminh@outlook.com>"
 COPY --from=builder /opt/libresbc /opt/libresbc
 CMD ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
 # docker build --platform linux/amd64 -t hnimminh/libresbc-liberator:1.0.0 -f build/docker/Dockerfile.liberator .
-# docker tag hnimminh/libresbc-liberator:1.0.0 hnimminh/libresbc-liberator:1.0.0
 # docker run --env-file ../libre.env --network host --name liberator hnimminh/libresbc-liberator:1.0.0
