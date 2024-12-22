@@ -100,25 +100,8 @@ CLUSTERS = {
 #-----------------------------------------------------------------------------------------------------
 CHANGE_CFG_CHANNEL = 'CHANGE_CFG_CHANNEL'
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'
-NODEID_CHANNEL = f'{NODEID.upper()}_CHANNEL'
-#-----------------------------------------------------------------------------------------------------
-# CALL ENGINE
-#-----------------------------------------------------------------------------------------------------
-# EVENT SOCKET
-ESL_HOST = '127.0.0.1'
-_ESL_HOST = os.getenv('ESL_HOST')
-if _ESL_HOST:
-    ESL_HOST = _ESL_HOST
-
-ESL_PORT = 8021
-_ESL_PORT = os.getenv('ESL_PORT')
-if _ESL_PORT and _ESL_PORT.isdigit():
-    ESL_PORT = _ESL_PORT
-
-ESL_PASSWORD = 'LIBRESBC'
-_ESL_PASSWORD = os.getenv('ESL_PASSWORD')
-if _ESL_PASSWORD:
-    ESL_PASSWORD = _ESL_PASSWORD
+# apply for particular node, with specify by event content
+NODEID_CHANNEL = 'NODEID_CHANNEL'
 
 # CALL RECOVERY CAPABILITY
 _CRC_CAPABILITY = os.getenv('CRC_CAPABILITY')

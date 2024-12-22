@@ -256,32 +256,37 @@ def fsinstance(data):
 
 
 @threaded
-def fssocket(data):
+def fssocket(data, sockets):
     result, fs = False, None
     try:
         commands = data.get('commands')
         requestid = data.get('requestid')
         # connecting
-        fs = redfs.InboundESL(host=ESL_HOST, port=ESL_PORT, password=ESL_SECRET, timeout=10)
-        for _ in range(0,3):
-            try:
-                fs.connect()
-                if fs.connected: break
-            except:
-                delay = data.get('delay')
-                if delay: time.sleep(delay)
-                else: time.sleep(5)
-        # send api commands
-        if commands and fs.connected:
-            result = True
-            for command in commands:
-                response = fs.send(f'api {command}')
-                if response:
-                    resultstr = response.data
-                    if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
-                        _result = True
-                    else:
-                        _result = False
+        for socket in sockets:
+            ipaddr = socket.get('ipaddr')
+            port = socket.get('port')
+            password = socket.get('password')
+            nodeid = socket.get('nodeid')
+            fs = redfs.InboundESL(host=ipaddr, port=port, password=password, timeout=10)
+            for _ in range(0,3):
+                try:
+                    fs.connect()
+                    if fs.connected: break
+                except:
+                    delay = data.get('delay')
+                    if delay: time.sleep(delay)
+                    else: time.sleep(5)
+            # send api commands
+            if commands and fs.connected:
+                result = True
+                for command in commands:
+                    response = fs.send(f'api {command}')
+                    if response:
+                        resultstr = response.data
+                        if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
+                            _result = True
+                        else:
+                            _result = False
                         logger.warning(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, command={command}, result={resultstr}")
                     result = bool(result and _result)
         logger.info(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, commands={commands}, result={result}")
@@ -458,6 +463,7 @@ class BaseEventHandler(Thread):
         # listen events
         while True:
             try:
+                nodeid = None
                 pubsub = rdbconn.pubsub()
                 pubsub.subscribe([CHANGE_CFG_CHANNEL, NODEID_CHANNEL])
                 for message in pubsub.listen():
@@ -535,7 +541,11 @@ class BaseEventHandler(Thread):
                         elif portion == _POLICY_:
                             layer = data.get('layer')
                             kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
-                        elif portion in [_CLUSTER_, _CFGAPISIP_]:
+                        elif portion == _CLUSTER_:
+                            fsgvars = data.get('fsgvars')
+                            commands = [f'global_setvar {fsgvar}' for fsgvar in fsgvars]
+                        elif portion == _CFGAPISIP_:
+                            nodeid = data.get('nodeid')
                             fsgvars = data.get('fsgvars')
                             commands = [f'global_setvar {fsgvar}' for fsgvar in fsgvars]
                         else:
@@ -543,7 +553,14 @@ class BaseEventHandler(Thread):
                         # execute esl commands
                         if commands:
                             data.update({'commands': commands})
-                            fssocket(data)
+                            sockets = []
+                            if nodeid:
+                                _socket = rdbconn.hget('DISCOVERY', nodeid)
+                                sockets.append(json.decode(_socket))
+                            else:
+                                _socketall = rdbconn.hgetall('DISCOVERY', nodeid)
+                                sockets = [v for k,v in json.decode(_socketall).items()]
+                            fssocket(data, sockets)
                         # firewall update
                         if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_, _ACCESS_]:
                             nftupdate(data)
