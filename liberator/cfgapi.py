@@ -207,7 +207,7 @@ def sip(request: Request, response: Response, nodeid: str):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
+        rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'nodeid': nodeid, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs },
