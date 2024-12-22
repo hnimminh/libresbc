@@ -8,6 +8,7 @@
 --
 
 require("callng.utilities")
+
 ---------------------------------------------------------------------------
 local function clean_node_capacity()
     local PATTERN = 'realtime:capacity:*:'..NODEID
@@ -28,6 +29,7 @@ local function clean_node_capacity()
     log.info('module=callng, space=event:initiation, action=clean_node_capacity, node=%s', NODEID)
 end
 
+---------------------------------------------------------------------------
 local function environment()
     local clustermebers = join(rdbconn:smembers('cluster:members'))
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
@@ -36,6 +38,33 @@ local function environment()
     log.info('module=callng, space=event:initiation, action=environment, CLUSTERNAME=%s, CLUSTERMEMBERS=%s', clustername, clustermebers)
 end
 
+---------------------------------------------------------------------------
+local function register()
+    local liberator_api_url = freeswitch.getGlobalVariable("liberator_api_url")
+    local eslhost = freeswitch.getGlobalVariable("eslhost")
+    local eslport = freeswitch.getGlobalVariable("eslport")
+    local eslpassword = freeswitch.getGlobalVariable("eslpassword")
+
+    local url = liberator_api_url .. "/discovery"
+    local _payload = {
+        nodeid = NODEID,
+        ipaddr = eslhost,
+        port = eslport
+    }
+    local payload = _payload['password'] = eslpassword
+
+    local headers = {
+        ["content-type"] = "application/json",
+        ["content-length"] = #bodyjson
+    }
+
+    local res, code, _, _, body = httprequest("POST", url, json.encode(payload), headers)
+    if res==nil or code~=200 then
+        log.error('module=callng, space=event:initiation, action=register, url=%s, request=%s, error=%s', url, json.encode(_payload), code)
+    else
+        log.debug('module=callng, space=event:initiation, action=register, url=%s, request=%s, response=%s', url, json.encode(_payload), body)
+    end
+end
 
 -----------------**********************************--------------------
 -----------------*****|   STARTUP-SCRIPT     |*****--------------------
@@ -46,6 +75,7 @@ local function main()
     -- luarun ~freeswitch.consoleLog('debug','callflow run on '.._VERSION)
     clean_node_capacity()
     environment()
+    register()
 end
 
 ---------------------******************************---------------------

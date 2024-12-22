@@ -13,7 +13,9 @@ import hashlib
 import redis
 import validators
 from fastapi import APIRouter, Request, Response
+from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
+from fastapi.encoders import jsonable_encoder
 from configuration import (CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
@@ -275,5 +277,28 @@ def directory(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.error(f"module=liberator, space=cfgapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+    finally:
+        return result
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class Entity(BaseModel):
+    nodeid: str
+    ipaddr: str
+    port: int
+    password: str
+
+@cfgrouter.post("/discovery", status_code=200, include_in_schema=False)
+def discovery(reqbody: Entity, response: Response):
+    result = None
+    try:
+        pipe = rdbconn.pipeline()
+        nodeid = reqbody.nodeid
+        data = jsonable_encoder(reqbody)
+        pipe.hset('DISCOVERY', nodeid, data)
+        pipe.execute()
+        response.status_code, result = 200, {'passed': True}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logger.error(f"module=liberator, space=cfgapi, action=discovery, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
