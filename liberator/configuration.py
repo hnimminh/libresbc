@@ -37,21 +37,27 @@ if _LOGSTACKS:
     if not any(logstack in LOGSTACKS for logstack in ['FILE', 'SYSLOG', 'CONSOLE']):
         LOGSTACKS = ['SYSLOG']
 
+# standalone ~ all in one server
+_LIBRE_STANDALONE_MODEL = os.getenv('LIBRE_STANDALONE_MODEL')
+LIBRE_STANDALONE_MODEL = False
+if _LIBRE_STANDALONE_MODEL and _LIBRE_STANDALONE_MODEL.upper() in ['TRUE', '1', 'YES']:
+    LIBRE_STANDALONE_MODEL = True
+
 # run inside container
-_CONTAINERIZED = os.getenv('LIBRE_CONTAINERIZED')
-CONTAINERIZED = False
-if _CONTAINERIZED and _CONTAINERIZED.upper() in ['TRUE', '1', 'YES']:
-    CONTAINERIZED = True
+_LIBRE_CONTAINERIZED = os.getenv('LIBRE_CONTAINERIZED')
+LIBRE_CONTAINERIZED = False
+if _LIBRE_CONTAINERIZED and _LIBRE_CONTAINERIZED.upper() in ['TRUE', '1', 'YES']:
+    LIBRE_CONTAINERIZED = True
 
-_LIBRE_REDIS = os.getenv('LIBRE_REDIS')
-LIBRE_REDIS = False
-if _LIBRE_REDIS and _LIBRE_REDIS.upper() in ['TRUE', '1', 'YES']:
-    LIBRE_REDIS = True
+_LIBRE_BUILTIN_REDIS = os.getenv('LIBRE_BUILTIN_REDIS')
+LIBRE_BUILTIN_REDIS = False
+if _LIBRE_BUILTIN_REDIS and _LIBRE_BUILTIN_REDIS.upper() in ['TRUE', '1', 'YES']:
+    LIBRE_BUILTIN_REDIS = True
 
-_BUILTIN_FIREWALL = os.getenv('LIBRE_BUILTIN_FIREWALL')
-BUILTIN_FIREWALL = True
-if _BUILTIN_FIREWALL and _BUILTIN_FIREWALL.upper() in ['FALSE', '0', 'NO']:
-    BUILTIN_FIREWALL = False
+_LIBRE_BUILTIN_FIREWALL = os.getenv('LIBRE_BUILTIN_FIREWALL')
+LIBRE_BUILTIN_FIREWALL = True
+if _LIBRE_BUILTIN_FIREWALL and _LIBRE_BUILTIN_FIREWALL.upper() in ['FALSE', '0', 'NO']:
+    LIBRE_BUILTIN_FIREWALL = False
 #-----------------------------------------------------------------------------------------------------
 # RBD UNIX SOCKET LOCALIZE INSTANCE
 #-----------------------------------------------------------------------------------------------------
@@ -87,10 +93,9 @@ _BUILTIN_ACLS_ = ['rfc1918.auto', 'nat.auto', 'localnet.auto', 'loopback.auto', 
 #-----------------------------------------------------------------------------------------------------
 # SERVER PROPERTIES
 #-----------------------------------------------------------------------------------------------------
-NODEID = os.getenv('NODEID')
 CLUSTERS = {
     'name': 'defaults',
-    'members': [NODEID] if NODEID else [],
+    'members': [],
     "rtp_start_port": 16384,
     "rtp_end_port": 32767,
     "max_calls_per_second": 60,
@@ -98,10 +103,12 @@ CLUSTERS = {
 }
 
 #-----------------------------------------------------------------------------------------------------
+# configuration-changing event bus, apply for all cluster member
 CHANGE_CFG_CHANNEL = 'CHANGE_CFG_CHANNEL'
+# security (firewall) event bus, apply for all cluster member
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'
 # apply for particular node, with specify by event content
-NODEID_CHANNEL = 'NODEID_CHANNEL'
+PERNODE_CHANNEL = 'PERNODE_CHANNEL'
 
 # CALL RECOVERY CAPABILITY
 _CRC_CAPABILITY = os.getenv('CRC_CAPABILITY')

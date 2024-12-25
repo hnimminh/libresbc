@@ -21,7 +21,7 @@ from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_net
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
-                           NODEID, SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
+                           SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logger, get_request_uuid, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey, isjson
 
@@ -71,8 +71,6 @@ __SEMICOLON__ = ';'
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 try:
-    rdbconn.sadd('cluster:candidates', NODEID)
-
     _clustername = rdbconn.get('cluster:name')
     if _clustername: CLUSTERS['name'] = _clustername
     _clustermembers = set(rdbconn.smembers('cluster:members'))
@@ -99,9 +97,7 @@ def predefine():
         'application': _APPLICATION,
         'swversion': _SWVERSION,
         'description': _DESCRIPTION,
-        'nodeid': NODEID,
         'candidates': rdbconn.smembers('cluster:candidates'),
-        #'cluster': CLUSTERS,
         'codecs': SWCODECS,
     }
 

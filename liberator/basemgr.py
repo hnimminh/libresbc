@@ -17,7 +17,7 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
-from configuration import (NODEID, CHANGE_CFG_CHANNEL, NODEID_CHANNEL, SECURITY_CHANNEL,
+from configuration import (CHANGE_CFG_CHANNEL, PERNODE_CHANNEL, SECURITY_CHANNEL,
     REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT,
     LIBRE_BUILTIN_FIREWALL, LIBRE_CONTAINERIZED, LIBRE_BUILTIN_REDIS, LIBRE_STANDALONE_MODEL,
 )
@@ -27,6 +27,9 @@ from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecod
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
                                                      decode_responses=True, max_connections=5, timeout=REDIS_TIMEOUT)
 rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
+
+# global private variable; existing only with standalone setup
+_NODEID = os.getenv('NODEID')
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # OS
@@ -56,7 +59,7 @@ _DFTBANTIME = 900
 
 @threaded
 def nftupdate(data):
-    if not LIBRE_BUILTIN_FIREWALL:
+    if not LIBRE_BUILTIN_FIREWALL or not LIBRE_STANDALONE_MODEL:
         logger.info(f"module=liberator, space=basemgr, action=nftupdate, message=[skip action since buitin firewall is disabled]")
         return
 
@@ -78,7 +81,7 @@ def nftupdate(data):
         details = pipe.execute()
         netaliases = dict()
         for netaliasname, detail in zip(netaliasnames, details):
-            addresses = [address for address in fieldjsonify(detail) if address.get('member') == NODEID][0]
+            addresses = [address for address in fieldjsonify(detail) if address.get('member') == _NODEID][0]
             netaliases.update({netaliasname: addresses})
         # SIP PROFILES AND LISTEN ADDRESS/PORT
         profilenames = rdbconn.smembers('nameset:sipprofile')
@@ -188,7 +191,7 @@ def nftupdate(data):
 _nftdelimiter_ = ', '
 @threaded
 def nftsets(setname, ops, srcips, bantime=None):
-    if not LIBRE_BUILTIN_FIREWALL:
+    if not LIBRE_BUILTIN_FIREWALL or not LIBRE_STANDALONE_MODEL:
         logger.info(f"module=liberator, space=basemgr, action=nftsets, message=[skip action since buitin firewall is disabled]")
         return
 
@@ -350,7 +353,7 @@ def kaminstance(data):
 
             kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
             netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
-            addresses = [address for address in netaliases if address.get('member') == NODEID][0]
+            addresses = [address for address in netaliases if address.get('member') == _NODEID][0]
             kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
 
             if 'topology_hiding' in kamcfgs:
@@ -374,7 +377,7 @@ def kaminstance(data):
             else: dftdomain = 'default.domain'
             # configuration
             cfgtemplate = _KAM.get_template("layer.j2.cfg")
-            cfgstream = cfgtemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=NODEID)
+            cfgstream = cfgtemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=_NODEID)
             with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
             # localization
             luatemplate = _KAM.get_template("layer.j2.lua")
@@ -400,12 +403,12 @@ def kaminstance(data):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
 def rdbinstance():
-    if not LIBRE_BUILTIN_REDIS:
+    if not LIBRE_BUILTIN_REDIS or not LIBRE_STANDALONE_MODEL:
         logger.info(f"module=liberator, space=basemgr, action=rdbinstance, message=[skip action since buitin redis is disabled]")
         return
 
     try:
-        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=rdbinstance, state=initiating")
+        logger.info(f"module=liberator, space=basemgr, action=rdbinstance, state=initiating")
         rdbrun = Popen(['/usr/bin/redis-server', '--bind', '127.0.0.1', '--port', '6379', '--pidfile', '/run/redis/redis.pid', '--unixsocket',
                         '/run/redis/redis.sock', '--unixsocketperm', '755', '--dbfilename', 'libresbc.rdb', '--dir', '/run/redis', '--loglevel', 'warning'])
         _, stderr = bdecode(rdbrun.communicate())
@@ -425,7 +428,7 @@ _NGLUA = Environment(loader=FileSystemLoader('nglua'))
 def basestartup():
     result = False
     try:
-        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state=initiating")
+        logger.info(f"module=liberator, space=basemgr, action=basestartup, state=initiating")
         data = {'portion': 'liberator:startup', 'requestid': '00000000-0000-0000-0000-000000000000'}
         rdbinstance()
         fsinstance(data)
@@ -441,7 +444,7 @@ def basestartup():
         logger.critical(f'module=liberator, space=basemgr, action=exception, exception={e}, tracings={traceback.format_exc()}')
         time.sleep(5)
     finally:
-        logger.info(f"module=liberator, space=basemgr, node={NODEID}, action=basestartup, state={'completed' if result else 'dropped'}")
+        logger.info(f"module=liberator, space=basemgr, action=basestartup, state={'completed' if result else 'dropped'}")
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -455,7 +458,7 @@ class BaseEventHandler(Thread):
         self.setName('BaseEventHandler')
 
     def run(self):
-        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, action=start")
         # portions
         _CLUSTER_   = 'cluster'
         _NETALIAS_  = 'netalias'
@@ -472,7 +475,7 @@ class BaseEventHandler(Thread):
             try:
                 nodeid = None
                 pubsub = rdbconn.pubsub()
-                pubsub.subscribe([CHANGE_CFG_CHANNEL, NODEID_CHANNEL])
+                pubsub.subscribe([CHANGE_CFG_CHANNEL, PERNODE_CHANNEL])
                 for message in pubsub.listen():
                     logger.info(f'module=liberator, space=basemgr, action=report, message={message}')
                     msgtype = message.get("type")
@@ -591,7 +594,7 @@ class SecurityEventHandler(Thread):
         self.setName('SecurityEventHandler')
 
     def run(self):
-        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, node={NODEID}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, action=start")
         # portions
         _kamiauthfailure = 'kami:authfailure'
         _kamiattackavoid = 'kami:attackavoid'

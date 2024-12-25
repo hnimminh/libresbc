@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request, Response
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.encoders import jsonable_encoder
-from configuration import (CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
+from configuration import (CLUSTERS, _BUILTIN_ACLS_, PERNODE_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
 from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
@@ -207,7 +207,7 @@ def sip(request: Request, response: Response, nodeid: str):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'nodeid': nodeid, 'requestid': get_request_uuid()}))
+        rdbconn.publish(PERNODE_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'nodeid': nodeid, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs },
