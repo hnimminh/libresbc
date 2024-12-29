@@ -7,4 +7,4 @@
 # callng scripts
 - name: deploy callng
   import_tasks: "callng.yml"
-  tags: [libre, callng]
+  tags: [libre, liberator, callng]

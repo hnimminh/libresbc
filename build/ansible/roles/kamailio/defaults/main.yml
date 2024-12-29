@@ -1,0 +1,2 @@
+libre_debian_version: '{{debian_codename|default("bookworm")}}'
+libre_kamailio_version: '{{kamailio_version|default("5.8.3")}}'

@@ -5,14 +5,16 @@
 
   vars:
     version: 'v1.0.0'
-    srcdir: '{{inventory_dir|dirname|dirname|dirname|dirname}}'
+    srcdir: '{{inventory_dir|dirname|dirname|dirname}}'
     dstdir: /opt/libresbc/{{version}}
 
   roles:
     - role: platform
-    - role: libre
-    - role: nginx
+    - role: freeswitch
+    - role: kamailio
+    - role: liberator
     - role: nftables
-      tags: [platform, libre, firewall]
     - role: captagent
-
+    - role: nginx
+    - role: webui
+      tags: [webui]
