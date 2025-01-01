@@ -5,7 +5,7 @@
 
   vars:
     version: 'v1.0.0'
-    srcdir: '{{inventory_dir|dirname|dirname|dirname}}'
+    srcdir: '{{inventory_dir|dirname|dirname}}'
     dstdir: /opt/libresbc/{{version}}
 
   roles:

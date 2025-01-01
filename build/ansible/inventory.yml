@@ -20,7 +20,7 @@ sbcs:
     expsbc:
       ansible_user: root
       ansible_host: EXPSBC
-      nodeid: devsbc
+      nodeid: expsbc
   vars:
     homer: null
     logstash: null
