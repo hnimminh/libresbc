@@ -17,5 +17,5 @@
     - role: nftables
     - role: captagent
     - role: nginx
-    - role: webui
-      tags: [webui]
+    - role: libreui
+

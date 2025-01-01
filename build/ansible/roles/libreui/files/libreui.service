@@ -1,0 +1,21 @@
+[Unit]
+Description=LibreUI - LibreSBC Web User Interface
+After=liberator.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/opt/libresbc/libreui --libresbc http://127.0.0.1:8080 -H 0.0.0.0 -P 8088 -d
+
+SyslogIdentifier=libreui
+SyslogFacility=5
+SyslogLevel=debug
+
+TimeoutSec=30s
+RemainAfterExit=no
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
