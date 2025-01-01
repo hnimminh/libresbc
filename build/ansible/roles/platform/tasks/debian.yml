@@ -80,7 +80,7 @@
     pkg:
       - python-setuptools
     state: latest 
-  when: libre_debian_version != "bookworm"
+  when: ansible_distribution_major_version|int < 12
 
 - name: Enable and start chronyd
   systemd:
