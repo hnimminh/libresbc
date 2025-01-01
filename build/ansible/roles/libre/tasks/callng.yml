@@ -26,6 +26,8 @@
     state: link
   with_items:
     - src: "{{dstdir}}/callng"
+      dest: /opt/libresbc/callng
+    - src: /opt/libresbc/callng
       dest: /usr/local/share/lua/5.2/callng
-    - src: "{{dstdir}}/callng"
+    - src: /opt/libresbc/callng
       dest: /usr/local/share/freeswitch/scripts/callng

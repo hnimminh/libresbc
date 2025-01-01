@@ -10,9 +10,10 @@
 
   roles:
     - role: platform
+    - role: redis
     - role: freeswitch
     - role: kamailio
-    - role: liberator
+    - role: libre
     - role: nftables
     - role: captagent
     - role: nginx

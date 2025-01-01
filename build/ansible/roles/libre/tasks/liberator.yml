@@ -1,0 +1,76 @@
+---
+- name: Create a directory if it does not exist
+  file:
+    path: '{{item}}'
+    state: directory
+    mode: '0755'
+  with_items:
+    - /var/log/libresbc/cdr
+
+- name: Create directory {{dstdir}}/liberator in target host
+  file:
+    path: "{{dstdir}}/liberator"
+    owner: root
+    group: root
+    mode: 0644
+    state: directory
+
+- name: Copy liberator role source to target host
+  synchronize:
+    src: "{{srcdir}}/liberator/"
+    dest: "{{dstdir}}/liberator/"
+    rsync_opts:
+      - "--exclude=*.pyc"
+
+- name: Update python lib/package for venv
+  pip:
+    requirements: "{{dstdir}}/liberator/requirements.txt"
+    virtualenv: "{{dstdir}}/venv"
+    virtualenv_command: /usr/bin/python3 -m venv
+
+- name: Update liberator templating-file (libre.env)
+  template:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    owner: root
+    group: root
+    mode: "{{item.mode}}"
+  with_items:
+    - src: libre.j2.env
+      dest: "{{dstdir}}/libre.env"
+      mode: "0644"
+
+- name: Symbolic link for primary location
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: "{{dstdir}}/liberator/system/systemd/liberator.service"
+      dest: /etc/systemd/system/liberator.service
+    - src: "{{dstdir}}/venv"
+      dest: /opt/libresbc/venv
+    - src: "{{dstdir}}/liberator"
+      dest: /opt/libresbc/liberator
+    - src: "{{dstdir}}/libre.env"
+      dest: /opt/libresbc/libre.env
+  changed_when: true
+  notify:
+    - restart liberator
+
+- name: Symbolic link for libre log service
+  file:
+    src: "{{item.src}}"
+    dest: "{{item.dest}}"
+    force: true
+    state: link
+  with_items:
+    - src: /opt/libresbc/liberator/system/rsyslog.d/libre.conf
+      dest: /etc/rsyslog.d/libre.conf
+    - src: /opt/libresbc/liberator/system/logrotate.d/libre
+      dest: /etc/logrotate.d/libre
+  changed_when: true
+  notify:
+    - reload logrotate
+    - restart rsyslog
