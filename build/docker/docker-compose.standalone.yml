@@ -24,7 +24,6 @@ services:
     labels:
       - libresbc.debian=bullseye
       - libresbc.version=1.0.0
-
     env_file:
       - libre.env
     environment:
