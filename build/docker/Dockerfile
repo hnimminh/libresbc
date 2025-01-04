@@ -1,27 +1,28 @@
-FROM debian:bullseye
+FROM debian:bookworm
 LABEL maintainer="Minh Minh <hnimminh@outlook.com>"
-ENV LIBRE_CONTAINERIZED 1
-ENV LIBRE_BUILTIN_FIREWALL 0
-ENV LIBRE_REDIS 1
+ENV LIBRE_CONTAINERIZED=1
+ENV LIBRE_BUILTIN_REDIS=1
+ENV LIBRE_BUILTIN_FIREWALL=0
+ENV LIBRE_STANDALONE_MODEL=1
 
 # BASE SOFTWARE
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
 # base
-    git curl wget lsof vim redis procps\
+    git curl wget lsof vim redis procps \
     sngrep tcpdump net-tools rsyslog logrotate rsync nftables chrony \
 # build
     build-essential make cmake gnupg2 automake autoconf g++ gcc 'libtool-bin|libtool' pkg-config \
 # general
     libssl-dev zlib1g-dev libdb-dev unixodbc-dev libncurses5-dev libexpat1-dev libgdbm-dev bison erlang-dev libtpl-dev libtiff5-dev uuid-dev \
 # core
-    libpcre3-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev openssl libcrypto++8 nasm\
+    libpcre3-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev openssl libcrypto++8 nasm \
 # codecs
     libogg-dev libspeex-dev libspeexdsp-dev libopus-dev libopencore-amrwb-dev libopencore-amrwb0 \
     libvo-amrwbenc-dev libvo-amrwbenc0  libopencore-amrnb-dev libopencore-amrnb0 \
 # languages
-    python3 python3-dev python3-pip python-setuptools liblua5.2-dev lua5.2 luarocks lua-curl\
+    python3 python3-dev python3-pip python3-venv liblua5.2-dev lua5.2 luarocks lua-curl\
 # mods
-    libavformat-dev libswscale-dev libavresample-dev libpq-dev\
+    libavformat-dev libswscale-dev libswresample-dev libpq-dev \
     libsndfile1-dev libflac-dev libogg-dev libvorbis-dev flite1-dev \
 # kams
     flex gdb libxml2-dev libunistring-dev libhiredis-dev
@@ -29,7 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
 RUN mkdir -p /run/redis /opt/libresbc /var/log/libresbc/cdr
 COPY callng /opt/libresbc/callng
 COPY liberator /opt/libresbc/liberator
-COPY build/ansible/roles/platform/files/modules.conf /opt/libresbc/modules.conf
+COPY build/preconfig/freeswitch/modules.conf /opt/libresbc/modules.conf
 
 # FREESWITCH
 RUN git clone https://github.com/signalwire/libks /usr/src/libs/libks && \
@@ -57,8 +58,8 @@ RUN curl https://www.kamailio.org/pub/kamailio/5.7.1/src/kamailio-5.7.1_src.tar.
     make cfg && make include_modules="jsonrpcs ctl kex corex tm tmx outbound sl rr pv maxfwd topoh dialog usrloc registrar textops textopsx siputils sanity uac kemix auth nathelper tls debugger htable pike xlog app_lua regex utils" cfg && \
     make all && make install
 
-RUN chmod +x /opt/libresbc/callng/requirement.sh && /opt/libresbc/callng/requirement.sh &&\
-    pip3 install -r /opt/libresbc/liberator/requirements.txt
+RUN chmod +x /opt/libresbc/callng/requirement.sh && /opt/libresbc/callng/requirement.sh
+RUN python3 -m venv /opt/libresbc/venv && /opt/libresbc/venv/bin/pip3 install -r /opt/libresbc/liberator/requirements.txt
 
 # LAYOUT & CLEANUP
 RUN rm -rf /usr/src/freeswitch-1.10.9.tar.gz /usr/local/freeswitch/conf/* /usr/local/src/kamailio* && \
@@ -70,5 +71,5 @@ WORKDIR /opt/libresbc/liberator
 CMD ["/usr/bin/python3", "/opt/libresbc/liberator/main.py"]
 
 # docker build --platform linux/amd64 -t hnimminh/libresbc:latest -f build/docker/Dockerfile .
-# docker tag hnimminh/libresbc:latest hnimminh/libresbc:0.7.1.c
+# docker tag hnimminh/libresbc:latest hnimminh/libresbc:1.0.0
 # docker run --env-file ../libre.env --cap-add NET_ADMIN --cap-add SYS_NICE --network host --name libresbc hnimminh/libresbc:latest
