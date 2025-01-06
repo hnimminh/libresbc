@@ -35,18 +35,6 @@ rdbconn = redis.StrictRedis(connection_pool=REDIS_CONNECTION_POOL)
 librerouter = APIRouter()
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PYDANTIC SCHEME HIDE FIELD
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-def field_schema(field: ModelField, **kwargs: Any) -> Any:
-    if field.field_info.extra.get("hidden_field", False):
-        raise schema.SkipField(f"{field.name} field is being hidden with fastapi/issues/1378")
-    else:
-        return original_field_schema(field, **kwargs)
-
-original_field_schema = schema.field_schema
-schema.field_schema = field_schema
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CONSTANTS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # PATTERN
