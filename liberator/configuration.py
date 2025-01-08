@@ -37,6 +37,19 @@ if _LOGSTACKS:
     if not any(logstack in LOGSTACKS for logstack in ['FILE', 'SYSLOG', 'CONSOLE']):
         LOGSTACKS = ['SYSLOG']
 
+#-----------------------------------------------------------------------------------------------------
+_HTTP_API_LISTEN_IP = os.getenv('HTTP_API_LISTEN_IP')
+HTTP_API_LISTEN_IP = '0.0.0.0'
+if _HTTP_API_LISTEN_IP:
+    HTTP_API_LISTEN_IP = _HTTP_API_LISTEN_IP
+
+_HTTP_API_LISTEN_PORT = os.getenv('HTTP_API_LISTEN_PORT')
+HTTP_API_LISTEN_PORT = 8080
+if _HTTP_API_LISTEN_PORT and _HTTP_API_LISTEN_PORT.isdigit():
+    HTTP_API_LISTEN_PORT = int(_HTTP_API_LISTEN_PORT)
+#-----------------------------------------------------------------------------------------------------
+# CENTRALIZED
+#-----------------------------------------------------------------------------------------------------
 # standalone ~ all in one server
 _LIBRE_STANDALONE_MODEL = os.getenv('LIBRE_STANDALONE_MODEL')
 LIBRE_STANDALONE_MODEL = False
