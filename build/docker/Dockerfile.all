@@ -62,7 +62,7 @@ RUN chmod +x /opt/libresbc/callng/requirement.sh && /opt/libresbc/callng/require
 RUN python3 -m venv /opt/libresbc/venv && /opt/libresbc/venv/bin/pip3 install -r /opt/libresbc/liberator/requirements.txt
 
 # LAYOUT & CLEANUP
-RUN rm -rf /usr/src/freeswitch-1.10.9.tar.gz /usr/local/freeswitch/conf/* /usr/local/src/kamailio* && \
+RUN rm -rf /usr/src/freeswitch* /usr/local/etc/freeswitch/* /usr/local/src/kamailio* && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     ln -nfs /opt/libresbc/callng /usr/local/share/lua/5.2/callng && \
     ln -nfs /opt/libresbc/callng /usr/local/share/freeswitch/scripts/callng
