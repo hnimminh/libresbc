@@ -568,7 +568,7 @@ class BaseEventHandler(Thread):
                                 _socket = rdbconn.hget('DISCOVERY', nodeid)
                                 sockets.append(json.decode(_socket))
                             else:
-                                _socketall = rdbconn.hgetall('DISCOVERY', nodeid)
+                                _socketall = rdbconn.hgetall('DISCOVERY')
                                 sockets = [v for k,v in json.decode(_socketall).items()]
                             fssocket(data, sockets)
                         # firewall update
