@@ -6,6 +6,7 @@
   <X-PRE-PROCESS cmd="exec-set" data="eslhost=(echo ${ESL_HOST:-127.0.0.1})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslport=(echo ${ESL_PORT:-8021}})"/>
   <X-PRE-PROCESS cmd="exec-set" data="eslpassword=(echo ${ESL_PASSWORD:-LIBRESBC})"/>
+  <X-PRE-PROCESS cmd="exec-set" data="eslacl=(echo ${ESL_ACL:-loopback.auto})"/>
   <X-PRE-PROCESS cmd="set" data="hold_music={loops=-1}tone_stream://%(250,0,350);%(250,0,440);%(250,0,530);%(300,0,700);%(400,0,800);%(300,0,900);%(250,0,600);%(160,0,440)"/>
   <X-PRE-PROCESS cmd="set" data="devshm=/dev/shm"/>
   <!-- BEGIN: CONFIGURATION SECTION -->
@@ -18,7 +19,7 @@
         <list name="loopback.auto" default="deny">
           <node type="allow" cidr="127.0.0.1/32"/>
           <node type="allow" cidr="::1/128"/>
-       </list>
+        </list>
       </network-lists>
     </configuration>
     <!-- CONSOLE LOGGER -->
@@ -45,6 +46,7 @@
         <param name="listen-ip" value="$${eslhost}"/>
         <param name="listen-port" value="$${eslport}"/>
         <param name="password" value="$${eslpassword}"/>
+        <param name="apply-inbound-acl" value="$${eslacl}"/>
       </settings>
     </configuration>
     <!--- LOGFILE -->

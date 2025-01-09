@@ -55,5 +55,6 @@ services:
       ESL_HOST: 164.90.201.161
       ESL_PORT: 8021
       ESL_PASSWORD: nopassword
+      ESL_ACL: wan_v4.auto # localnet.auto, rfc1918.auto, rfc6598.auto, wan.auto, wan_v6.auto, wan_v4.auto, any_v6.auto, any_v4.auto, any_v4.auto, loopback.auto
     depends_on: 
       - liberator
