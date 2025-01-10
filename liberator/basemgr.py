@@ -566,10 +566,10 @@ class BaseEventHandler(Thread):
                             sockets = []
                             if nodeid:
                                 _socket = rdbconn.hget('DISCOVERY', nodeid)
-                                sockets.append(json.decode(_socket))
+                                sockets.append(json.loads(_socket))
                             else:
                                 _socketall = rdbconn.hgetall('DISCOVERY')
-                                sockets = [v for k,v in json.decode(_socketall).items()]
+                                sockets = [json.loads(v) for _,v in _socketall.items()]
                             fssocket(data, sockets)
                         # firewall update
                         if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_, _ACCESS_]:
