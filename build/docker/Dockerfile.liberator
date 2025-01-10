@@ -11,6 +11,7 @@ RUN python3 -m venv /opt/libresbc/venv && \
 FROM python:3.13.1-slim-bookworm AS runner
 LABEL maintainer="Minh Minh <hnimminh@outlook.com>"
 COPY --from=builder /opt/libresbc /opt/libresbc
+WORKDIR /opt/libresbc/liberator
 CMD ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
 # pwd=libresbc
 # docker build --platform linux/amd64 -t hnimminh/libresbc-liberator:1.0.0 -f build/docker/Dockerfile.liberator .

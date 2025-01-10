@@ -12,14 +12,14 @@ import json
 import hashlib
 import redis
 import validators
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Path
 from pydantic import BaseModel
 from fastapi.templating import Jinja2Templates
 from fastapi.encoders import jsonable_encoder
 from configuration import (CLUSTERS, _BUILTIN_ACLS_, PERNODE_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
-from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
+from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, randomstr
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -129,7 +129,7 @@ def distributor(request: Request, response: Response):
 
 
 @cfgrouter.get("/cfgapi/fsxml/sip-setting/{nodeid}", include_in_schema=False)
-def sip(request: Request, response: Response, nodeid: str):
+def sip(request: Request, response: Response, nodeid: str=Path(...)):
     try:
         if not rdbconn.sismember('cluster:members', nodeid):
             response.status_code, result = 404, str(); return
