@@ -6,7 +6,6 @@
 # cp /root/libresbc/build/docker/docker-compose.yml /root/libresbc/
 # docker-compose down && docker-compose up -d
 #
-version: "3.3"
 services:
   libresbc:
     hostname: devsbc
