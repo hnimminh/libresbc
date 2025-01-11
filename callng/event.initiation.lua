@@ -48,7 +48,7 @@ local function register()
     local payload = {
         nodeid = NODEID,
         ipaddr = eslhost,
-        port = eslport,
+        port = tonumber(eslport),
         password = eslpassword
     }
 
