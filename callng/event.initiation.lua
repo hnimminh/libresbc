@@ -41,29 +41,22 @@ end
 
 ---------------------------------------------------------------------------
 local function register()
-    local liberator_api_url = freeswitch.getGlobalVariable("liberator_api_url")
     local eslhost = freeswitch.getGlobalVariable("eslhost")
     local eslport = freeswitch.getGlobalVariable("eslport")
     local eslpassword = freeswitch.getGlobalVariable("eslpassword")
 
-    local url = liberator_api_url .. "/discovery"
-    local _payload = {
+    local payload = {
         nodeid = NODEID,
         ipaddr = eslhost,
-        port = eslport
-    }
-    local payload = _payload['password'] = eslpassword
-
-    local headers = {
-        ["content-type"] = "application/json",
-        ["content-length"] = #bodyjson
+        port = eslport,
+        password = eslpassword
     }
 
-    local res, code, _, _, body = httprequest("POST", url, json.encode(payload), headers)
-    if res==nil or code~=200 then
-        log.error('module=callng, space=event:initiation, action=register, url=%s, request=%s, error=%s', url, json.encode(_payload), code)
+    local result, error = pcall(rdbconn:hset('DISCOVERY', NODEID, json.encode(payload)))
+    if not result then
+        log.error('module=callng, space=event:initiation, action=register, nodeid=%s, error=%s', NODEID, error)
     else
-        log.debug('module=callng, space=event:initiation, action=register, url=%s, request=%s, response=%s', url, json.encode(_payload), body)
+        log.debug('module=callng, space=event:initiation, action=register, nodeid=%s, state=success', NODEID)
     end
 end
 
@@ -74,9 +67,9 @@ local function main()
     -- NO NEED TO CLEAN CPS, AS IT JUST ONE-TIME-ATTEMPT
     -- CLEAN CAPACITY AS IT IS LONG-LIVE-TIME-ATTEMP
     -- luarun ~freeswitch.consoleLog('debug','callflow run on '.._VERSION)
-    clean_node_capacity()
     environment()
     register()
+    clean_node_capacity()
 end
 
 ---------------------******************************---------------------

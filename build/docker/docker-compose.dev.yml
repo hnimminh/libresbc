@@ -41,6 +41,8 @@ services:
       - libresbc.version=1.0.0
     volumes:
       - /root/libresbc/callng:/opt/libresbc/callng
+      - /root/libresbc/callng:/usr/local/share/lua/5.2/callng
+      - /root/libresbc/callng:/usr/local/share/freeswitch/scripts/callng
     environment:
       REDIS_HOST: 164.90.201.161
       REDIS_PORT: 6379
@@ -54,6 +56,6 @@ services:
       ESL_HOST: 164.90.201.161
       ESL_PORT: 8021
       ESL_PASSWORD: nopassword
-      ESL_ACL: wan_v4.auto # localnet.auto, rfc1918.auto, rfc6598.auto, wan.auto, wan_v6.auto, wan_v4.auto, any_v6.auto, any_v4.auto, any_v4.auto, loopback.auto
+      ESL_ACL: any_v4.auto # localnet.auto, rfc1918.auto, rfc6598.auto, wan.auto, wan_v6.auto, wan_v4.auto, any_v6.auto, any_v4.auto, loopback.auto
     depends_on: 
       - liberator
