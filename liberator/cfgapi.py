@@ -14,7 +14,7 @@ import redis
 import validators
 from fastapi import APIRouter, Request, Response, Path
 from fastapi.templating import Jinja2Templates
-from configuration import (CLUSTERS, _BUILTIN_ACLS_, PERNODE_CHANNEL,
+from configuration import (_BUILTIN_ACLS_, PERNODE_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
 from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, randomstr
@@ -46,9 +46,10 @@ crcs = {
 @cfgrouter.get("/cfgapi/fsxml/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
     try:
+        attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
         result = fstpl.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "switchattributes": CLUSTERS, 'crcs': crcs},
-                                            media_type="application/xml")
+                                        {"request": request, "switchattributes": attributes, 'crcs': crcs},
+                                        media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()

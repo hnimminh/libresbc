@@ -22,7 +22,7 @@ from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_net
 from fastapi import APIRouter, Response, Path
 from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
-                           SWCODECS, CLUSTERS, _BUILTIN_ACLS_,
+                           SWCODECS, DFT_CLUSTER_ATTRS, _BUILTIN_ACLS_,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
 from utilities import logger, get_request_uuid, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey, isjson
 
@@ -60,20 +60,27 @@ __SEMICOLON__ = ';'
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 try:
-    _clustername = rdbconn.get('cluster:name')
-    if _clustername: CLUSTERS['name'] = _clustername
-    _clustermembers = set(rdbconn.smembers('cluster:members'))
-    if _clustermembers: CLUSTERS['members'] = list(_clustermembers)
+    # TODO: fix: restart liberator is required when new member added
+    clustername = rdbconn.get('cluster:name')
+    if not clustername:
+        rdbconn.set('cluster:name', clustername)
+
+    CLUSTERMEMBERS = set(rdbconn.smembers('cluster:members'))
+    for member in CLUSTERMEMBERS:
+        rdbconn.sadd('cluster:members', member)
 
     attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
-    _rtp_start_port = attributes.get('rtp_start_port')
-    if _rtp_start_port: CLUSTERS['rtp_start_port'] = _rtp_start_port
-    _rtp_end_port = attributes.get('rtp_end_port')
-    if _rtp_end_port: CLUSTERS['rtp_end_port'] = _rtp_end_port
-    _max_concurrent_calls = attributes.get('max_concurrent_calls')
-    if _max_concurrent_calls: CLUSTERS['max_concurrent_calls'] = _max_concurrent_calls
-    _max_calls_per_second = attributes.get('max_calls_per_second')
-    if _max_calls_per_second: CLUSTERS['max_calls_per_second'] = _max_calls_per_second
+    CLUSTERCAP = len(CLUSTERMEMBERS)*int(attributes.get('max_concurrent_calls', 0))
+    CLUSTERCPS = len(CLUSTERMEMBERS)*int(attributes.get('max_calls_per_second', 0))
+    if not attributes:
+        rdbconn.hmset('cluster:attributes', redishash({
+            'rtp_start_port': DFT_CLUSTER_ATTRS.get('rtp_start_port'),
+            'rtp_end_port': DFT_CLUSTER_ATTRS.get('rtp_end_port'),
+            'max_concurrent_calls': DFT_CLUSTER_ATTRS.get('max_concurrent_calls'),
+            'max_calls_per_second': DFT_CLUSTER_ATTRS.get('max_calls_per_second')
+        }))
+        CLUSTERCAP = len(CLUSTERMEMBERS)*DFT_CLUSTER_ATTRS.get('max_concurrent_calls')
+        CLUSTERCPS = len(CLUSTERMEMBERS)*DFT_CLUSTER_ATTRS.get('max_calls_per_second')
 except Exception as e:
     logger.error(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
@@ -118,29 +125,32 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
+        pipe.set('cluster:name', name)
+
         members = set(reqbody.members)
-        rtp_start_port = reqbody.rtp_start_port
-        rtp_end_port = reqbody.rtp_end_port
-        max_concurrent_calls = reqbody.max_concurrent_calls
-        max_calls_per_second = reqbody.max_calls_per_second
         _members = set(rdbconn.smembers('cluster:members'))
         removed_members = _members - members
         for removed_member in removed_members:
             if rdbconn.scard(f'engagement:node:{removed_member}'):
                 response.status_code, result = 403, {'error': 'engaged node'}; return
+        for member in members:
+            pipe.sadd('cluster:members', member)
 
-        pipe.set('cluster:name', name)
-        for member in members: pipe.sadd('cluster:members', member)
-        pipe.hmset('cluster:attributes', redishash({'rtp_start_port': rtp_start_port, 'rtp_end_port': rtp_end_port, 'max_concurrent_calls': max_concurrent_calls, 'max_calls_per_second': max_calls_per_second}))
-        pipe.execute()
-        CLUSTERS.update({
-            'name': name,
-            'members': list(members),
+        rtp_start_port = reqbody.rtp_start_port
+        rtp_end_port = reqbody.rtp_end_port
+        max_concurrent_calls = reqbody.max_concurrent_calls
+        max_calls_per_second = reqbody.max_calls_per_second
+        pipe.hmset('cluster:attributes', redishash({
             'rtp_start_port': rtp_start_port,
             'rtp_end_port': rtp_end_port,
             'max_concurrent_calls': max_concurrent_calls,
             'max_calls_per_second': max_calls_per_second
-        })
+        }))
+        pipe.execute()
+        # reset global vars
+        CLUSTERMEMBERS = members
+        CLUSTERCAP = len(CLUSTERMEMBERS)*max_concurrent_calls
+        CLUSTERCPS = len(CLUSTERMEMBERS)*max_calls_per_second
         # fire-event cluster member to fsvar
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'cluster', 'action': 'update', 'fsgvars': [f'CLUSTERMEMBERS={stringify(members,__COMMA__)}'], 'requestid': requestid}))
         response.status_code, result = 200, {'passed': True}
@@ -155,7 +165,12 @@ def update_cluster(reqbody: ClusterModel, response: Response):
 def get_cluster(response: Response):
     result = None
     try:
-        response.status_code, result = 200, CLUSTERS
+        name = rdbconn.get('cluster:name')
+        members = set(rdbconn.smembers('cluster:members'))
+        attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
+        cluster = attributes
+        cluster.update({"name": name, "members": members})
+        response.status_code, result = 200, cluster
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
@@ -170,7 +185,7 @@ def get_cluster(response: Response):
 
 def netalias_agreement(addresses):
     _addresses = jsonable_encoder(addresses)
-    if len(_addresses) != len(CLUSTERS.get('members')):
+    if len(_addresses) != len(CLUSTERMEMBERS):
         raise ValueError('The alias must be set for cluster members')
     for address in _addresses:
         member = address['member']
@@ -1097,19 +1112,8 @@ def list_media_class(response: Response):
 class CapacityModel(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    cps: int = Field(default=2, ge=-1, le=len(CLUSTERS.get('members'))*2000, description='call per second')
-    concurentcalls: int = Field(default=10, ge=-1, le=len(CLUSTERS.get('members'))*25000, description='concurrent calls')
-    # validator
-    @root_validator()
-    def capacity_agreement(cls, values):
-        cps = values.get('cps')
-        if cps > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_calls_per_second'))//2:
-            raise ValueError(f'the cps value is not valid for cluster capacity')
-        concurentcalls = values.get('concurentcalls')
-        if concurentcalls > len(CLUSTERS.get('members'))*(CLUSTERS.get('max_concurrent_calls'))//2:
-            raise ValueError(f'the concurentcalls value is not valid for cluster capacity')
-        return values
-
+    cps: int = Field(default=-1, ge=-1, le=CLUSTERCPS, description='call per second')
+    concurentcalls: int = Field(default=-1, ge=-1, le=CLUSTERCAP, description='concurrent calls')
 
 @librerouter.post("/libreapi/class/capacity", status_code=200)
 def create_capacity_class(reqbody: CapacityModel, response: Response):
@@ -1786,7 +1790,7 @@ def check_existent_sipprofile(sipprofile):
 
 def check_cluster_node(nodes):
     for node in nodes:
-        if node != '_ALL_' and node not in CLUSTERS.get('members'):
+        if node != '_ALL_' and node not in CLUSTERMEMBERS:
             raise ValueError('nonexistent node')
     return nodes
 
@@ -1842,7 +1846,7 @@ class OutboundInterconnection(BaseModel):
     privacy: List[PrivacyEnum] = Field(default=['auto'], min_length=1, max_item=3, description='privacy header')
     cid_type: Optional[CallerIDType] = Field(default='auto', description='callerid header mechanism: rpid, pid, none')
     nofailover_sip_codes: Optional[List[SIPCode]] = Field(default=[], min_length=0, max_item=32, description='a set of sip response code that stop failover')
-    nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
+    nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
     _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
@@ -1852,7 +1856,8 @@ class OutboundInterconnection(BaseModel):
     _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def out_intcon_agreement(cls, values):
         values = jsonable_encoder(values)
         sipprofile = values.get('sipprofile')
@@ -2171,7 +2176,7 @@ class InboundInterconnection(BaseModel):
     preanswer_class: str = Field(default=None, description='nameid of preanswer class')
     authscheme: AuthSchemeEnum = Field(default='IP', description='auth scheme for inbound, include: ip, digest, both')
     secret: SkipJsonSchema[Optional[str]] = Field(None, min_length=8, max_length=64, description='password of digest auth for inbound')
-    nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERS.get('members')), description='a set of node member that interconnection engage to')
+    nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
     # validation
     _existenpreanswer = validator('preanswer_class', allow_reuse=True)(check_existent_preanswer)
@@ -2183,7 +2188,8 @@ class InboundInterconnection(BaseModel):
     _existentrouting = validator('routing')(check_existent_routing)
     _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def in_intcon_agreement(cls, values):
         _values = jsonable_encoder(values)
         authscheme = _values.get('authscheme')

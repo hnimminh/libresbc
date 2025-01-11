@@ -1,7 +1,8 @@
 # https://runnable.com/docker/docker-compose-networking
 # https://dockerlabs.collabnix.com/docker/cheatsheet
 # https://github.com/compose-spec/compose-spec/blob/master/spec.md]
-# # pwd=libresbc: docker-compose -f build/docker/docker-compose.yml up
+# rsync -avzh -e ssh /Users/minh/codespace/libresbc EXPSBC:/root/
+# pwd=libresbc: docker-compose -f build/docker/docker-compose.yml up
 services:
   liberator:
     hostname: sbc-liberator
@@ -43,6 +44,7 @@ services:
       - /root/libresbc/callng:/opt/libresbc/callng
       - /root/libresbc/callng:/usr/local/share/lua/5.2/callng
       - /root/libresbc/callng:/usr/local/share/freeswitch/scripts/callng
+      - /root/libresbc/liberator/fscfg/xml/freeswitch.xml:/usr/local/etc/freeswitch/freeswitch.xml
     environment:
       REDIS_HOST: 164.90.201.161
       REDIS_PORT: 6379
