@@ -86,7 +86,7 @@ def predefine():
         'application': _APPLICATION,
         'swversion': _SWVERSION,
         'description': _DESCRIPTION,
-        'candidates': rdbconn.smembers('cluster:candidates'),
+        'members': rdbconn.smembers('cluster:members'),
         'codecs': SWCODECS,
     }
 
@@ -96,8 +96,8 @@ def predefine():
 
 def check_member(members):
     for member in members:
-        if not rdbconn.sismember('cluster:candidates', member):
-            raise ValueError('member is not in candidates')
+        if not rdbconn.sismember('cluster:members', member):
+            raise ValueError('invalid member name')
     return members
 
 class ClusterModel(BaseModel):
@@ -171,11 +171,11 @@ def get_cluster(response: Response):
 def netalias_agreement(addresses):
     _addresses = jsonable_encoder(addresses)
     if len(_addresses) != len(CLUSTERS.get('members')):
-        raise ValueError('The alias must be set for only/all cluster members')
+        raise ValueError('The alias must be set for cluster members')
     for address in _addresses:
         member = address['member']
-        if not rdbconn.sismember('cluster:candidates', member):
-            raise ValueError(f'{member} is invalid candidates')
+        if not rdbconn.sismember('cluster:members', member):
+            raise ValueError(f'{member} is invalid members')
     return addresses
 
 class IPSuite(BaseModel):

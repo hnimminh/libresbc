@@ -31,7 +31,7 @@ end
 
 ---------------------------------------------------------------------------
 local function environment()
-    rdbconn:sadd('cluster:candidates', NODEID)
+    rdbconn:sadd('cluster:members', NODEID)
     local clustermebers = join(rdbconn:smembers('cluster:members'))
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
     local clustername = rdbconn:get('cluster:name')
