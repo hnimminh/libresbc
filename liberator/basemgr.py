@@ -262,12 +262,11 @@ def fsinstance(data):
 
 
 @threaded
-def fssocket(data, sockets):
+def fssocket(requestid, commands, delay, sockets):
     result, fs = False, None
     try:
-        commands = data.get('commands')
-        requestid = data.get('requestid')
         # connecting
+        logger.info(f"module=liberator, space=basemgr, func=fssocket, action=preparing, requestid={requestid}, nodeids={[socket.get("nodeid") for socket in sockets]}, commands={commands}, delay={delay}")
         for socket in sockets:
             ipaddr = socket.get('ipaddr')
             port = socket.get('port')
@@ -279,9 +278,10 @@ def fssocket(data, sockets):
                     fs.connect()
                     if fs.connected: break
                 except:
-                    delay = data.get('delay')
-                    if delay: time.sleep(delay)
-                    else: time.sleep(5)
+                    if delay:
+                        time.sleep(delay)
+                    else:
+                        time.sleep(5)
             # send api commands
             if commands and fs.connected:
                 result = True
@@ -293,11 +293,11 @@ def fssocket(data, sockets):
                             _result = True
                         else:
                             _result = False
-                            logger.warning(f"module=liberator, space=basemgr, action=fssocket, requestid={requestid}, nodeid={nodeid},command={command}, result={resultstr}")
+                            logger.warning(f"module=liberator, space=basemgr, func=fssocket, requestid={requestid}, nodeid={nodeid},command={command}, result={resultstr}")
                         result = bool(result and _result)
-            logger.info(f"module=liberator, space=basemgr, action=fssocket, connected={fs.connected}, requestid={requestid}, nodeid={nodeid}, commands={commands}, result={result}")
+            logger.info(f"module=liberator, space=basemgr, func=fssocket, connected={fs.connected}, requestid={requestid}, nodeid={nodeid}, commands={commands}, result={result}")
     except Exception as e:
-        logger.error(f"module=liberator, space=basemgr, action=fssocket, data={data}, esno={len(sockets)} exception={e}, tracings={traceback.format_exc()}")
+        logger.error(f"module=liberator, space=basemgr, func=fssocket, commands={commands}, requestid={requestid}, esno={len(sockets)} exception={e}, tracings={traceback.format_exc()}")
     finally:
         if fs and fs.connected: fs.stop()
         return result
@@ -473,7 +473,6 @@ class BaseEventHandler(Thread):
         # listen events
         while True:
             try:
-                nodeid = None
                 pubsub = rdbconn.pubsub()
                 pubsub.subscribe([CHANGE_CFG_CHANNEL, PERNODE_CHANNEL])
                 for message in pubsub.listen():
@@ -483,6 +482,8 @@ class BaseEventHandler(Thread):
                         data = json.loads(message.get("data"))
                         portion = data.get('portion')
                         requestid = data.get('requestid')
+                        delay = data.get('delay')
+                        nodeid = None
                         # specify event
                         commands = list()
                         if portion == _NETALIAS_:
@@ -562,15 +563,13 @@ class BaseEventHandler(Thread):
                             pass
                         # execute esl commands
                         if commands:
-                            data.update({'commands': commands})
-                            sockets = []
                             if nodeid:
                                 _socket = rdbconn.hget('DISCOVERY', nodeid)
-                                sockets.append(json.loads(_socket))
+                                sockets = [json.loads(_socket)]
                             else:
                                 _socketall = rdbconn.hgetall('DISCOVERY')
-                                sockets = [json.loads(v) for _,v in _socketall.items()]
-                            fssocket(data, sockets)
+                                sockets = [json.loads(_socket) for _,_socket in _socketall.items()]
+                            fssocket(requestid, commands, delay, sockets)
                         # firewall update
                         if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_, _ACCESS_]:
                             nftupdate(data)
