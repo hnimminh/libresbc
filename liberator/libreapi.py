@@ -13,11 +13,12 @@ import json
 import hashlib
 import redis
 import validators
-from pydantic import BaseModel, Field, validator, root_validator, schema, constr
-from pydantic.fields import ModelField
-from typing import Optional, List, Dict, Union, Any
-from enum import Enum
+from pydantic import model_validator, StringConstraints, BaseModel, Field
+from pydantic.v1 import validator
 from pydantic.json_schema import SkipJsonSchema
+from typing import Optional, List, Union
+from typing_extensions import Annotated
+from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_network as IPvNetwork
 from fastapi import APIRouter, Response, Path
 from fastapi.encoders import jsonable_encoder
@@ -58,20 +59,18 @@ __SEMICOLON__ = ';'
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INITIALIZE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
+CLUSTERMEMBERS = []
 try:
     # TODO: fix: restart liberator is required when new member added
     clustername = rdbconn.get('cluster:name')
     if not clustername:
-        rdbconn.set('cluster:name', clustername)
+        rdbconn.set('cluster:name', DFT_CLUSTER_ATTRS.get('name'))
 
     CLUSTERMEMBERS = set(rdbconn.smembers('cluster:members'))
     for member in CLUSTERMEMBERS:
         rdbconn.sadd('cluster:members', member)
 
     attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
-    CLUSTERCAP = len(CLUSTERMEMBERS)*int(attributes.get('max_concurrent_calls', 0))
-    CLUSTERCPS = len(CLUSTERMEMBERS)*int(attributes.get('max_calls_per_second', 0))
     if not attributes:
         rdbconn.hmset('cluster:attributes', redishash({
             'rtp_start_port': DFT_CLUSTER_ATTRS.get('rtp_start_port'),
@@ -79,8 +78,6 @@ try:
             'max_concurrent_calls': DFT_CLUSTER_ATTRS.get('max_concurrent_calls'),
             'max_calls_per_second': DFT_CLUSTER_ATTRS.get('max_calls_per_second')
         }))
-        CLUSTERCAP = len(CLUSTERMEMBERS)*DFT_CLUSTER_ATTRS.get('max_concurrent_calls')
-        CLUSTERCPS = len(CLUSTERMEMBERS)*DFT_CLUSTER_ATTRS.get('max_calls_per_second')
 except Exception as e:
     logger.error(f"module=liberator, space=libreapi, action=initiate, exception={e}, traceback={traceback.format_exc()}")
 
@@ -149,8 +146,6 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         pipe.execute()
         # reset global vars
         CLUSTERMEMBERS = members
-        CLUSTERCAP = len(CLUSTERMEMBERS)*max_concurrent_calls
-        CLUSTERCPS = len(CLUSTERMEMBERS)*max_calls_per_second
         # fire-event cluster member to fsvar
         rdbconn.publish(CHANGE_CFG_CHANNEL, json.dumps({'portion': 'cluster', 'action': 'update', 'fsgvars': [f'CLUSTERMEMBERS={stringify(members,__COMMA__)}'], 'requestid': requestid}))
         response.status_code, result = 200, {'passed': True}
@@ -216,7 +211,7 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
         name_key = f'base:netalias:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'nameset:netalias', name)
         pipe.execute()
@@ -240,7 +235,7 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         rdbconn.hmset(name_key, redishash(data))
         # proactive get list who use this netalias
         _engaged_key = f'engagement:{_name_key}'
@@ -396,7 +391,8 @@ class ACLRuleModel(BaseModel):
     value: str = Field(description='acl rule value depend on type')
     force: SkipJsonSchema[Optional[bool]] = Field(None, description='set true if you need to add acl domain')
 
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def acl_rule_agreement(cls, rule):
         key = rule.get('key')
         value = rule.get('value')
@@ -429,7 +425,7 @@ def create_acl(reqbody: ACLModel, response: Response):
         name_key = f'base:acl:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent acl name'}; return
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         rdbconn.hmset(name_key, redishash(data))
         response.status_code, result = 200, {'passed': True}
         # fire-event acl change
@@ -453,7 +449,7 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
             response.status_code, result = 403, {'error': 'nonexistent acl identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         rdbconn.hmset(name_key, redishash(data))
         # proactive get list who use this acl
         _engaged_key = f'engagement:{_name_key}'
@@ -601,7 +597,8 @@ class SIPProfileModel(BaseModel):
     tls_version: SkipJsonSchema[str] = Field(min_length=4, max_length=64, default='tlsv1.2', description='TLS version')
     tls_cert_dir: SkipJsonSchema[Optional[str]] = Field(None, min_length=4, max_length=256, description='TLS Certificate dirrectory')
     # validation
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def sipprofile_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
@@ -646,7 +643,7 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'sipprofile:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent sip profile name'}; return
@@ -690,7 +687,7 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
         _rtp_address = _data.get('rtp_address')
         _realm = _data.get('realm')
 
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         local_network_acl = data.get('local_network_acl')
         sip_address = data.get('sip_address')
         rtp_address = data.get('rtp_address')
@@ -826,7 +823,8 @@ class PreAnswerStream(BaseModel):
     type: PreAnswerTypeEnum = Field(default='tone', description='media type: tone - tone script follow ITU-T Recommendation E.180, media - filename (fullpath) of audio file, speak - text to speak')
     stream: str = Field(min_length=4, max_length=511, description='stream data follow the media type')
     # will do validate yet in next release
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def preanswer_stream_agreement(cls, stream):
         streamtype = stream.get('type')
         streamdata = stream.get('stream')
@@ -842,7 +840,7 @@ def create_preanswer_class(reqbody: PreAnswerModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'class:preanswer:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -860,7 +858,7 @@ def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifi
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         _name_key = f'class:preanswer:{identifier}'
         name_key = f'class:preanswer:{name}'
         if not rdbconn.exists(_name_key):
@@ -997,7 +995,7 @@ def create_media_class(reqbody: MediaModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'class:media:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1015,7 +1013,7 @@ def update_media_class(reqbody: MediaModel, response: Response, identifier: str=
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         _name_key = f'class:media:{identifier}'
         name_key = f'class:media:{name}'
         if not rdbconn.exists(_name_key):
@@ -1110,17 +1108,17 @@ def list_media_class(response: Response):
 # CAPACITY
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class CapacityModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of capacity class (identifier)')
+    name: str = Field(pattern=_NAME_, max_length=32, description='name of capacity class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    cps: int = Field(default=-1, ge=-1, le=CLUSTERCPS, description='call per second')
-    concurentcalls: int = Field(default=-1, ge=-1, le=CLUSTERCAP, description='concurrent calls')
+    cps: int = Field(default=-1, ge=-1, description='call per second')
+    concurentcalls: int = Field(default=-1, ge=-1, description='concurrent calls')
 
 @librerouter.post("/libreapi/class/capacity", status_code=200)
 def create_capacity_class(reqbody: CapacityModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'class:capacity:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1138,7 +1136,7 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         _name_key = f'class:capacity:{identifier}'
         name_key = f'class:capacity:{name}'
         if not rdbconn.exists(_name_key):
@@ -1247,7 +1245,7 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
     result = None
     try:
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'class:translation:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent class name'}; return
@@ -1265,7 +1263,7 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         _name_key = f'class:translation:{identifier}'
         name_key = f'class:translation:{name}'
         if not rdbconn.exists(_name_key):
@@ -1390,7 +1388,8 @@ class ManiAction(BaseModel):
     targetvar: Optional[str] = Field(None, min_length=2, max_length=128, description='name of target variable')
     values: List[str] = Field(max_length=8, description='value of target variable')
     # validation
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def maniaction_agreement(cls, maniacts):
         _maniacts = jsonable_encoder(maniacts)
         action = _maniacts.get('action')
@@ -1426,13 +1425,14 @@ class ManiAction(BaseModel):
         return _maniacts
 
 class ManipulationModel(BaseModel):
-    name: str = Field(regex=_NAME_, max_length=32, description='name of manipulation class')
+    name: str = Field(pattern=_NAME_, max_length=32, description='name of manipulation class')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
-    conditions: Optional[ManiCondition] = Field(description='combine the logic and list of checking rules')
-    actions: List[ManiAction] = Field(min_items=1, max_items=16, description='list of action when conditions is true')
-    antiactions: Optional[List[ManiAction]] = Field(min_items=1, max_items=16, description='list of action when conditions is false')
+    conditions: Optional[ManiCondition] = Field(None, description='combine the logic and list of checking rules')
+    actions: List[ManiAction] = Field(min_length=1, max_length=16, description='list of action when conditions is true')
+    antiactions: Optional[List[ManiAction]] = Field(None, min_length=1, max_length=16, description='list of action when conditions is false')
     # validation
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def mani_agreement(cls, manis):
         _manis = jsonable_encoder(manis)
         if 'conditions' not in _manis:
@@ -1448,7 +1448,7 @@ def create_manipulation(reqbody: ManipulationModel, response: Response):
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'class:manipulation:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent manipulation name'}; return
@@ -1467,7 +1467,7 @@ def update_manipulation_class(reqbody: ManipulationModel, response: Response, id
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         _name_key = f'class:manipulation:{identifier}'
         name_key = f'class:manipulation:{name}'
         if not rdbconn.exists(_name_key):
@@ -1610,7 +1610,8 @@ class GatewayModel(BaseModel):
     contact_in_ping: SkipJsonSchema[Optional[str]] = Field(None, min_length=4, max_length=256, description='contact header of ping message')
     ping_user_agent: SkipJsonSchema[Optional[str]] = Field(None, min_length=4, max_length=64, description='user agent of ping message')
     # validation
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def gateway_agreement(cls, values):
         _values = jsonable_encoder(values)
         for key, value in _values.items():
@@ -1631,9 +1632,8 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
-        pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name_key = f'base:gateway:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
@@ -1659,7 +1659,7 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent gateway name'}; return
         _data = jsonhash(rdbconn.hgetall(_name_key))
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         rdbconn.hmset(name_key, redishash(data))
         # remove the unintended-field
         for _field in _data:
@@ -1805,7 +1805,7 @@ HASHCALLID = 'hash_callid'
 HASHIPADDR = 'hash_src_ip'
 HASHDESTNO = 'hash_destination_number'
 
-SIPCode = constr(regex="^[1-6][0-9][0-9]$")
+SIPCode = Annotated[str, StringConstraints(pattern="^[1-6][0-9][0-9]$")]
 
 class Distribution(str, Enum):
     weight_based = WEIGHTBASE
@@ -1904,7 +1904,7 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
@@ -1946,7 +1946,7 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         sipprofile = data.get('sipprofile')
         gateways = {gw.get('name'):gw.get('weight') for gw in data.get('gateways')}
         rtpaddrs = set(data.get('rtpaddrs'))
@@ -2209,7 +2209,7 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         sipprofile = data.get('sipprofile')
         routing = data.get('routing')
         sipaddrs = set(data.get('sipaddrs'))
@@ -2263,7 +2263,7 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     try:
         pipe = rdbconn.pipeline()
         name = reqbody.name
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         sipprofile = data.get('sipprofile')
         sipaddrs = set(data.get('sipaddrs'))
         rtpaddrs = set(data.get('rtpaddrs'))
@@ -2466,7 +2466,8 @@ class RoutingTableModel(BaseModel):
     routes: Optional[Union[RouteModel, List[Union[str,int]]]] = Field(None, description='route model data')
     navigator: Optional[str] = Field(None, pattern=_NAME_, max_length=32, description='reference (clearip/youmail) sip entity of route')
     # validation
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def routing_table_agreement(cls, values):
         values = jsonable_encoder(values)
         action = values.get('action')
@@ -2520,7 +2521,7 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent routing table'}; return
 
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         routes = data.get('routes')
         pipe.hmset(name_key, redishash(data))
         if routes and isinstance(routes, list):
@@ -2565,7 +2566,7 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
         if _navigator:
             pipe.srem(f'engagement:intcon:out:{_navigator}', _nameid)
 
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         routes = data.get('routes')
         navigator = data.get('navigator')
         pipe.hmset(name_key, redishash(data))
@@ -2745,9 +2746,10 @@ class RoutingRecordModel(BaseModel):
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match, eq: equal, ne: not equal, gt: greater than, lt: less than',)
     value: str = Field(min_length=1, max_length=128, pattern=_DIAL_, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
-    routes: Optional[Union[RouteModel, List[Union[str,int]]]]  = Field(None, description='route model data')
+    routes: Optional[Union[RouteModel, List[Union[str,int]]]]  = Field(description='route model data')
     # validation and transform data
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def routing_record_agreement(cls, values):
         #try:
         values = jsonable_encoder(values)
@@ -2787,7 +2789,7 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         table = data.get('table')
         match = data.get('match')
         value = data.get('value')
@@ -2830,7 +2832,7 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         table = data.get('table')
         match = data.get('match')
         value = data.get('value')
@@ -2930,8 +2932,9 @@ class Socket(BaseModel):
     transport: SkipJsonSchema[TransportEnum] = Field(default='udp', description='transport protocol')
     port: SkipJsonSchema[int] = Field(default=5060, ge=0, le=65535, description='sip port')
     ip: Union[IPv4Address, IPv6Address] = Field(description='ip address')
-    force: Optional[bool] = Field(description='set true if you need to add none loopback ip', hidden_field=True)
-    @root_validator()
+    force: SkipJsonSchema[Optional[bool]] = Field(None, description='set true if you need to add none loopback ip')
+    @model_validator(mode='before')
+    @classmethod
     def socket_ip(cls, kvs):
         kvs = jsonable_encoder(kvs)
         force = kvs.pop('force', None)
@@ -2945,7 +2948,8 @@ class DomainPolicy(BaseModel):
     domain: str = Field(pattern=_REALM_, max_length=32, description='sip domain')
     srcsocket: Socket = Field(description='listen socket of sip between proxy and b2bua')
     dstsocket: Socket = Field(description='forward socket of sip between proxy and b2bua')
-    @root_validator()
+    @model_validator(mode='before')
+    @classmethod
     def policy(cls, kvs):
         kvs = jsonable_encoder(kvs)
         domain = kvs.get('domain')
@@ -2965,7 +2969,7 @@ def create_access_domain_policy(reqbody: DomainPolicy, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         domain = data.pop('domain')
         # verification
         name_key = f'access:policy:{domain}'
@@ -2985,7 +2989,7 @@ def update_access_domain_policy(reqbody: DomainPolicy, response: Response):
     requestid=get_request_uuid()
     result = None
     try:
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         domain = data.pop('domain')
         # verification
         name_key = f'access:policy:{domain}'
@@ -3149,7 +3153,7 @@ def create_access_service(reqbody: AccessService, response: Response):
     result = None
     try:
         pipe = rdbconn.pipeline()
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name = data.get('name')
         domains = data.get('domains')
         sip_address = data.get('sip_address')
@@ -3183,7 +3187,7 @@ def update_access_service(reqbody: AccessService, response: Response, identifier
     result = None
     try:
         pipe = rdbconn.pipeline()
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         name = data.get('name')
         domains = data.get('domains')
         sip_address = data.get('sip_address')
@@ -3328,7 +3332,7 @@ class UserDirectory(BaseModel):
 def create_access_directory_user(reqbody: UserDirectory, response: Response):
     result = None
     try:
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         domain = data.get('domain')
         id = data.get('id')
         name_key = f'access:dir:usr:{domain}:{id}'
@@ -3347,7 +3351,7 @@ def create_access_directory_user(reqbody: UserDirectory, response: Response):
 def update_access_directory_user(reqbody: UserDirectory, response: Response):
     result = None
     try:
-        data = jsonable_encoder(reqbody)
+        data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         domain = data.get('domain')
         id = data.get('id')
         name_key = f'access:dir:usr:{domain}:{id}'
