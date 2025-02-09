@@ -2463,7 +2463,7 @@ class RoutingTableModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: Optional[List[str]] = Field(None, min_length=1, max_length=5, description='sip variable for routing base, eg: cidnumber, cidname, dstnumber, intconname, realm')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection; {_HTTPR} - find nexthop by HTTP GET')
-    routes: Optional[RouteModel] = Field(None, description='route model data')
+    routes: Optional[Union[RouteModel, List[Union[str,int]]]] = Field(None, description='route model data')
     navigator: Optional[str] = Field(None, pattern=_NAME_, max_length=32, description='reference (clearip/youmail) sip entity of route')
     # validation
     @root_validator()
@@ -2476,7 +2476,7 @@ class RoutingTableModel(BaseModel):
         if action==_ROUTE:
             values.pop('variables', None)
             routes = values.get('routes', None)
-            if not routes:
+            if not routes or not isinstance(routes, dict):
                 raise ValueError(f'{_ROUTE} action require at routes param')
             else:
                 primary = routes.get('primary')
@@ -2499,7 +2499,7 @@ class RoutingTableModel(BaseModel):
             if not variables:
                 raise ValueError(f'{_QUERY} action require at variables param')
             routes = values.get('routes')
-            if not routes:
+            if not routes or not isinstance(routes, dict):
                 raise ValueError(f'{_ROUTE} action require at routes param')
             values['routes'] = routes.get('primary')
         else:
@@ -2745,7 +2745,7 @@ class RoutingRecordModel(BaseModel):
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match, eq: equal, ne: not equal, gt: greater than, lt: less than',)
     value: str = Field(min_length=1, max_length=128, pattern=_DIAL_, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
-    routes: Optional[RouteModel] = Field(None, description='route model data')
+    routes: Optional[Union[RouteModel, List[Union[str,int]]]]  = Field(None, description='route model data')
     # validation and transform data
     @root_validator()
     def routing_record_agreement(cls, values):
@@ -2762,6 +2762,8 @@ class RoutingRecordModel(BaseModel):
             routes = values.get('routes')
             if not routes:
                 raise ValueError(f'routes parameter is required for {action} action')
+            elif not isinstance(routes, dict):
+                raise ValueError(f'invalid data type')
             else:
                 primary = routes.get('primary')
                 secondary = routes.get('secondary')
