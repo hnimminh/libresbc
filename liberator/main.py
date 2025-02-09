@@ -45,4 +45,4 @@ if __name__ == '__main__':
         logger.debug('module=liberator, space=main, action=liberator_stopping')
         for thrd in threading.enumerate():
             thrd.stop = True
-            logger.info(f'module=liberator, space=main, action=teardown, id={thrd.ident}, name={thrd.getName()}')
+            logger.info(f'module=liberator, space=main, action=teardown, id={thrd.ident}, name={thrd.name}')
