@@ -119,6 +119,7 @@ DFT_CLUSTER_ATTRS = {
 CHANGE_CFG_CHANNEL = 'CHANGE_CFG_CHANNEL'
 # security (firewall) event bus, apply for all cluster member
 SECURITY_CHANNEL = 'SECURITY_CHANNEL'
+FIREWALL_NFTCMD_CHANNEL = 'FIREWALL_NFTCMD_CHANNEL'
 # apply for particular node, with specify by event content
 PERNODE_CHANNEL = 'PERNODE_CHANNEL'
 

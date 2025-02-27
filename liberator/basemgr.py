@@ -17,7 +17,7 @@ import redis
 import redfs
 from jinja2 import Environment, FileSystemLoader
 from ipaddress import ip_address as IPvAddress, ip_network as IPvNetwork
-from configuration import (CHANGE_CFG_CHANNEL, PERNODE_CHANNEL, SECURITY_CHANNEL,
+from configuration import (CHANGE_CFG_CHANNEL, PERNODE_CHANNEL, SECURITY_CHANNEL, FIREWALL_NFTCMD_CHANNEL,
     REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT,
     LIBRE_BUILTIN_FIREWALL, LIBRE_CONTAINERIZED, LIBRE_BUILTIN_REDIS, LIBRE_STANDALONE_MODEL,
 )
@@ -59,7 +59,7 @@ _DFTBANTIME = 900
 
 @threaded
 def nftupdate(data):
-    if not LIBRE_BUILTIN_FIREWALL or not LIBRE_STANDALONE_MODEL:
+    if not LIBRE_BUILTIN_FIREWALL and not LIBRE_STANDALONE_MODEL:
         logger.info(f"module=liberator, space=basemgr, action=nftupdate, message=[skip action since buitin firewall is disabled]")
         return
 
@@ -74,113 +74,109 @@ def nftupdate(data):
         blacksetv6 = rdbconn.smembers(f'firewall:blacksetv6')
         # RTP PORTRANGE
         rtpportrange = list(map(fieldjsonify ,rdbconn.hmget('cluster:attributes', 'rtp_start_port', 'rtp_end_port')))
-        # NETALIAS
-        netaliasnames = rdbconn.smembers('nameset:netalias')
-        for netaliasname in netaliasnames:
-            pipe.hget(f'base:netalias:{netaliasname}', 'addresses')
-        details = pipe.execute()
-        netaliases = dict()
-        for netaliasname, detail in zip(netaliasnames, details):
-            addresses = [address for address in fieldjsonify(detail) if address.get('member') == _NODEID][0]
-            netaliases.update({netaliasname: addresses})
-        # SIP PROFILES AND LISTEN ADDRESS/PORT
-        profilenames = rdbconn.smembers('nameset:sipprofile')
-        sipprofiles = dict()
-        for profilename in profilenames:
-            sip_port, sips_port, sip_address, rtp_address = rdbconn.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
-            sip_ip = netaliases[sip_address]['listen']
-            rtp_ip = netaliases[rtp_address]['listen']
-            sip_ip_version = IPvAddress(sip_ip).version
-            rtp_ip_version = IPvAddress(rtp_ip).version
 
-            intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
+        # PER NODE FIREWALL
+        CLUSTERMEMBERS = set(rdbconn.smembers('cluster:members'))
+        if _NODEID:
+            # colocate libresbc and callengine
+            CLUSTERMEMBERS = {_NODEID}
 
-            # collect farend rtp ip addr per profile
-            for intconnameid in intconnameids:
-                pipe.hget(f'intcon:{intconnameid}', 'rtpaddrs')
-            rtpaddrstrlist = pipe.execute()
-            farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
-            _farendrtpaddrs = [ip for ip in farendrtpaddrs if IPvNetwork(ip).version==rtp_ip_version and not IPvNetwork(ip).is_loopback]
+        for nodeid in CLUSTERMEMBERS:
+            # NETALIAS
+            netaliasnames = rdbconn.smembers('nameset:netalias')
+            for netaliasname in netaliasnames:
+                pipe.hget(f'base:netalias:{netaliasname}', 'addresses')
+            details = pipe.execute()
+            netaliases = dict()
+            for netaliasname, detail in zip(netaliasnames, details):
+                addresses = [address for address in fieldjsonify(detail) if address.get('member') == nodeid][0]
+                netaliases.update({netaliasname: addresses})
+            # SIP PROFILES AND LISTEN ADDRESS/PORT
+            profilenames = rdbconn.smembers('nameset:sipprofile')
+            sipprofiles = dict()
+            for profilename in profilenames:
+                sip_port, sips_port, sip_address, rtp_address = rdbconn.hmget(f'sipprofile:{profilename}', 'sip_port', 'sips_port', 'sip_address', 'rtp_address')
+                sip_ip = netaliases[sip_address]['listen']
+                rtp_ip = netaliases[rtp_address]['listen']
+                sip_ip_version = IPvAddress(sip_ip).version
+                rtp_ip_version = IPvAddress(rtp_ip).version
 
-            # collect farend sip ip addr per profile
-            # there is a SET of farend sip ip addr redis-key=[farendsipaddrs:in:{profilename}]
-            # but it only for INBOUND then do same as farend rtp ip addr
-            # sipaddrs field for outbound is supported later (then need to handle null)
-            for intconnameid in intconnameids:
-                pipe.hget(f'intcon:{intconnameid}', 'sipaddrs')
-            sipaddrstrlist = pipe.execute()
-            farendsipaddrs = set([sipaddr for sipaddrstr in sipaddrstrlist if sipaddrstr for sipaddr in fieldjsonify(sipaddrstr)])
-            _farendsipaddrs = [ip for ip in farendsipaddrs if IPvNetwork(ip).version==sip_ip_version and not IPvNetwork(ip).is_loopback]
+                intconnameids = [item for item in rdbconn.smembers(f'engagement:sipprofile:{profilename}')]
 
-            sipprofiles[profilename] = {
-                'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
-                'sipudpports': fieldjsonify(sip_port),
-                'sip_ip': sip_ip,
-                'rtp_ip': rtp_ip,
-                f'farendrtpaddrv{rtp_ip_version}s': _farendrtpaddrs,
-                f'farendsipaddrv{sip_ip_version}s': _farendsipaddrs
-            }
-        logger.debug(f"module=liberator, space=basemgr, action=nftupdate, sipprofiles={sipprofiles}")
+                # collect farend rtp ip addr per profile
+                for intconnameid in intconnameids:
+                    pipe.hget(f'intcon:{intconnameid}', 'rtpaddrs')
+                rtpaddrstrlist = pipe.execute()
+                farendrtpaddrs = set([rtpaddr for rtpaddrstr in rtpaddrstrlist for rtpaddr in fieldjsonify(rtpaddrstr)])
+                _farendrtpaddrs = [ip for ip in farendrtpaddrs if IPvNetwork(ip).version==rtp_ip_version and not IPvNetwork(ip).is_loopback]
 
-        # ACCESS LAYERS
-        layernames = rdbconn.smembers('nameset:access:service')
-        accesslayers = dict()
-        for layername in layernames:
-            transports, sip_port, sips_port, sip_address, whiteips, blackips, whiteipv6s, blackipv6s = rdbconn.hmget(
-                f'access:service:{layername}',
-                'transports', 'sip_port','sips_port', 'sip_address', 'whiteips', 'blackips','whiteipv6s', 'blackipv6s'
-            )
-            sip_ip = netaliases[sip_address]['listen']
-            transports = fieldjsonify(transports)
-            sipudpports = None
-            if 'udp' in transports: sipudpports = fieldjsonify(sip_port)
-            siptcpports = []
-            if 'tcp' in transports: siptcpports.append(fieldjsonify(sip_port))
-            if 'tls' in transports: siptcpports.append(fieldjsonify(sips_port))
+                # collect farend sip ip addr per profile
+                # there is a SET of farend sip ip addr redis-key=[farendsipaddrs:in:{profilename}]
+                # but it only for INBOUND then do same as farend rtp ip addr
+                # sipaddrs field for outbound is supported later (then need to handle null)
+                for intconnameid in intconnameids:
+                    pipe.hget(f'intcon:{intconnameid}', 'sipaddrs')
+                sipaddrstrlist = pipe.execute()
+                farendsipaddrs = set([sipaddr for sipaddrstr in sipaddrstrlist if sipaddrstr for sipaddr in fieldjsonify(sipaddrstr)])
+                _farendsipaddrs = [ip for ip in farendsipaddrs if IPvNetwork(ip).version==sip_ip_version and not IPvNetwork(ip).is_loopback]
 
-            layerdata = {
-                'sip_ip': sip_ip,
-                'sipudpports': sipudpports,
-                'siptcpports': set(siptcpports)
-            }
+                sipprofiles[profilename] = {
+                    'siptcpports': set([fieldjsonify(port) for port in [sip_port, sips_port] if port]),
+                    'sipudpports': fieldjsonify(sip_port),
+                    'sip_ip': sip_ip,
+                    'rtp_ip': rtp_ip,
+                    f'farendrtpaddrv{rtp_ip_version}s': _farendrtpaddrs,
+                    f'farendsipaddrv{sip_ip_version}s': _farendsipaddrs
+                }
+            logger.debug(f"module=liberator, space=basemgr, action=nftupdate, nodeid={nodeid}, sipprofiles={sipprofiles}")
 
-            if IPvAddress(sip_ip).version == 4:
-                whiteips = fieldjsonify(whiteips)
-                blackips = fieldjsonify(blackips)
-                if not whiteips:
-                    whiteips = {'0.0.0.0/0'}
-                layerdata.update({'whiteips': whiteips, 'blackips': blackips})
-            else:
-                whiteipv6s = fieldjsonify(whiteipv6s)
-                blackipv6s = fieldjsonify(blackipv6s)
-                if not whiteipv6s:
-                    whiteipv6s = {'::/0'}
-                layerdata.update({'whiteipv6s': whiteipv6s, 'blackipv6s': blackipv6s})
+            # ACCESS LAYERS
+            layernames = rdbconn.smembers('nameset:access:service')
+            accesslayers = dict()
+            for layername in layernames:
+                transports, sip_port, sips_port, sip_address, whiteips, blackips, whiteipv6s, blackipv6s = rdbconn.hmget(
+                    f'access:service:{layername}',
+                    'transports', 'sip_port','sips_port', 'sip_address', 'whiteips', 'blackips','whiteipv6s', 'blackipv6s'
+                )
+                sip_ip = netaliases[sip_address]['listen']
+                transports = fieldjsonify(transports)
+                sipudpports = None
+                if 'udp' in transports: sipudpports = fieldjsonify(sip_port)
+                siptcpports = []
+                if 'tcp' in transports: siptcpports.append(fieldjsonify(sip_port))
+                if 'tls' in transports: siptcpports.append(fieldjsonify(sips_port))
 
-            accesslayers[layername] = layerdata
-        logger.debug(f"module=liberator, space=basemgr, action=nftupdate, accesslayers={accesslayers}")
+                layerdata = {
+                    'sip_ip': sip_ip,
+                    'sipudpports': sipudpports,
+                    'siptcpports': set(siptcpports)
+                }
 
-        # RULE FILE
-        template = _NFT.get_template("nftables.j2.conf")
-        stream = template.render(whiteset=whiteset, blackset=blackset, whitesetv6=whitesetv6, blacksetv6=blacksetv6,
-                                 rtpportrange=rtpportrange, sipprofiles=sipprofiles,
-                                 accesslayers=accesslayers, dftbantime=_DFTBANTIME)
-        nftfile = '/etc/nftables.conf.new'
-        with open(nftfile, 'w') as nftf: nftf.write(stream)
+                if IPvAddress(sip_ip).version == 4:
+                    whiteips = fieldjsonify(whiteips)
+                    blackips = fieldjsonify(blackips)
+                    if not whiteips:
+                        whiteips = {'0.0.0.0/0'}
+                    layerdata.update({'whiteips': whiteips, 'blackips': blackips})
+                else:
+                    whiteipv6s = fieldjsonify(whiteipv6s)
+                    blackipv6s = fieldjsonify(blackipv6s)
+                    if not whiteipv6s:
+                        whiteipv6s = {'::/0'}
+                    layerdata.update({'whiteipv6s': whiteipv6s, 'blackipv6s': blackipv6s})
 
-        nftcmd = Popen(['/usr/sbin/nft', '-f', nftfile], stdout=PIPE, stderr=PIPE)
-        _, stderr = bdecode(nftcmd.communicate())
-        if stderr:
-            result = False
-            stderr = stderr.replace('\n', '')
-            logger.error(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, nftfile={nftfile}, error={stderr}")
-        else:
-            old = osrename('/etc/nftables.conf', '/etc/nftables.conf.old')
-            new = osrename('/etc/nftables.conf.new', '/etc/nftables.conf')
-            if not (old and new):
-                logger.info(f"module=liberator, space=basemgr, action=osrename, requestid={requestid}, subtasks=rename:{old}:{new}")
-            else:
-                logger.info(f"module=liberator, space=basemgr, action=nftupdate, requestid={requestid}, result=success")
+                accesslayers[layername] = layerdata
+            logger.debug(f"module=liberator, space=basemgr, action=nftupdate, nodeid={nodeid}, accesslayers={accesslayers}")
+
+            # RULE FILE
+            template = _NFT.get_template("nftables.j2.conf")
+            stream = template.render(whiteset=whiteset, blackset=blackset, whitesetv6=whitesetv6, blacksetv6=blacksetv6,
+                                    rtpportrange=rtpportrange, sipprofiles=sipprofiles,
+                                    accesslayers=accesslayers, dftbantime=_DFTBANTIME)
+
+            # fire pubsub event for firewall
+            logger.info(f"module=liberator, space=basemgr, requestid={requestid}, action=nftupdate-publish")
+            rdbconn.publish(FIREWALL_NFTCMD_CHANNEL, json.dumps({'type': 'stream', 'data': stream}))
     except Exception as e:
         result = False
         logger.critical(f"module=liberator, space=basemgr, action=nftupdate, data={data}, exception={e}, traceback={traceback.format_exc()}")
@@ -191,7 +187,7 @@ def nftupdate(data):
 _nftdelimiter_ = ', '
 @threaded
 def nftsets(setname, ops, srcips, bantime=None):
-    if not LIBRE_BUILTIN_FIREWALL or not LIBRE_STANDALONE_MODEL:
+    if not LIBRE_BUILTIN_FIREWALL and not LIBRE_STANDALONE_MODEL:
         logger.info(f"module=liberator, space=basemgr, action=nftsets, message=[skip action since buitin firewall is disabled]")
         return
 
@@ -205,14 +201,9 @@ def nftsets(setname, ops, srcips, bantime=None):
         else:
             element = f'{{ {stringify(srcips, _nftdelimiter_)} }}'
 
-        nftcmd = Popen(['/usr/sbin/nft', ops, 'element', 'inet', 'LIBREFW', setname, element], stdout=PIPE, stderr=PIPE)
-        _, stderr = bdecode(nftcmd.communicate())
-        if stderr:
-            result = False
-            stderr = stderr.replace('\n', '')
-            logger.error(f"module=liberator, space=basemgr, action=nftsets, error={stderr}")
-        else:
-            logger.info(f"module=liberator, space=basemgr, action=nftsets, ops={ops}, setname={setname}, srcips={srcips}, result=success")
+        # fire pubsub event for firewall
+        logger.info(f"module=liberator, space=basemgr, action=nftsets-publish, ops={ops}, setname={setname}, srcips={srcips}, element={element}")
+        rdbconn.publish(FIREWALL_NFTCMD_CHANNEL, json.dumps({'type': 'cmd', 'data': f'nft {ops} element inet LIBREFW {setname} {element}'}))
     except Exception as e:
         result = False
         logger.critical(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
@@ -266,7 +257,7 @@ def fssocket(requestid, commands, delay, sockets):
     result, fs = False, None
     try:
         # connecting
-        logger.info(f"module=liberator, space=basemgr, func=fssocket, action=preparing, requestid={requestid}, nodeids={[socket.get("nodeid") for socket in sockets]}, commands={commands}, delay={delay}")
+        logger.info(f"module=liberator, space=basemgr, func=fssocket, action=preparing, requestid={requestid}, nodeids={[socket.get('nodeid') for socket in sockets]}, commands={commands}, delay={delay}")
         for socket in sockets:
             ipaddr = socket.get('ipaddr')
             port = socket.get('port')
