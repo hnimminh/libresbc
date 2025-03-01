@@ -15,6 +15,7 @@
     - role: kamailio
     - role: libre
     - role: nftables
+    - role: shield
     - role: captagent
     - role: nginx
     - role: libreui

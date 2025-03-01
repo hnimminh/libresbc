@@ -1,0 +1,23 @@
+[Unit]
+Description=Shield - Simple Daemon control firewall by REST API & PUBSUB
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=/opt/libresbc/libre.env
+ExecStart=/usr/local/bin/shield --redisurl tcp://:@127.0.0.1:6379/0
+#tcp://:@$REDIS_HOST:$REDIS_PORT/$REDIS_DB
+
+SyslogIdentifier=libresbc
+SyslogFacility=5
+SyslogLevel=debug
+
+TimeoutSec=30s
+RemainAfterExit=no
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

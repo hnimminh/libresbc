@@ -11,6 +11,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - end of life cluster candidate attributes
 - support centralized liberator
 - python lib broken upgrading (code rework)
+- introduce shield: separately control nftables with api/pubsub
 
 ## [v0.8.0] - 2024-09-14
 - Support Debian 12 (bookworm)
