@@ -2,7 +2,7 @@
 - name: Fetch password protected FreeSWITCH GPG key
   get_url:
     url: https://freeswitch.signalwire.com/repo/deb/debian-release/signalwire-freeswitch-repo.gpg
-    username: libresbc
+    username: '{{ signalwire_user }}'
     password: '{{ signalwire_pat_token }}'
     dest: /usr/share/keyrings/signalwire-freeswitch-repo.gpg
 
@@ -12,7 +12,7 @@
     owner: root
     group: root
     mode: '0700'
-    content: 'machine freeswitch.signalwire.com login libresbc password {{ signalwire_pat_token }}'
+    content: 'machine freeswitch.signalwire.com login {{ signalwire_user }} password {{ signalwire_pat_token }}'
 
 - name: Add FreeSWITCH repo link
   lineinfile:
