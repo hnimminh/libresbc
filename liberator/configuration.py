@@ -71,11 +71,6 @@ _LIBRE_BUILTIN_FIREWALL = os.getenv('LIBRE_BUILTIN_FIREWALL')
 LIBRE_BUILTIN_FIREWALL = True
 if _LIBRE_BUILTIN_FIREWALL and _LIBRE_BUILTIN_FIREWALL.upper() in ['FALSE', '0', 'NO']:
     LIBRE_BUILTIN_FIREWALL = False
-#-----------------------------------------------------------------------------------------------------
-# RBD UNIX SOCKET LOCALIZE INSTANCE
-#-----------------------------------------------------------------------------------------------------
-RDB_PIDFILE = f'{RUNDIR}/redis.pid'
-RDB_USOCKET = f'{RUNDIR}/redis.sock'
 
 #-----------------------------------------------------------------------------------------------------
 # REDIS ENDPOINT
