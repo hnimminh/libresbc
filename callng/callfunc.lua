@@ -51,22 +51,28 @@ end
 
 
 function verify_concurentcalls(name, direction, uuid)
-    local concurentcalls = 0
-    local startpoint = 1
-    local clustermembers = freeswitch.getGlobalVariable('CLUSTERMEMBERS')
-    local cckeys = concurentcallskeys(name)
-    local max_concurentcalls = get_defined_concurentcalls(name, direction)
     -- unlimited/bypass cps check
+    local max_concurentcalls = get_defined_concurentcalls(name, direction)
     if max_concurentcalls < 0 then
         return -math.huge, -1
     end
-    if direction == INBOUND then startpoint = 2 end
+
+    local cckeys = concurentcallskeys(name)
     local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
         txn:multi()
-        if direction == INBOUND then txn:sadd(concurentcallskey(name), uuid) end
-        for i=1, #cckeys do txn:scard(cckeys) end
+        if direction == INBOUND then
+            txn:sadd('realtime:concurentcalls:'..name..':'..NODEID, uuid)
+        end
+        for i=1, #cckeys do
+            txn:scard(cckeys[i])
+        end
     end)
-    for i=startpoint, #replies do concurentcalls = concurentcalls + tonumber(replies[i]) end
+
+    local startpoint = ((direction == INBOUND) and 2) or 1
+    local concurentcalls = 0
+    for i=startpoint, #replies do
+        concurentcalls = concurentcalls + tonumber(replies[i])
+    end
     return concurentcalls, max_concurentcalls
 end
 
