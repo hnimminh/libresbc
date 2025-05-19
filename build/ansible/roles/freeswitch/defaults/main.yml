@@ -1,0 +1,3 @@
+libre_debian_version: '{{debian_codename|default("bookworm")}}'
+libre_freeswitch_version: '{{freeswitch_version|default("v1.10.11-libre-b")}}'
+

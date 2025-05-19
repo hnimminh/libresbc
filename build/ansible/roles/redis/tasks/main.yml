@@ -1,0 +1,3 @@
+- name: redis installation
+  import_tasks: redis.yml
+  tags: [redis]

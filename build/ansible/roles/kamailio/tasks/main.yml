@@ -1,0 +1,4 @@
+- name: kamailio installation
+  import_tasks: kamailio.yml
+  tags: [kamailio]
+

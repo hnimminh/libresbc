@@ -1,0 +1,10 @@
+---
+- name: Update templating firewall rule for nftables
+  template:
+    src: preset.libre.nft
+    dest: /etc/preset.libre.nft
+    owner: root
+    group: root
+    mode: u+rx,g+x,o-w
+
+

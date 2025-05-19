@@ -7,9 +7,9 @@ Before=freeswitch.service
 Type=simple
 User=root
 Group=root
-EnvironmentFile={{dstdir}}/libre.env
-WorkingDirectory={{dstdir}}/liberator
-ExecStart={{libre_python_binary}} {{dstdir}}/liberator/main.py
+EnvironmentFile=/opt/libresbc/libre.env
+WorkingDirectory=/opt/libresbc/liberator
+ExecStart=/opt/libresbc/venv/bin/python3 /opt/libresbc/liberator/main.py
 
 SyslogIdentifier=libresbc
 SyslogFacility=5
