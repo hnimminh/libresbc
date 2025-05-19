@@ -37,23 +37,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 2. Help people in the [issues](https://github.com/hnimminh/libresbc/issues) by sharing your knowledge and experience.
 3. Find and report issues.
 4. Influence the future of LibreSBC with feature requests.
-
-
-**You can also contribute money to help secure LibreSBC's future.**
-
-<p align="center">
-  <a href="https://www.paypal.com/paypalme/hnimminh" target="_blank">
-    <img src="https://user-images.githubusercontent.com/58973699/130890970-ad7f3be3-42c4-4a21-8e28-27dda9c603e3.png" height="54" alt="Paypal">
-  </a>
-</p>
-<br>
-<p align="center"> 
-  <img width="100px" src="https://raw.githubusercontent.com/hnimminh/hnimminh/master/bc.png">
-  <br><strong>BITCOIN</strong>
-  <br>1MNjpx5Jy9KUxx2gt5qVmExruehgPi3dQX
-</p>
-
-<br>
+5. You can also contribute money to help secure LibreSBC's future
 
 ## Sponsors
 
