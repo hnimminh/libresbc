@@ -9,7 +9,7 @@
 # If something feels complicated, it probably is, and may be a good opportunity to simplify things.                                                     #
 #                                                                                                                                                       #
 #-------------------------------------------------------------------------------------------------------------------------------------------------------#
-# TESTING LIBRESBC
+# SAMPLE CONFIGURATION FOR LIBRESBC
 #-------------------------------------------------------------------------------------------------------------------------------------------------------#
 sbcs:
   hosts:
@@ -20,7 +20,7 @@ sbcs:
     expsbc:
       ansible_user: root
       ansible_host: EXPSBC
-      nodeid: devsbc
+      nodeid: expsbc
   vars:
     homer: null
     logstash: null
@@ -54,7 +54,7 @@ all:
       database: 0
       password: null
     crcs:
-      recovery_capability: true
+      recovery_capability: false
       pgsql_host: !vault |
           $ANSIBLE_VAULT;1.1;AES256
           36633163616236333639353963313237383031303134323465663566333132313564316532636566

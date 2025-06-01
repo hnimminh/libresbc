@@ -1,0 +1,11 @@
+---
+# handlers file for libreui
+- name: restart libreui
+  systemd:
+    name: libreui
+    enabled: true
+    state: restarted
+    daemon_reload: true
+
+
+...
