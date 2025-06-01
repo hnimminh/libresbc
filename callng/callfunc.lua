@@ -36,10 +36,10 @@ end
 ---------------------------------------------------------------------------------------------------------------------------------------------
 -- CONCURENT CALL
 ---------------------------------------------------------------------------------------------------------------------------------------------
-function concurentcallskeys(name)
+function concurentcallskeys(name, direction)
     local xvars = split(freeswitch.getGlobalVariable('CLUSTERMEMBERS'))
     for i=1, #xvars do
-        xvars[i] = 'realtime:concurentcalls:'..name..':'..xvars[i]
+        xvars[i] = 'realtime:concurentcalls:'..direction..':'..name..':'..xvars[i]
     end
     return xvars
 end
@@ -57,11 +57,11 @@ function verify_concurentcalls(name, direction, uuid)
         return -math.huge, -1
     end
 
-    local cckeys = concurentcallskeys(name)
+    local cckeys = concurentcallskeys(name, direction)
     local replies = rdbconn:transaction({watch=cckeys, cas=true, retry=0}, function(txn)
         txn:multi()
         if direction == INBOUND then
-            txn:sadd('realtime:concurentcalls:'..name..':'..NODEID, uuid)
+            txn:sadd('realtime:concurentcalls:inbound:'..name..':'..NODEID, uuid)
         end
         for i=1, #cckeys do
             txn:scard(cckeys[i])

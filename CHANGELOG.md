@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
 ## [v1.0.0] - TBA
+- handle direction concurent calls
 - fix verify concurent calls
 - end of life cluster candidate attributes
 - support centralized liberator

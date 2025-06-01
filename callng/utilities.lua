@@ -254,8 +254,8 @@ function intconkey(name, direction)
     end
 end
 
-function concurentcallskey(name)
-    return 'realtime:concurentcalls:'..name..':'..NODEID
+function concurentcallskey(name, direction)
+    return 'realtime:concurentcalls:'..direction..':'..name..':'..NODEID
 end
 
 ----------------------------------------------------------------------------
