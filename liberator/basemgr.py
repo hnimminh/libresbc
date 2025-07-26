@@ -508,6 +508,8 @@ class BaseEventHandler(Thread):
                         elif portion == _SOFIAGW_:
                             sipprofile = data.get('sipprofile')
                             _gateway = data.get('_gateway')
+                            # Regenerar configuración XML antes de enviar comandos
+                            fsinstance(data)
                             commands = [f'sofia profile {sipprofile} killgw {_gateway}', f'sofia profile {sipprofile} rescan', 'reloadxml']
                         elif portion == _OUTCNX_:
                             action = data.get('action')
