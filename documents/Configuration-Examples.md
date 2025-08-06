@@ -242,6 +242,9 @@ Declare PBX as a gateway
   "desc": "PBX Server",
   "sipprofile": "internal",
   "distribution": "weight_based",
+  "sipaddrs": [
+    "10.10.10.20/32",
+  ],
   "rtpaddrs": [
     "10.10.10.20/32"
   ],
