@@ -14,8 +14,8 @@ services:
     restart: always
     image: hnimminh/libresbc:latest
     volumes:
-      - ./liberator:/opt/libresbc/liberator
-      - ./callng:/opt/libresbc/callng
+      - libresbc:/var/redis
+      - libresbc:/var/tls
     network_mode: host
     cap_add:
       - NET_ADMIN

@@ -250,7 +250,13 @@ const APIGuide = {
             "sip_address": "netalias_name",
             "domains": [
                 "libre.sbc"
-            ]
+            ],
+            "tls": {
+                "method": "TLSv1+",
+                "cert": "/var/tls/cert.pem",
+                "key": "/var/tls/key.pem",
+                "sni": "libre.sbc"
+            }
         }
     },
     "AccessDomainPolicy": {

@@ -13,6 +13,7 @@ import json
 import hashlib
 import redis
 import validators
+import os.path
 from pydantic import BaseModel, Field, validator, root_validator, schema, constr
 from pydantic.fields import ModelField
 from typing import Optional, List, Dict, Union, Any
@@ -52,7 +53,7 @@ schema.field_schema = field_schema
 _NAME_ = r'^[a-zA-Z][a-zA-Z0-9_-]+$'
 _ID_ = r'^[a-zA-Z0-9][a-zA-Z0-9_]+$'
 _SRNAME_ = r'^_[a-zA-Z0-9_]+$'
-_REALM_ = r'^[a-z][a-z0-9_\-\.]+$'
+_REALM_ = r'^[a-z0-9_\-\.]+$'
 _DIAL_ = r'^[a-zA-Z0-9_\-+#*@\.]*$'
 # ROUTING
 _QUERY = 'query'
@@ -2956,8 +2957,8 @@ class DomainPolicy(BaseModel):
     def policy(cls, kvs):
         kvs = jsonable_encoder(kvs)
         domain = kvs.get('domain')
-        if not validators.domain(domain):
-            raise ValueError('Invalid domain name, please refer rfc1035')
+        if not validators.domain(domain) and not validators.ipv4(domain):
+            raise ValueError('Domain must be rfc1035 domain name or an IP address')
         src_socket = kvs.get('srcsocket')
         srcsocket = f'{src_socket["transport"]}:{src_socket["ip"]}:{src_socket["port"]}'
         dst_socket = kvs.get('dstsocket')
@@ -3086,7 +3087,20 @@ def list_access_domain_policy(response: Response):
     finally:
         return result
 
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+class TLSMethodsEnum(str, Enum):
+    TLS13plus = 'TLSv1.3+'
+    TLS13 = 'TLSv1.3'
+    TLS12plus = 'TLSv1.2+'
+    TLS12 = 'TLSv1.2'
+    TLS11plus = 'TLSv1.1+'
+    TLS11 = 'TLSv1.1'
+    TLS1plus = 'TLSv1+'
+    TLS1 = 'TLSv1'
+    SSL3 = 'SSLv3'
+    SSL2 = 'SSLv2'
+    SSL23 = 'SSLv23'
 
 class AntiFlooding(BaseModel):
     sampling: int = Field(default=2, ge=1, le=300, description='sampling time unit (in second)')
@@ -3104,6 +3118,12 @@ class AttackAvoid(BaseModel):
     window: int = Field(default=18000, ge=3600, le=86400, description='evaluated window time in second')
     threshold: int = Field(default=5, ge=1, le=3600, description='number of request threshold that will be banned')
     bantime: int = Field(default=86400, ge=600, le=864000, description='firewall ban time in second')
+
+class TLS(BaseModel):
+    method: TLSMethodsEnum = Field(default='TLSv1+', description='Allowed TLS version')
+    cert: str = Field(default='/var/tls/cert.pem', description='Path to TLS certificate in PEM format')
+    key: str = Field(default='/var/tls/cert.key', description='Path to TLS key in PEM format')
+    sni: Optional[str] = Field(description='Server Name Indication (SNI) for TLS connections')
 
 class AccessService(BaseModel):
     name: str = Field(regex=_NAME_, max_length=32, description='name of access service')
@@ -3124,13 +3144,14 @@ class AccessService(BaseModel):
     blackipv6s: List[IPv6Network] = Field(default=[], max_items=1024, description='denied ipv6 list')
     whiteipv6s: List[IPv4Network] = Field(default=[], max_items=1024 ,description='allowed ipv6 list')
     domains: List[str] = Field(min_items=1, max_items=8, description='list of policy domain')
+    tls: Optional[TLS] = Field(description='TLS settings')
     @root_validator
     def access_service_validation(cls, kvs):
         kvs = jsonable_encoder(kvs)
         domains = kvs.get('domains')
         for domain in domains:
-            if not validators.domain(domain):
-                raise ValueError('Invalid domain name, please refer rfc1035')
+            if not validators.domain(domain) and not validators.ipv4(domain):
+                raise ValueError('Domain must be rfc1035 domain name or an IP address')
             if not rdbconn.exists(f'access:policy:{domain}'):
                 raise ValueError('Undefined domain')
         sip_address = kvs.get('sip_address')
@@ -3146,6 +3167,16 @@ class AccessService(BaseModel):
         whiteipv6s = kvs.get('whiteipv6s')
         if blackipv6s and whiteipv6s:
             raise ValueError('only one of blackipv6s/whiteipv6s can be set')
+        if 'tls' in kvs.get('transports'):
+            if not kvs.get('tls'):
+                raise ValueError("TLS parameters must be specified when using TLS transport")
+            tls = jsonable_encoder(kvs.get('tls'))
+            cert = tls.get('cert')
+            if not os.path.exists(cert):
+                raise ValueError(f"TLS certificate file {cert} does not exist")
+            key = tls.get('key')
+            if not os.path.exists(key):
+                raise ValueError(f"TLS key file {key} does not exist")
         return kvs
 
 
@@ -3322,8 +3353,8 @@ class UserDirectory(BaseModel):
     @root_validator
     def user_directory_validation(cls, kvs):
         domain = kvs.get('domain')
-        if not validators.domain(domain):
-            raise ValueError('Invalid domain name, please refer rfc1035')
+        if not validators.domain(domain) and not validators.ipv4(domain):
+            raise ValueError('Domain must be rfc1035 domain name or an IP address')
         if not rdbconn.exists(f'access:policy:{domain}'):
             raise ValueError('Undefined domain')
         return kvs
@@ -3398,7 +3429,7 @@ def detail_access_directory_user(response: Response, domain: str=Path(..., regex
         return result
 
 @librerouter.get("/libreapi/access/directory/user/{domain}", status_code=200)
-def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z][a-z0-9_\-\.]+$|^\*$')):
+def list_access_directory_user(response: Response, domain: str=Path(..., regex=r'^[a-z0-9_\-\.]+$|^\*$')):
     result = None
     try:
         pipe = rdbconn.pipeline()
