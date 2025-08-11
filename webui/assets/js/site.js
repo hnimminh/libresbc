@@ -341,9 +341,8 @@ function GetPresentNode(){
                 <div>${CandidateHtml}</div></li>`;
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById('node-info').innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 
@@ -382,9 +381,8 @@ function GetPresentNode(){
             </div>`;
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById('cluster-info').innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -408,9 +406,8 @@ function GeneralGetPresent(SettingName){
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById(presentation).innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -464,7 +461,14 @@ function GeneralRemove(name, SettingName){
         },
         error: function (jqXHR, textStatus, errorThrown) {
             console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            
+            // Mostrar el modal de errores si hay respuesta JSON
+            if (jqXHR.responseJSON) {
+                ShowErrorModal(jqXHR.responseJSON);
+            } else {
+                // Fallback al toast si no hay respuesta JSON
+                ShowToast('Error de conexión: ' + textStatus, 'danger');
+            }
         }
     });
 }
@@ -490,8 +494,7 @@ function GeneralModify(name, SettingName){
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -535,8 +538,7 @@ function GeneralSubmit(name, SettingName, method="POST"){
             offcanvaspanel.hide();
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -624,9 +626,8 @@ function AccessDomainPolicyDetail(Adomain){
             </div>`;
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById(`DetailAD${Adomain}`).innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -675,9 +676,8 @@ function AccessUserDirectoryDetail(Adomain){
             }
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById(`TableAD${Adomain}`).innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -695,8 +695,7 @@ function RemoveAccessUser(domain, user){
             AccessUserDirectoryDetail(domain);
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -720,8 +719,7 @@ function UpdateAccessUser(domain, user){
             PresentCanvas(userdata, domain, SettingName, 'PATCH');
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -836,9 +834,8 @@ function RoutingTableDetail(Rtablename){
             };
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
             document.getElementById("DetailRT"+Rtablename).innerHTML = EMPTYSTR;
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -855,8 +852,7 @@ function RemoveRoutingRecord(tablename, match, value){
             RoutingTableDetail(tablename);
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            console.log(jqXHR);
-            ShowToast(jqXHR.responseJSON.error);
+            ShowAPIError(jqXHR, textStatus, errorThrown);
         }
     });
 }
@@ -947,6 +943,18 @@ function ShowToast(message, msgtype='danger'){
         ToastMsgEMLS.classList.remove('bg-warning');
         ToastMsgEMLS.classList.remove('bg-success');
     }
+    
+    // Configurar duración del toast según el tipo de mensaje
+    let delay = 3500; // 3.5 segundos por defecto
+    if (msgtype === 'warning') {
+        delay = 8000; // 8 segundos para errores de validación
+    } else if (msgtype === 'danger') {
+        delay = 6000; // 6 segundos para errores críticos
+    }
+    
+    // Configurar el delay del toast
+    ToastMsgEMLS.setAttribute('data-bs-delay', delay);
+    
     document.getElementById('event-message').innerHTML = message;
     $('.toast').toast('show');
 }
@@ -1003,4 +1011,67 @@ function loadCDR() {
         },
         error: function(jqXHR) { LSBC.ajaxError(jqXHR); }
     });
+}
+
+// Función mejorada para mostrar errores de la API
+function ShowAPIError(jqXHR, textStatus, errorThrown) {
+    console.log(jqXHR);
+    
+    let errorMessage = '';
+    let msgType = 'danger';
+    
+    if (jqXHR.responseJSON) {
+        const error = jqXHR.responseJSON;
+        
+        if (error.detail && Array.isArray(error.detail)) {
+            // Error de validación de Pydantic
+            msgType = 'warning';
+            errorMessage = '<strong>🚨 Errores de Validación:</strong><br>';
+            
+            error.detail.forEach((err, index) => {
+                let fieldName = err.loc && err.loc.length > 1 ? err.loc[1] : 'Campo';
+                let errorMsg = err.msg || 'Error de validación';
+                let inputValue = err.input ? ` (Valor: <code>${err.input}</code>)` : '';
+                let expectedValues = err.ctx && err.ctx.expected ? `<br><small>💡 Valores permitidos: ${err.ctx.expected}</small>` : '';
+                
+                errorMessage += `• <strong>${fieldName}:</strong> ${errorMsg}${inputValue}${expectedValues}<br>`;
+            });
+            
+            // Agregar sugerencia de ayuda
+            errorMessage += '<br><small>💡 Revisa los valores ingresados y asegúrate de que cumplan con el formato requerido.</small>';
+        } else if (error.error) {
+            errorMessage = `<strong>❌ Error:</strong> ${error.error}`;
+        } else if (error.message) {
+            errorMessage = `<strong>❌ Error:</strong> ${error.message}`;
+        } else {
+            errorMessage = '❌ Ha ocurrido un error inesperado';
+        }
+        
+        // Agregar código de estado si está disponible
+        if (jqXHR.status) {
+            let statusText = '';
+            switch(jqXHR.status) {
+                case 400: statusText = 'Solicitud Incorrecta'; break;
+                case 401: statusText = 'No Autorizado'; break;
+                case 403: statusText = 'Prohibido'; break;
+                case 404: statusText = 'No Encontrado'; break;
+                case 422: statusText = 'Entidad No Procesable'; break;
+                case 500: statusText = 'Error del Servidor'; break;
+                default: statusText = 'Error';
+            }
+            errorMessage += `<br><small>📊 Código: ${jqXHR.status} (${statusText})</small>`;
+        }
+    } else {
+        // Error de conexión
+        msgType = 'danger';
+        errorMessage = `🌐 Error de conexión: ${textStatus}`;
+        
+        if (textStatus === 'timeout') {
+            errorMessage = '⏰ Tiempo de espera agotado. Verifica tu conexión a internet.';
+        } else if (textStatus === 'error') {
+            errorMessage = '🔌 Error de conexión. Verifica que el servidor esté disponible.';
+        }
+    }
+    
+    ShowToast(errorMessage, msgType);
 }
