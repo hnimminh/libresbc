@@ -8,6 +8,7 @@
 --
 
 require("callng.utilities")
+
 ---------------------------------------------------------------------------
 local function clean_node_capacity()
     local PATTERN = 'realtime:capacity:*:'..NODEID
@@ -28,7 +29,9 @@ local function clean_node_capacity()
     log.info('module=callng, space=event:initiation, action=clean_node_capacity, node=%s', NODEID)
 end
 
+---------------------------------------------------------------------------
 local function environment()
+    rdbconn:sadd('cluster:members', NODEID)
     local clustermebers = join(rdbconn:smembers('cluster:members'))
     freeswitch.setGlobalVariable("CLUSTERMEMBERS", clustermebers)
     local clustername = rdbconn:get('cluster:name')
@@ -36,6 +39,26 @@ local function environment()
     log.info('module=callng, space=event:initiation, action=environment, CLUSTERNAME=%s, CLUSTERMEMBERS=%s', clustername, clustermebers)
 end
 
+---------------------------------------------------------------------------
+local function register()
+    local eslhost = freeswitch.getGlobalVariable("eslhost")
+    local eslport = freeswitch.getGlobalVariable("eslport")
+    local eslpassword = freeswitch.getGlobalVariable("eslpassword")
+
+    local payload = {
+        nodeid = NODEID,
+        ipaddr = eslhost,
+        port = tonumber(eslport),
+        password = eslpassword
+    }
+
+    local result, error = pcall(rdbconn:hset('DISCOVERY', NODEID, json.encode(payload)))
+    if not result then
+        log.error('module=callng, space=event:initiation, action=register, nodeid=%s, error=%s', NODEID, error)
+    else
+        log.debug('module=callng, space=event:initiation, action=register, nodeid=%s, state=success', NODEID)
+    end
+end
 
 -----------------**********************************--------------------
 -----------------*****|   STARTUP-SCRIPT     |*****--------------------
@@ -44,8 +67,9 @@ local function main()
     -- NO NEED TO CLEAN CPS, AS IT JUST ONE-TIME-ATTEMPT
     -- CLEAN CAPACITY AS IT IS LONG-LIVE-TIME-ATTEMP
     -- luarun ~freeswitch.consoleLog('debug','callflow run on '.._VERSION)
-    clean_node_capacity()
     environment()
+    register()
+    clean_node_capacity()
 end
 
 ---------------------******************************---------------------

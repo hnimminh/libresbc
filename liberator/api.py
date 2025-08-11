@@ -9,7 +9,7 @@
 
 import time
 import uuid
-from fastapi import FastAPI, Request, Response, Depends, status
+from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from configuration import _APPLICATION, _SWVERSION, _DESCRIPTION
 from utilities import logger, _request_uuid_ctx_var, get_request_uuid

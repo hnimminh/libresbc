@@ -1,0 +1,5 @@
+# liberator service
+- name: deploy libre webui
+  import_tasks: "libreui.yml"
+  tags: [never, webui, libreui]
+

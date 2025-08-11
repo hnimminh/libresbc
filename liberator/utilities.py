@@ -15,7 +15,7 @@ import logging
 from logging.handlers import TimedRotatingFileHandler, SysLogHandler
 from threading import Thread
 from contextvars import ContextVar
-from configuration import LOGDIR, LOGSTACKS, LOGLEVEL, NODEID
+from configuration import LOGDIR, LOGSTACKS, LOGLEVEL
 
 # delimiter for data transformation
 _delimiter_ = ','
@@ -26,7 +26,7 @@ def get_request_uuid() -> str:
 
 
 def getlogger(name):
-    FORMATTER = logging.Formatter(f"%(asctime)s.%(msecs)03d{time.strftime('%z')} {NODEID} %(name)s %(process)d %(levelname)s %(message)s", datefmt='%Y-%m-%dT%H:%M:%S')
+    FORMATTER = logging.Formatter(f"%(asctime)s.%(msecs)03d{time.strftime('%z')} %(name)s %(process)d %(levelname)s %(message)s", datefmt='%Y-%m-%dT%H:%M:%S')
 
     _logger = logging.getLogger(name)
 
