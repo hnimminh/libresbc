@@ -21,7 +21,7 @@ from configuration import (CHANGE_CFG_CHANNEL, PERNODE_CHANNEL, SECURITY_CHANNEL
     REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, REDIS_TIMEOUT,
     LIBRE_BUILTIN_FIREWALL, LIBRE_CONTAINERIZED, LIBRE_BUILTIN_REDIS, LIBRE_STANDALONE_MODEL,
 )
-from utilities import logger, threaded, listify, fieldjsonify, stringify, bdecode, jsonhash, randomstr
+from utilities import logger, threaded, fieldjsonify, stringify, bdecode
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -130,49 +130,10 @@ def nftupdate(data):
                 }
             logger.debug(f"module=liberator, space=basemgr, action=nftupdate, nodeid={nodeid}, sipprofiles={sipprofiles}")
 
-            # ACCESS LAYERS
-            layernames = rdbconn.smembers('nameset:access:service')
-            accesslayers = dict()
-            for layername in layernames:
-                transports, sip_port, sips_port, sip_address, whiteips, blackips, whiteipv6s, blackipv6s = rdbconn.hmget(
-                    f'access:service:{layername}',
-                    'transports', 'sip_port','sips_port', 'sip_address', 'whiteips', 'blackips','whiteipv6s', 'blackipv6s'
-                )
-                sip_ip = netaliases[sip_address]['listen']
-                transports = fieldjsonify(transports)
-                sipudpports = None
-                if 'udp' in transports: sipudpports = fieldjsonify(sip_port)
-                siptcpports = []
-                if 'tcp' in transports: siptcpports.append(fieldjsonify(sip_port))
-                if 'tls' in transports: siptcpports.append(fieldjsonify(sips_port))
-
-                layerdata = {
-                    'sip_ip': sip_ip,
-                    'sipudpports': sipudpports,
-                    'siptcpports': set(siptcpports)
-                }
-
-                if IPvAddress(sip_ip).version == 4:
-                    whiteips = fieldjsonify(whiteips)
-                    blackips = fieldjsonify(blackips)
-                    if not whiteips:
-                        whiteips = {'0.0.0.0/0'}
-                    layerdata.update({'whiteips': whiteips, 'blackips': blackips})
-                else:
-                    whiteipv6s = fieldjsonify(whiteipv6s)
-                    blackipv6s = fieldjsonify(blackipv6s)
-                    if not whiteipv6s:
-                        whiteipv6s = {'::/0'}
-                    layerdata.update({'whiteipv6s': whiteipv6s, 'blackipv6s': blackipv6s})
-
-                accesslayers[layername] = layerdata
-            logger.debug(f"module=liberator, space=basemgr, action=nftupdate, nodeid={nodeid}, accesslayers={accesslayers}")
-
             # RULE FILE
             template = _NFT.get_template("nftables.j2.conf")
             stream = template.render(whiteset=whiteset, blackset=blackset, whitesetv6=whitesetv6, blacksetv6=blacksetv6,
-                                    rtpportrange=rtpportrange, sipprofiles=sipprofiles,
-                                    accesslayers=accesslayers, dftbantime=_DFTBANTIME)
+                                    rtpportrange=rtpportrange, sipprofiles=sipprofiles, dftbantime=_DFTBANTIME)
 
             # fire pubsub event for firewall
             logger.info(f"module=liberator, space=basemgr, requestid={requestid}, action=nftupdate-publish")
@@ -295,101 +256,6 @@ def fssocket(requestid, commands, delay, sockets):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-# PROXY MANAGE
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-_KAM = Environment(loader=FileSystemLoader('kamcfg'))
-_KAMCONST = {'BRANCH_NATOUT_FLAG': 6, 'BRANCH_NATSIPPING_FLAG': 7, 'LIBRE_USER_LOCATION': 'LIBREUSRLOC'}
-
-@threaded
-def kaminstance(data):
-    if not LIBRE_STANDALONE_MODEL:
-        logger.info(f"module=liberator, space=basemgr, action=kaminstance, message=[skip this action with standardalone model]")
-        return
-
-    result = True
-    try:
-        PIDDIR = f'/run/kamailio'
-        CFGDIR = f'/usr/local/etc/kamailio'
-        requestid = data.get('requestid')
-        layer = data.get('layer')
-        _layer = data.get('_layer')
-        # ------------------------------------------------------------
-        # TEARDOWN THE EXISTENT INSTANCE
-        # ------------------------------------------------------------
-        if _layer:
-            pidkill = '/usr/bin/pkill'
-            _pidfile = f'{PIDDIR}/{_layer}.pid'
-            _cfgfile = f'{CFGDIR}/{_layer}.cfg'
-            _luafile = f'{CFGDIR}/{_layer}.lua'
-
-            kamend = Popen([pidkill, '-F', _pidfile], stdout=PIPE, stderr=PIPE)
-            _, stderr = bdecode(kamend.communicate())
-            if stderr:
-                stderr = stderr.replace('\n', '')
-                logger.warning(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, error={stderr}")
-            else: logger.info(f"module=liberator, space=basemgr, action=kaminstance.kamend, requestid={requestid}, result=success")
-
-            cfgdel = osdelete(_cfgfile)
-            luadel = osdelete(_luafile)
-            logger.info(f"module=liberator, space=basemgr, action=kaminstance.filedel, requestid={requestid}, cfgdel={cfgdel}, luadel={luadel}")
-        # ------------------------------------------------------------
-        # LAUNCH THE NEW INSTANCE
-        # ------------------------------------------------------------
-        if layer:
-            pipe = rdbconn.pipeline()
-            kambin = '/usr/local/sbin/kamailio'
-            pidfile = f'{PIDDIR}/{layer}.pid'
-            cfgfile = f'{CFGDIR}/{layer}.cfg'
-            luafile = f'{CFGDIR}/{layer}.lua'
-
-            kamcfgs = jsonhash(rdbconn.hgetall(f'access:service:{layer}'))
-            netaliases = fieldjsonify(rdbconn.hget(f'base:netalias:{kamcfgs.get("sip_address")}', 'addresses'))
-            addresses = [address for address in netaliases if address.get('member') == _NODEID][0]
-            kamcfgs.update({'listen': addresses.get('listen'), 'advertise': addresses.get('advertise')})
-
-            if 'topology_hiding' in kamcfgs:
-                kamcfgs.update({'randomsecret': randomstr()})
-
-            domains = kamcfgs.get('domains')
-            for domain in domains:
-                pipe.hgetall(f'access:policy:{domain}')
-            sockets = pipe.execute()
-            policies = dict()
-            swipaddrs = set()
-            for domain, socket in zip(domains, sockets):
-                srcsocket = listify(socket.get('srcsocket'))
-                dstsocket = listify(socket.get('dstsocket'))
-                policies[domain] = {'srcsocket': {'transport': srcsocket[0], 'ip': srcsocket[1], 'port': srcsocket[2]},
-                                    'dstsocket': {'transport': dstsocket[0], 'ip': dstsocket[1], 'port': dstsocket[2]}}
-                swipaddrs.add(dstsocket[1])
-            kamcfgs.update({'policies': policies})
-            # default domain
-            if len(domains)==1: dftdomain = domains[0]
-            else: dftdomain = 'default.domain'
-            # configuration
-            cfgtemplate = _KAM.get_template("layer.j2.cfg")
-            cfgstream = cfgtemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, piddir=PIDDIR, cfgdir=CFGDIR, nodeid=_NODEID)
-            with open(cfgfile, 'w') as kmf: kmf.write(cfgstream)
-            # localization
-            luatemplate = _KAM.get_template("layer.j2.lua")
-            luastream = luatemplate.render(_KAMCONST=_KAMCONST, kamcfgs=kamcfgs, layer=layer, swipaddrs=swipaddrs, jsonpolicies=json.dumps(policies), dftdomain=dftdomain)
-            with open(luafile, 'w') as lf: lf.write(luastream)
-
-            kamrun = Popen([kambin, '-S', '-M', '16', '-P', pidfile, '-f', cfgfile], stdout=PIPE, stderr=PIPE)
-            _, stderr = bdecode(kamrun.communicate())
-            if stderr:
-                result = False
-                stderr = stderr.replace('\n', '')
-                logger.error(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, cfgfile={cfgfile}, error={stderr}")
-            else: logger.info(f"module=liberator, space=basemgr, action=kaminstance.kamrun, requestid={requestid}, result=success")
-    except Exception as e:
-        result = False
-        logger.critical(f"module=liberator, space=basemgr, action=kaminstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
-
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # RDB UNIX SOCKET INSTANCE
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @threaded
@@ -424,10 +290,6 @@ def basestartup():
         rdbinstance()
         fsinstance(data)
         nftupdate(data)
-        layers = rdbconn.smembers('nameset:access:service')
-        for layer in layers:
-            data.update({'layer': layer, '_layer': layer})
-            kaminstance(data)
         result = True
     except redis.RedisError as e:
         time.sleep(10)
@@ -458,7 +320,6 @@ class BaseEventHandler(Thread):
         _OUTCNX_    = 'outbound:intcon'
         _SOFIASIP_  = 'sofiasip'
         _SOFIAGW_   = 'sofiagw'
-        _ACCESS_    = 'access:service'
         _POLICY_    = 'policy:domain'
         _CFGAPISIP_ = 'cfgapi:sip'
         # listen events
@@ -536,10 +397,6 @@ class BaseEventHandler(Thread):
                                 commands.append(f'sofia profile {sipprofile} rescan')
                             # reload xml & distributor
                             commands += ['reloadxml', 'distributor_ctl reload']
-                        elif portion == _ACCESS_:
-                            name = data.get('name')
-                            _name = data.get('_name')
-                            kaminstance({'layer': name, '_layer': _name, 'requestid': requestid})
                         elif portion == _POLICY_:
                             layer = data.get('layer')
                             kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
@@ -562,7 +419,7 @@ class BaseEventHandler(Thread):
                                 sockets = [json.loads(_socket) for _,_socket in _socketall.items()]
                             fssocket(requestid, commands, delay, sockets)
                         # firewall update
-                        if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_, _ACCESS_]:
+                        if portion in [_NETALIAS_, _ACL_, _INCNX_, _OUTCNX_, _SOFIASIP_]:
                             nftupdate(data)
             except redis.RedisError as e:
                 time.sleep(5)
