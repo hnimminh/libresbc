@@ -985,6 +985,12 @@ class DtmfModeEnum(str, Enum):
     info = 'info'
     none = 'none'
 
+class RtpSecureMediaEnum(str, Enum):
+    mandatory = 'mandatory'
+    optional = 'optional'
+    forbidden = 'forbidden'
+    false = 'false'
+
 class MediaModel(BaseModel):
     name: str = Field(pattern=_NAME_, max_length=32, description='name of Media class (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
@@ -992,6 +998,7 @@ class MediaModel(BaseModel):
     codec_negotiation: NegotiationMode = Field(default='generous', description='codec negotiation mode, generous: refer remote, greedy: refer local,  scrooge: enforce local')
     media_mode: MediaModeEnum = Field(default='transcode', description='media processing mode')
     dtmf_mode: DtmfModeEnum = Field(default='rfc2833', description='Dual-tone multi-frequency mode')
+    rtp_secure_media: RtpSecureMediaEnum = Field(default='false', description='RTP/SRTP security mode: mandatory=always SRTP, optional=SRTP if supported, forbidden=never SRTP, false=no SRTP')
     cng: bool = Field(default=False, description='comfort noise generate')
     vad: bool = Field(default=False, description='voice active detection, no transmit data when no party speaking')
     # validate
