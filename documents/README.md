@@ -27,12 +27,6 @@
       * [sofia_media.c](https://github.com/signalwire/freeswitch/blob/master/src./mod/endpoints/mod_sofia/sofia_media.c)
       * sofia.c [here](./freeswitch/mod/endpoints/mod_sofia/sofia.c) [freesswitch](https://github.com/signalwire/freeswitch/blob/master/src/mod/endpoints/mod_sofia/sofia.c)
 
-### Kamailio
-* [present](./kamailio/present.cfg)
-* [simple](./kamailio/proxy.cfg)
-* [class4-5](./kamailio/class45/kamailio.cfg)
-* [basic](./kamailio/basic/kamailio-basic-kemi.cfg)
-
 ### References
 * [RFC3261](https://tools.ietf.org/html/rfc3261)
 * [FAST API](https://fastapi.tiangolo.com/)

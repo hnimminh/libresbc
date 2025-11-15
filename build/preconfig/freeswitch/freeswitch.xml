@@ -9,7 +9,7 @@
   <X-PRE-PROCESS cmd="exec-set" data="eslacl=(echo ${ESL_ACL:-loopback.auto})"/>
   <X-PRE-PROCESS cmd="set" data="hold_music={loops=-1}tone_stream://%(250,0,350);%(250,0,440);%(250,0,530);%(300,0,700);%(400,0,800);%(300,0,900);%(250,0,600);%(160,0,440)"/>
   <X-PRE-PROCESS cmd="set" data="devshm=/dev/shm"/>
-  <!-- BEGIN: CONFIGURATION SECTION -->
+  <!-- BEGIN: CONFIGURATION SECTION -->ff
   <section name="configuration" description="Various Configuration">
     <!-- ACL ACCESS CONTROL LIST -->
     <configuration name="acl.conf" description="Network Lists">
