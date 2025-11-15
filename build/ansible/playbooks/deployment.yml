@@ -12,7 +12,6 @@
     - role: platform
     - role: redis
     - role: freeswitch
-    - role: kamailio
     - role: libre
     - role: nftables
     - role: shield
