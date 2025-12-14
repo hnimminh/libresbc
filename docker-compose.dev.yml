@@ -1,0 +1,60 @@
+# https://runnable.com/docker/docker-compose-networking
+# https://dockerlabs.collabnix.com/docker/cheatsheet
+# https://github.com/compose-spec/compose-spec/blob/master/spec.md]
+# # pwd=libresbc: docker-compose -f build/docker/docker-compose.yml up
+services:
+  redis:
+    hostname: redisdb
+    container_name: redisdb
+    restart: always
+    image: redis:latest
+    ports:
+      - 6379:6379
+  liberator:
+    hostname: sbc-liberator
+    container_name: sbc-liberator
+    restart: always
+    image: hnimminh/libresbc-liberator:1.0.0
+    ports:
+      - 8080:8080
+    tty: true
+    labels:
+      - libresbc.debian=bullseye
+      - libresbc.component=liberator
+      - libresbc.version=1.0.0
+    environment:
+      REDIS_HOST: 164.90.201.161
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      SCAN_COUNT: 1000
+      REDIS_TIMEOUT: 5
+      LOGSTACKS: CONSOLE
+    depends_on: 
+      - redis
+  freeswitch:
+    hostname: sbc-freeswitch
+    container_name: sbc-freeswitch
+    restart: always
+    image: hnimminh/libresbc-freeswitch:1.10.11
+    command: ["/usr/local/bin/freeswitch", "-reincarnate"]
+    network_mode: host
+    tty: true
+    labels:
+      - libresbc.debian=bullseye
+      - libresbc.component=freeswitch
+      - libresbc.version=1.0.0
+    environment:
+      REDIS_HOST: 164.90.201.161
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      SCAN_COUNT: 1000
+      REDIS_TIMEOUT: 5
+      LOGSTACKS: CONSOLE
+      NODEID: A1SBC
+      LIBERATOR_API_URL: http://164.90.201.161:8080
+      ESL_HOST: 164.90.201.161
+      ESL_PORT: 8021
+      ESL_PASSWORD: nopassword
+      ESL_ACL: wan_v4.auto # localnet.auto, rfc1918.auto, rfc6598.auto, wan.auto, wan_v6.auto, wan_v4.auto, any_v6.auto, any_v4.auto, loopback.auto
+    depends_on: 
+      - liberator

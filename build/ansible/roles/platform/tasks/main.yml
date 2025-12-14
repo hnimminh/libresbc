@@ -1,8 +1,0 @@
-- name: os update
-  import_tasks: debian.yml
-  tags: [platform, debian, platform-debian]
-
-- name: performance tuning
-  import_tasks: tuning.yml
-  tags: [platform, tuning, platform-debian]
-

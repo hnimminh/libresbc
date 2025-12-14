@@ -1,8 +1,0 @@
-- name: install nftables
-  import_tasks: install.yml
-  tags: [nftables, nftables-install, firewall, firewall-install]
-
-- name: configure nftables
-  import_tasks: config.yml
-  tags: [nftables, nftables-config, firewall, firewall-config]
-

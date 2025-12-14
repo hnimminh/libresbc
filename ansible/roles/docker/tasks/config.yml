@@ -1,0 +1,7 @@
+- name: Provisioning docker daemon file
+  ansible.builtin.copy:
+    src: "daemon.json"
+    dest: "/etc/docker/daemon.json"
+    owner: root
+    group: root
+    mode: preserve

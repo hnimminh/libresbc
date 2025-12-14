@@ -1,0 +1,64 @@
+# https://runnable.com/docker/docker-compose-networking
+# https://dockerlabs.collabnix.com/docker/cheatsheet
+# https://github.com/compose-spec/compose-spec/blob/master/spec.md]
+# # pwd=libresbc: docker-compose -f build/docker/docker-compose.yml up
+services:
+  rdb:
+    hostname: rdb
+    container_name: rdb
+    restart: always
+    image: redis:latest
+    volumes:
+      - {{libresbc_sw_path}}/rdb:/data
+    command: ['redis-server', '--loglevel', 'warning', '--dir', '/data', '--dbfilename', 'libresbc.rdb']
+    ports:
+      - 6379:6379
+    tty: true
+    labels:
+      - libresbc.component=rdb
+      - libresbc.version={{_version}}
+  liberator:
+    hostname: liberator
+    container_name: liberator
+    restart: always
+    image: hnimminh/libresbc-liberator:1.0.0-dev1
+    volumes:
+      - {{libresbc_log_path}}/cdr:/var/log/libresbc/cdr
+{% if with_source %}
+      - {{libresbc_sw_path}}/liberator:/opt/libresbc/liberator
+{% endif %}
+    command: ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
+    ports:
+      - 8080:8080
+    tty: true
+    labels:
+      - libresbc.component=liberator
+      - libresbc.version={{_version}}
+    env_file:
+      - {{libresbc_sw_path}}/libre.env
+    depends_on:
+      - rdb
+  switch:
+    hostname: switch
+    container_name: switch
+    restart: always
+    image: hnimminh/libresbc-freeswitch:1.10.11
+    volumes:
+      - {{libresbc_log_path}}/cdr:/var/log/libresbc/cdr
+{% if with_source %}
+      - /opt/libresbc/fsw.xml:/usr/local/etc/freeswitch/freeswitch.xml
+      - /opt/libresbc/callng:/opt/libresbc/callng
+{% endif %}
+    command: ["/usr/local/bin/freeswitch", "-reincarnate"]
+    network_mode: host
+    tty: true
+    labels:
+      - libresbc.component=switch
+      - libresbc.version={{_version}}
+    env_file:
+      - {{libresbc_sw_path}}/libre.env
+    environment:
+      NODEID: {{nodeid}}
+      ESL_ACL: any_v4.auto
+    depends_on:
+      - liberator

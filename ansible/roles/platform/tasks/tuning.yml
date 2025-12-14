@@ -1,0 +1,36 @@
+# sysctl kernel parameters
+- name: Copy a 01-libresbc.sysctl.conf to /etc/sysctl.d/01-libresbc.conf
+  copy:
+    src: 01-libresbc.sysctl.conf
+    dest: /etc/sysctl.d/01-libresbc.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- sysctl:
+    name: net.core.rmem_max
+    value: '26214400'
+    sysctl_set: yes
+    reload: yes
+    sysctl_file: /etc/sysctl.d/01-libresbc.conf
+
+- sysctl:
+    name: net.core.rmem_default
+    value: '26214400'
+    sysctl_set: yes
+    reload: yes
+    sysctl_file: /etc/sysctl.d/01-libresbc.conf
+
+- sysctl:
+    name: fs.file-max
+    value: '1048575'
+    sysctl_set: yes
+    reload: yes
+    sysctl_file: /etc/sysctl.d/01-libresbc.conf
+
+- sysctl:
+    name: vm.overcommit_memory
+    value: '1'
+    sysctl_set: yes
+    reload: yes
+    sysctl_file: /etc/sysctl.d/01-libresbc.conf

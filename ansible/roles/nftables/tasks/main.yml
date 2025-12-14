@@ -1,0 +1,8 @@
+- name: install nftables
+  ansible.builtin.import_tasks: install.yml
+  tags: [nftables, nftables-install, firewall, firewall-install]
+
+- name: configure nftables
+  ansible.builtin.import_tasks: config.yml
+  tags: [nftables, nftables-config, firewall, firewall-config]
+

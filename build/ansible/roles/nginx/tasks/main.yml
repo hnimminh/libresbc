@@ -1,7 +1,0 @@
-- name: nginx installation
-  import_tasks: nginx-install.yml
-  tags: [never, nginx, nginx-install]
-
-- name: nginx configuration
-  import_tasks: nginx-config.yml
-  tags: [never, nginx, nginx-config]

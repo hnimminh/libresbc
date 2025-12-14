@@ -1,7 +1,0 @@
-- name: build captagent from source
-  import_tasks: captagent-build.yml
-  tags: [never, captagent, captagent-build]
-
-- name: captagent configuration
-  import_tasks: captagent-config.yml
-  tags: [never, captagent, captagent-config]

@@ -1,0 +1,10 @@
+- name: provision docker compose file to target host
+  ansible.builtin.import_tasks: "provision.yml"
+  tags: 
+    - libresbc-container-provision
+
+- name: restart/rebuild docker compose
+  ansible.builtin.import_tasks: "restart.yml"
+  tags:
+    - never
+    - libresbc-container-restart

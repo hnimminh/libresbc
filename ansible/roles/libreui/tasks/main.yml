@@ -1,0 +1,5 @@
+# liberator service
+- name: deploy librator
+  ansible.builtin.import_tasks: "libreui.yml"
+  tags: [never, webui, libreui]
+
