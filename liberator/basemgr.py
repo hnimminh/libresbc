@@ -308,10 +308,9 @@ class BaseEventHandler(Thread):
         Thread.__init__(self)
         self.stop = False
         self.daemon = True
-        self.setName('BaseEventHandler')
 
     def run(self):
-        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread=BaseEventHandler, action=start")
         # portions
         _CLUSTER_   = 'cluster'
         _NETALIAS_  = 'netalias'
@@ -320,7 +319,6 @@ class BaseEventHandler(Thread):
         _OUTCNX_    = 'outbound:intcon'
         _SOFIASIP_  = 'sofiasip'
         _SOFIAGW_   = 'sofiagw'
-        _POLICY_    = 'policy:domain'
         _CFGAPISIP_ = 'cfgapi:sip'
         # listen events
         while True:
@@ -397,9 +395,6 @@ class BaseEventHandler(Thread):
                                 commands.append(f'sofia profile {sipprofile} rescan')
                             # reload xml & distributor
                             commands += ['reloadxml', 'distributor_ctl reload']
-                        elif portion == _POLICY_:
-                            layer = data.get('layer')
-                            kaminstance({'layer': layer, '_layer': layer, 'requestid': requestid})
                         elif portion == _CLUSTER_:
                             fsgvars = data.get('fsgvars')
                             commands = [f'global_setvar {fsgvar}' for fsgvar in fsgvars]
@@ -438,10 +433,9 @@ class SecurityEventHandler(Thread):
         Thread.__init__(self)
         self.stop = False
         self.daemon = True
-        self.setName('SecurityEventHandler')
 
     def run(self):
-        logger.info(f"module=liberator, space=basemgr, thread={self.getName()}, action=start")
+        logger.info(f"module=liberator, space=basemgr, thread=SecurityEventHandler, action=start")
         # portions
         _kamiauthfailure = 'kami:authfailure'
         _kamiattackavoid = 'kami:attackavoid'

@@ -18,11 +18,11 @@ sbcs:
       ansible_host: DEVSBC
       nodeid: devsbc
       esl:
-        host: 146.190.20.216
+        host: 127.0.0.1
   vars:
-    liberator_api_url: http://146.190.20.216:8080
+    liberator_api_url: http://127.0.0.1:8080
     redis:
-      host: 146.190.20.216
+      host: 127.0.0.1
       port: 6379
       database: 0
       password: null
@@ -50,19 +50,3 @@ all:
     #  endpoints:
     #    - http://127.0.0.1:54321
     diskcdr: false
-    firewalls:
-      - name: Home HTTP API
-        transport: tcp
-        sourceips:
-          - 0.0.0.0/0
-        destports:
-          - 8443
-        srcports: null
-      - name: WorldWide SSH
-        transport: tcp
-        sourceips:
-          - 0.0.0.0/0
-        destports:
-          - 22
-        srcports:
-          - 1024-65535
