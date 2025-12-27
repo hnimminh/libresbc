@@ -11,8 +11,7 @@ services:
     volumes:
       - {{libresbc_sw_path}}/rdb:/data
     command: ['redis-server', '--loglevel', 'warning', '--dir', '/data', '--dbfilename', 'libresbc.rdb']
-    ports:
-      - 6379:6379
+    network_mode: host
     tty: true
     labels:
       - libresbc.component=rdb
@@ -28,8 +27,7 @@ services:
       - {{libresbc_sw_path}}/liberator:/opt/libresbc/liberator
 {% endif %}
     command: ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
-    ports:
-      - 8080:8080
+    network_mode: host
     tty: true
     labels:
       - libresbc.component=liberator
@@ -59,6 +57,6 @@ services:
       - {{libresbc_sw_path}}/libre.env
     environment:
       NODEID: {{nodeid}}
-      ESL_ACL: any_v4.auto
+      # ESL_ACL: any_v4.auto
     depends_on:
       - liberator
