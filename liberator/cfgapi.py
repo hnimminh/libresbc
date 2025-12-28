@@ -71,7 +71,7 @@ def acl(request: Request, response: Response):
         for profilename, realm in zip(profilenames, realms):
             sipprofiles.update({profilename: realm})
 
-        # ENGAGMENT ACL LIST
+        # ENGAGEMENT ACL LIST
         # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
         for profilename in profilenames:
             pipe.hget(f'sipprofile:{profilename}', 'local_network_acl')
