@@ -10,11 +10,9 @@
 import traceback
 import re
 import json
-import hashlib
 import redis
 import validators
 from pydantic import model_validator, StringConstraints, BaseModel, Field
-from pydantic.v1 import validator
 from pydantic.json_schema import SkipJsonSchema
 from typing import Optional, List, Union
 from typing_extensions import Annotated
@@ -101,8 +99,8 @@ def predefine():
 def check_member(members):
     for member in members:
         if not rdbconn.sismember('cluster:members', member):
-            raise ValueError('invalid member name')
-    return members
+            return False, f'{member} is invalid member'
+    return True, None
 
 class ClusterModel(BaseModel):
     name: str = Field(pattern=_NAME_, max_length=32, description='The name of libresbc cluster')
@@ -111,8 +109,6 @@ class ClusterModel(BaseModel):
     rtp_end_port: int = Field(default=60000, min=0, max=65535, description='start of rtp port range')
     max_concurrent_calls: int = Field(default=6000, min=0, max=65535, description='maximun number of active (concurent) call that one cluster member can handle')
     max_calls_per_second: int = Field(default=200, min=0, max=65535, description='maximun number of calls attempt in one second that one cluster member can handle')
-    # validation
-    _validmember = validator('members')(check_member)
 
 
 @librerouter.put("/libreapi/cluster", status_code=200)
@@ -125,6 +121,12 @@ def update_cluster(reqbody: ClusterModel, response: Response):
         pipe.set('cluster:name', name)
 
         members = set(reqbody.members)
+        # validate member
+        passed, error = check_member(members)
+        if not passed:
+            logger.error(f"module=liberator, space=libreapi, action=change_cluster, requestid={requestid}, error={error}")
+            response.status_code, result = 400, {'error': error}; return
+
         _members = set(rdbconn.smembers('cluster:members'))
         removed_members = _members - members
         for removed_member in removed_members:
@@ -181,12 +183,12 @@ def get_cluster(response: Response):
 def netalias_agreement(addresses):
     _addresses = jsonable_encoder(addresses)
     if len(_addresses) != len(CLUSTERMEMBERS):
-        raise ValueError('The alias must be set for cluster members')
+        return False, 'The alias must be set for cluster members'
     for address in _addresses:
         member = address['member']
         if not rdbconn.sismember('cluster:members', member):
-            raise ValueError(f'{member} is invalid members')
-    return addresses
+            return False, f'{member} is invalid members'
+    return True, None
 
 class IPSuite(BaseModel):
     member: str = Field(pattern=_NAME_, description='NodeID of member in cluster')
@@ -197,8 +199,6 @@ class NetworkAlias(BaseModel):
     name: str = Field(pattern=_NAME_, max_length=32, description='name of network alias (identifier)')
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     addresses: List[IPSuite] = Field(description='List of IP address suite for cluster members')
-    # validation
-    _validnetalias = validator('addresses')(netalias_agreement)
 
 
 @librerouter.post("/libreapi/base/netalias", status_code=200)
@@ -211,6 +211,14 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
         name_key = f'base:netalias:{name}'
         if rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
+
+        # validate addresses
+        addresses = reqbody.addresses
+        passed, error = netalias_agreement(addresses)
+        if not passed:
+            logger.error(f"module=liberator, space=libreapi, action=create_netalias, requestid={requestid}, error={error}")
+            response.status_code, result = 400, {'error': error}; return
+
         data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         pipe.hmset(name_key, redishash(data))
         pipe.sadd(f'nameset:netalias', name)
@@ -235,6 +243,14 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
             response.status_code, result = 403, {'error': 'nonexistent network alias identifier'}; return
         if name != identifier and rdbconn.exists(name_key):
             response.status_code, result = 403, {'error': 'existent network alias name'}; return
+
+        # validate addresses
+        addresses = reqbody.addresses
+        passed, error = netalias_agreement(addresses)
+        if not passed:
+            logger.error(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, error={error}")
+            response.status_code, result = 400, {'error': error}; return
+
         data = {k: v for k,v in jsonable_encoder(reqbody).items() if v is not None}
         rdbconn.hmset(name_key, redishash(data))
         # proactive get list who use this netalias
@@ -952,14 +968,6 @@ def list_preanswer_class(response: Response):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # MEDIA CLASS
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
-def codecs_allow(codecs):
-    for codec in codecs:
-        if not re.match("^([A-Z0-9_-])+(@(8|16|32|48)000h)?(@(1|2|3|4|6|8|10|12)0i)?$", codec):
-            raise ValueError(f'{codec} is invalid codec setting format')
-        codecname = codec.split('@')[0]
-        if codecname not in SWCODECS:
-            raise ValueError(f'{codec} is invalid codec; permitted: {SWCODECS}')
-    return codecs
 
 class NegotiationMode(str, Enum):
     generous = 'generous'
@@ -987,7 +995,18 @@ class MediaModel(BaseModel):
     cng: bool = Field(default=False, description='comfort noise generate')
     vad: bool = Field(default=False, description='voice active detection, no transmit data when no party speaking')
     # validate
-    _validcodec = validator('codecs')(codecs_allow)
+    @model_validator(mode='before')
+    @classmethod
+    def media_agreement(cls, values):
+        _values = jsonable_encoder(values)
+        codecs = _values.get('codecs')
+        for codec in codecs:
+            if not re.match("^([A-Z0-9_-])+(@(8|16|32|48)000h)?(@(1|2|3|4|6|8|10|12)0i)?$", codec):
+                raise ValueError(f'{codec} is invalid codec setting format')
+            codecname = codec.split('@')[0]
+            if codecname not in SWCODECS:
+                raise ValueError(f'{codec} is invalid codec; permitted: {SWCODECS}')
+        return values
 
 
 @librerouter.post("/libreapi/class/media", status_code=200)
@@ -1460,7 +1479,6 @@ def create_manipulation(reqbody: ManipulationModel, response: Response):
     finally:
         return result
 
-
 @librerouter.put("/libreapi/class/manipulation/{identifier}", status_code=200)
 def update_manipulation_class(reqbody: ManipulationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
     result = None
@@ -1498,7 +1516,6 @@ def update_manipulation_class(reqbody: ManipulationModel, response: Response, id
         logger.error(f"module=liberator, space=libreapi, action=update_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
     finally:
         return result
-
 
 @librerouter.delete("/libreapi/class/manipulation/{identifier}", status_code=200)
 def delete_manipulation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1763,36 +1780,36 @@ def list_gateway(response: Response):
 
 def check_existent_media(name):
     if not rdbconn.exists(f'class:media:{name}'):
-        raise ValueError('nonexistent class')
-    return name
+        return False, ValueError('nonexistent class')
+    return True, None
 
 def check_existent_capacity(capacity):
     if not rdbconn.exists(f'class:capacity:{capacity}'):
-        raise ValueError('nonexistent class')
-    return capacity
+        return False, ValueError('nonexistent class')
+    return True, None
 
 def check_existent_manipulation(manipulations):
     for manipulation in manipulations:
         if not rdbconn.exists(f'class:manipulation:{manipulation}'):
-            raise ValueError('nonexistent class')
-    return manipulations
+            return False, ValueError('nonexistent class')
+    return True, None
 
 def check_existent_translation(translations):
     for translation in translations:
         if not rdbconn.exists(f'class:translation:{translation}'):
-            raise ValueError('nonexistent class')
-    return translations
+            return False, ValueError('nonexistent class')
+    return True, None
 
 def check_existent_sipprofile(sipprofile):
     if not rdbconn.exists(f'sipprofile:{sipprofile}'):
-        raise ValueError('nonexistent sipprofile')
-    return sipprofile
+        return False, ValueError('nonexistent sipprofile')
+    return True, None
 
 def check_cluster_node(nodes):
     for node in nodes:
         if node != '_ALL_' and node not in CLUSTERMEMBERS:
-            raise ValueError('nonexistent node')
-    return nodes
+            return False, ValueError('nonexistent node')
+    return True, None
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1848,13 +1865,6 @@ class OutboundInterconnection(BaseModel):
     nofailover_sip_codes: Optional[List[SIPCode]] = Field(default=[], min_length=0, max_item=32, description='a set of sip response code that stop failover')
     nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
-    # validation
-    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
-    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
-    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
-    _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
-    _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
     @model_validator(mode='before')
     @classmethod
@@ -1886,9 +1896,36 @@ class OutboundInterconnection(BaseModel):
         if totalweight <= 0:
             raise ValueError('total weight of gateways must be greater than zero')
 
+        # class validation
+        media_class = values.get('media_class')
+        passed, excpt = check_existent_media(media_class)
+        if not passed:
+            raise excpt
+        capacity_class = values.get('capacity_class')
+        passed, excpt = check_existent_capacity(capacity_class)
+        if not passed:
+            raise excpt
+        translation_classes = values.get('translation_classes')
+        passed, excpt = check_existent_translation(translation_classes)
+        if not passed:
+            raise excpt
+        manipulation_classes = values.get('manipulation_classes')
+        passed, excpt = check_existent_manipulation(manipulation_classes)
+        if not passed:
+            raise excpt
+        sipprofile = values.get('sipprofile')
+        passed, excpt = check_existent_sipprofile(sipprofile)
+        if not passed:
+            raise excpt
+        nodes = values.get('nodes')
+        passed, excpt = check_cluster_node(nodes)
+        if not passed:
+            raise excpt
+
         privacy = values.get('privacy')
         privacilen = len(privacy)
-        if 'none' in privacy and privacilen > 1: raise ValueError('none can not configured with others')
+        if 'none' in privacy and privacilen > 1:
+            raise ValueError('none can not configured with others')
         elif 'auto' in privacy:
             if privacilen > 1 and ('number' in privacy or 'name' in privacy):
                 raise ValueError('auto can not configured with others except screen')
@@ -2147,14 +2184,14 @@ def list_outbound_interconnect(response: Response):
 
 def check_existent_routing(table):
     if not rdbconn.exists(f'routing:table:{table}'):
-        raise ValueError('nonexistent routing')
-    return table
+        return False, ValueError('nonexistent routing')
+    return True, None
 
 def check_existent_preanswer(preanswer):
     if preanswer is not None:
         if not rdbconn.exists(f'class:preanswer:{preanswer}'):
-            raise ValueError('nonexistent class')
-    return preanswer
+            return False, ValueError('nonexistent class')
+    return True, None
 
 class AuthSchemeEnum(str, Enum):
     IP = 'IP'
@@ -2178,15 +2215,6 @@ class InboundInterconnection(BaseModel):
     secret: SkipJsonSchema[Optional[str]] = Field(None, min_length=8, max_length=64, description='password of digest auth for inbound')
     nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
-    # validation
-    _existenpreanswer = validator('preanswer_class', allow_reuse=True)(check_existent_preanswer)
-    _existentmedia = validator('media_class', allow_reuse=True)(check_existent_media)
-    _existentcapacity = validator('capacity_class', allow_reuse=True)(check_existent_capacity)
-    _existenttranslation = validator('translation_classes', allow_reuse=True)(check_existent_translation)
-    _existentmanipulation = validator('manipulation_classes', allow_reuse=True)(check_existent_manipulation)
-    _existentsipprofile = validator('sipprofile', allow_reuse=True)(check_existent_sipprofile)
-    _existentrouting = validator('routing')(check_existent_routing)
-    _clusternode = validator('nodes', allow_reuse=True)(check_cluster_node)
 
     @model_validator(mode='before')
     @classmethod
@@ -2199,6 +2227,42 @@ class InboundInterconnection(BaseModel):
         for key, value in values.items():
             if value is None:
                 _values.pop(key, None)
+
+        # class validation
+        media_class = _values.get('media_class')
+        passed, excpt = check_existent_media(media_class)
+        if not passed:
+            raise excpt
+        capacity_class = _values.get('capacity_class')
+        passed, excpt = check_existent_capacity(capacity_class)
+        if not passed:
+            raise excpt
+        translation_classes = _values.get('translation_classes')
+        passed, excpt = check_existent_translation(translation_classes)
+        if not passed:
+            raise excpt
+        manipulation_classes = _values.get('manipulation_classes')
+        passed, excpt = check_existent_manipulation(manipulation_classes)
+        if not passed:
+            raise excpt
+        sipprofile = _values.get('sipprofile')
+        passed, excpt = check_existent_sipprofile(sipprofile)
+        if not passed:
+            raise excpt
+        nodes = _values.get('nodes')
+        passed, excpt = check_cluster_node(nodes)
+        if not passed:
+            raise excpt
+
+        preanswer_class = _values.get('preanswer_class')
+        passed, excpt = check_existent_preanswer(preanswer_class)
+        if not passed:
+            raise excpt
+        routing = _values.get('routing')
+        passed, excpt = check_existent_routing(routing)
+        if not passed:
+            raise excpt
+
         return _values
 
 
