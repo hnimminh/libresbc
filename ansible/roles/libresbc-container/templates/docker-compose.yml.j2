@@ -20,7 +20,7 @@ services:
     hostname: liberator
     container_name: liberator
     restart: always
-    image: hnimminh/libresbc-liberator:1.0.0-dev1
+    image: hnimminh/libresbc-liberator:1.0.0-dev2
     volumes:
       - {{libresbc_log_path}}/cdr:/var/log/libresbc/cdr
 {% if with_source %}

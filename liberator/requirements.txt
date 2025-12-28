@@ -1,9 +1,9 @@
-requests==2.32.3
+requests==2.32.4
 fastapi==0.115.6
 typing==3.7.4.3
 pydantic==2.10.4
 uvicorn==0.34.0
-Jinja2==3.1.5
+Jinja2==3.1.6
 aiofiles==24.1.0
 redis==5.2.1
 contextvars==2.4
