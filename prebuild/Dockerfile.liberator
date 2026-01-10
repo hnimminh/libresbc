@@ -10,6 +10,7 @@ RUN python3 -m venv /opt/libresbc/venv && \
 # RUNNER
 FROM python:3.11.14-slim-trixie AS runner
 LABEL maintainer="Minh Minh <hnimminh@outlook.com>"
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /opt/libresbc /opt/libresbc
 WORKDIR /opt/libresbc/liberator
 CMD ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
