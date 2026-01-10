@@ -16,11 +16,11 @@ charset = utf-8
 trim_trailing_whitespace = true
 insert_final_newline = true
 
-[{*.md,*.yaml,*.yml,*.xml,*.html}]
+[{*.md,*.yaml,*.yml,*.xml,*.html,*.md.j2,*.yaml.j2,*.yml.j2,*.xml.j2,*.html.j2}]
 trim_trailing_whitespace = false
 indent_size = 2
 
-[{*.cfg,*.conf}]
+[{*.cfg,*.conf,*.cfg.j2,*.conf.j2}]
 trim_trailing_whitespace = false
 indent_size = 4
 
