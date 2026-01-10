@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:trixie
 LABEL maintainer="Minh Minh <hnimminh@outlook.com>"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
@@ -9,7 +9,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get -yq install \
     # general
     libssl-dev zlib1g-dev libdb-dev unixodbc-dev libncurses5-dev libexpat1-dev libgdbm-dev bison erlang-dev libtpl-dev libtiff5-dev uuid-dev \
     # core
-    libpcre3-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev openssl libcrypto++8 nasm\
+    libpcre2-dev libedit-dev libsqlite3-dev libcurl4-openssl-dev openssl libcrypto++8 nasm\
     # codecs
     libogg-dev libspeex-dev libspeexdsp-dev libopus-dev libopencore-amrwb-dev libopencore-amrwb0 \
     libvo-amrwbenc-dev libvo-amrwbenc0 libopencore-amrnb-dev libopencore-amrnb0 \
@@ -24,10 +24,10 @@ COPY callng /opt/libresbc/callng
 COPY prebuild/modules.conf /opt/libresbc/modules.conf
 
 RUN git clone https://github.com/signalwire/libks /usr/src/libs/libks && \
-    git clone --branch v1.13.17 https://github.com/freeswitch/sofia-sip.git /usr/src/libs/sofia-sip && \
+    git clone --branch master https://github.com/freeswitch/sofia-sip.git /usr/src/libs/sofia-sip && \
     git clone https://github.com/freeswitch/spandsp /usr/src/libs/spandsp && \
     git clone https://github.com/signalwire/signalwire-c /usr/src/libs/signalwire-c && \
-    git clone --branch v1.10.11-libre-b https://github.com/hnimminh/freeswitch.git /usr/src/freeswitch && \
+    git clone --branch v1.10.12-master-libresbc https://github.com/hnimminh/freeswitch.git /usr/src/freeswitch && \
     cp /usr/include/opencore-amrwb/dec_if.h /usr/src/freeswitch/src/mod/codecs/mod_amrwb/dec_if.h && \
     cp /usr/include/vo-amrwbenc/enc_if.h /usr/src/freeswitch/src/mod/codecs/mod_amrwb/enc_if.h && \
     cp /usr/include/opencore-amrnb/interf_enc.h /usr/src/freeswitch/src/mod/codecs/mod_amr/interf_enc.h && \
@@ -55,5 +55,5 @@ RUN ln -nfs /opt/libresbc/callng /usr/local/share/lua/5.2/callng && \
 CMD ["/usr/local/bin/freeswitch", "-reincarnate"]
 
 # pwd=libresbc
-# docker build --platform linux/amd64 -t hnimminh/libresbc-freeswitch:1.10.11 -f prebuild/Dockerfile.freeswitch .
-# docker run --env-file ../libre.env --network host --name freeswitch hnimminh/libresbc-freeswitch:1.10.11
+# docker build --platform linux/amd64 -t hnimminh/libresbc-freeswitch:1.10.12-13-trixie -f prebuild/Dockerfile.freeswitch .
+# docker run --env-file ../libre.env --network host --name freeswitch hnimminh/libresbc-freeswitch:1.10.12-13-trixie
