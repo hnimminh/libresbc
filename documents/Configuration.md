@@ -18,7 +18,6 @@ Here is some question that might help you design you solution with LibreSBC.
 
 * [[SIP Profile]]: SIP Signalling and RTP Media Network
 * [[Interconnection]]
-  * [[Access Service]]: (not shown in graph since it's under development)
   * [[Inbound]]: Inbound Traffic Connection
   * [[Outbound]]: Outbound Traffic Connection
   * [[Gateway]]: Inbound Traffic Connection

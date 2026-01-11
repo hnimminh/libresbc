@@ -1,0 +1,15 @@
+- name: Install Docker
+  ansible.builtin.shell:
+    cmd: "{{ item }}"
+  args:
+    executable: /bin/bash
+  with_items:
+    - curl -fsSL https://get.docker.com -o get-docker.sh
+    - sudo sh ./get-docker.sh
+
+- name: Enable docker service
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: restarted
+    daemon_reload: true

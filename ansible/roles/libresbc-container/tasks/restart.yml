@@ -1,0 +1,14 @@
+---
+- name: Rebuild container
+  community.docker.docker_compose_v2:
+    project_src: "/{{libresbc_docker_path}}"
+    build: always
+    recreate: always
+
+- name: Restart container
+  community.docker.docker_compose_v2:
+    project_src: "/{{libresbc_docker_path}}"
+    build: never
+    state: restarted
+
+...

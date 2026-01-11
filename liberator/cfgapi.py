@@ -12,12 +12,12 @@ import json
 import hashlib
 import redis
 import validators
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Path
 from fastapi.templating import Jinja2Templates
-from configuration import (CLUSTERS, _BUILTIN_ACLS_, NODEID_CHANNEL,
+from configuration import (_BUILTIN_ACLS_, PERNODE_CHANNEL,
                            CRC_CAPABILITY, CRC_PGSQL_HOST, CRC_PGSQL_PORT, CRC_PGSQL_DATABASE, CRC_PGSQL_USERNAME, CRC_PGSQL_PASSWORD,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD)
-from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, listify, randomstr
+from utilities import logger, get_request_uuid, fieldjsonify, jsonhash, getaname, randomstr
 
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -46,9 +46,10 @@ crcs = {
 @cfgrouter.get("/cfgapi/fsxml/switch", include_in_schema=False)
 def switch(request: Request, response: Response):
     try:
+        attributes = jsonhash(rdbconn.hgetall('cluster:attributes'))
         result = fstpl.TemplateResponse("switch.j2.xml",
-                                            {"request": request, "switchattributes": CLUSTERS, 'crcs': crcs},
-                                            media_type="application/xml")
+                                        {"request": request, "switchattributes": attributes, 'crcs': crcs},
+                                        media_type="application/xml")
         response.status_code = 200
     except Exception as e:
         response.status_code, result = 500, str()
@@ -70,7 +71,7 @@ def acl(request: Request, response: Response):
         for profilename, realm in zip(profilenames, realms):
             sipprofiles.update({profilename: realm})
 
-        # ENGAGMENT ACL LIST
+        # ENGAGEMENT ACL LIST
         # [{'name': name, 'action': default-action, 'rules': [{'action': allow/deny, 'key': domain/cidr, 'value': ip/domain-value}]}]
         for profilename in profilenames:
             pipe.hget(f'sipprofile:{profilename}', 'local_network_acl')
@@ -127,7 +128,7 @@ def distributor(request: Request, response: Response):
 
 
 @cfgrouter.get("/cfgapi/fsxml/sip-setting/{nodeid}", include_in_schema=False)
-def sip(request: Request, response: Response, nodeid: str):
+def sip(request: Request, response: Response, nodeid: str=Path(...)):
     try:
         if not rdbconn.sismember('cluster:members', nodeid):
             response.status_code, result = 404, str(); return
@@ -205,7 +206,7 @@ def sip(request: Request, response: Response, nodeid: str):
                 sipprofiles[sipprofile]['gateways'] = gateways
 
         # set var profile address by separated thread
-        rdbconn.publish(NODEID_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'requestid': get_request_uuid()}))
+        rdbconn.publish(PERNODE_CHANNEL, json.dumps({'portion': 'cfgapi:sip', 'delay': 30, 'fsgvars': fsgvars, 'nodeid': nodeid, 'requestid': get_request_uuid()}))
         # template
         result = fstpl.TemplateResponse("sip-setting.j2.xml",
                                             {"request": request, "sipprofiles": sipprofiles, 'crcs': crcs },

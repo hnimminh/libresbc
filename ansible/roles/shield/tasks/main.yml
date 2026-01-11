@@ -1,0 +1,17 @@
+---
+- name: Download cmake source code and checksum
+  get_url:
+    url: https://github.com/hnimminh/repository/raw/refs/heads/master/shield_0.0.1
+    dest: /usr/local/bin/shield
+    mode: 0544
+    checksum: md5:91c5f587df3b06ec29b7ad9a21427ca1
+  tags: [shield, firewall]
+
+- name: copy shield service to remote server
+  copy:
+    src: shield.service
+    dest: /etc/systemd/system/shield.service
+  changed_when: true
+  notify:
+    - restart shield
+  tags: [shield, firewall]

@@ -12,23 +12,6 @@
 	endscript
 }
 
-/var/log/kamailio/kamailio.log {
-    daily
-    size 100M
-    nodateext
-    missingok
-    notifempty
-    rotate 60
-    maxage 5
-    create
-    compress
-    delaycompress
-    sharedscripts
-    postrotate
-        /bin/kill -HUP `cat /var/run/rsyslogd.pid 2> /dev/null` 2> /dev/null || true
-    endscript
-}
-
 /var/log/freeswitch/*.log {
     daily
     rotate 60

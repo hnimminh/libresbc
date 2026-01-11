@@ -1,0 +1,99 @@
+---
+
+- block:
+    - name: Create directory libresbc with source
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0644"
+        state: directory
+      with_items:
+        - "{{libresbc_sw_path}}/liberator/fscfg/xml"
+        - "{{libresbc_sw_path}}/liberator/nft"
+        - "{{libresbc_sw_path}}/callng"
+        - "{{libresbc_log_path}}/cdr"
+
+    - name: Copy libresbc with liberator as source
+      ansible.builtin.copy:
+        src: "{{srcdir}}/liberator/{{item}}"
+        dest: "{{libresbc_sw_path}}/liberator/{{item}}"
+        owner: root
+        group: root
+        mode: preserve
+      with_items:
+        - configuration.py
+        - utilities.py
+        - basemgr.py
+        - cdr.py
+        - libreapi.py
+        - cfgapi.py
+        - api.py
+        - main.py
+        - requirements.txt
+        - fscfg/xml/acl.j2.xml
+        - fscfg/xml/directory.j2.xml
+        - fscfg/xml/distributor.j2.xml
+        - fscfg/xml/freeswitch.xml
+        - fscfg/xml/switch.j2.xml
+        - fscfg/xml/sip-setting.j2.xml
+        - nft/nftables.j2.conf
+  
+    - name: Copy libresbc with callng as source
+      ansible.builtin.copy:
+        src: "{{srcdir}}/callng/{{item}}"
+        dest: "{{libresbc_sw_path}}/callng/{{item}}"
+        owner: root
+        group: root
+        mode: preserve
+      with_items:
+      - nglog.lua
+      - configuration.lua
+      - utilities.lua
+      - callfunc.lua
+      - event.capacity.lua
+      - event.cdr.lua
+      - event.initiation.lua
+      - event.startup.lua
+      - event.unauth.lua
+      - main.lua
+      - redirection.lua
+      - requirement.sh
+
+    - name: Copy libresbc with callng as source
+      ansible.builtin.copy:
+        src: "{{srcdir}}/liberator/fscfg/xml/freeswitch.xml"
+        dest: "{{libresbc_sw_path}}/fsw.xml"
+        owner: root
+        group: root
+        mode: preserve
+  when: with_source == true
+
+- name: Provisioning docker-compose.yml for container
+  ansible.builtin.template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ libresbc_docker_path }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create standard directory for libresbc envfile 
+  ansible.builtin.file:
+    path: "{{ item}}"
+    owner: root
+    group: root
+    mode: "0644"
+    state: directory
+  with_items:
+    - "{{ libresbc_sw_path }}"
+    - "{{ libresbc_sw_path }}/rdb"
+
+- name: Provisioning libre.env for container
+  ansible.builtin.template:
+    src: "libre.env.j2"
+    dest: "{{ libresbc_sw_path}}/libre.env"
+    owner: root
+    group: root
+    mode: "0644"
+
+...

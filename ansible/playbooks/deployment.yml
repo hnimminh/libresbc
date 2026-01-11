@@ -1,0 +1,22 @@
+- name: LibreSBC Deployment with container (docker)
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    _version: 1.0.0
+    srcdir: '{{inventory_dir|dirname}}'
+
+  roles:
+    - role: platform
+      tags: platform
+    - role: docker
+      tags: docker
+    - role: libresbc-container
+      tags: libresbc-container
+    - role: nftables
+      tags: nftables
+    - role: shield
+      tags: shield
+    - role: libreui
+      tags: libreui

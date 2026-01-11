@@ -1,0 +1,8 @@
+- name: os update
+  ansible.builtin.import_tasks: debian.yml
+  tags: [platform, debian, platform-debian]
+
+- name: performance tuning
+  ansible.builtin.import_tasks: tuning.yml
+  tags: [platform, tuning, platform-debian]
+

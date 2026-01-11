@@ -29,3 +29,6 @@ luac.out
 
 ## binary
 libreui-*
+
+# custom
+*.save

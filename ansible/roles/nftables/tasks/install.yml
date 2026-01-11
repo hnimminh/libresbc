@@ -1,0 +1,10 @@
+- name: Update apt-cache
+  apt:
+    update_cache: yes
+
+- name: Install nftables packages
+  apt:
+    pkg:
+      - nftables
+    state: latest
+  

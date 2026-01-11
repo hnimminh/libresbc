@@ -1,0 +1,3 @@
+libresbc_docker_path: /etc/docker/libresbc
+libresbc_sw_path: /opt/libresbc
+libresbc_log_path: /var/log/libresbc

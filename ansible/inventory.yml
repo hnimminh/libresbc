@@ -1,0 +1,52 @@
+#-------------------------------------------------------------------------------------------------------------------------------------------------------#
+#                                                                                                                                                       #
+# This is the ansible 'hosts' file with yml syntax.                                                                                                     #
+# https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html                                                                          #
+# https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html                                                                               #
+#                                                                                                                                                       #
+# Keep It Simple:                                                                                                                                       #
+# When you can do something simply, do something simply. Do not reach to use every feature of Ansible together, all at once. Use what works for you     #
+# If something feels complicated, it probably is, and may be a good opportunity to simplify things.                                                     #
+#                                                                                                                                                       #
+#-------------------------------------------------------------------------------------------------------------------------------------------------------#
+# SAMPLE CONFIGURATION FOR LIBRESBC
+#-------------------------------------------------------------------------------------------------------------------------------------------------------#
+sbcs:
+  hosts:
+    devsbc:
+      ansible_user: root
+      ansible_host: DEVSBC
+      nodeid: devsbc
+      esl:
+        host: 127.0.0.1
+  vars:
+    liberator_api_url: http://127.0.0.1:8080
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      database: 0
+      password: null
+    crcs:
+      recovery_capability: false
+      pgsql_host: pgdb.libre.sbc
+      pgsql_port: 25060
+      pgsql_username: admin
+      pgsql_password: !vault |
+          $ANSIBLE_VAULT;1.1;AES256
+          66643233346165663632343163626663386536333234613833623739313964333663363862336265
+          3635353932623065373761656134356237303336616563390a356365643531363036393333613132
+          34336265323939333432313638636231383036346231363132643065353261316438306662306339
+          3661306637626538340a303139313731393937393430386131376264636237393163393632333138
+          37306434366165333361353834643963666536613538616163393363323830356364
+      pgsql_database: defaultdb
+#------------------------------------------------------------------------------------------------------------------------
+# GLOBAL VARIABLES
+#------------------------------------------------------------------------------------------------------------------------
+all:
+  vars:
+    with_source: true
+    timezone: UTC
+    #httpcdr:
+    #  endpoints:
+    #    - http://127.0.0.1:54321
+    diskcdr: false

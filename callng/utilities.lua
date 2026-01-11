@@ -34,8 +34,8 @@ rdbconn = nil
 rdbstate, rdberror = pcall(redis.connect, REDIS_HOST, REDIS_PORT, REDIS_TIMEOUT)
 if rdbstate then
     rdbconn = redis.connect(REDIS_HOST, REDIS_PORT, REDIS_TIMEOUT)
-    if REDIS_DB ~= 0 then rdbconn:select(REDIS_DB) end
     if REDIS_PASSWORD then rdbconn:auth(REDIS_PASSWORD) end
+    if REDIS_DB ~= 0 then rdbconn:select(REDIS_DB) end
 end
 ---------------------******************************--------------------------
 ---------------------****|  FUNDAMENTAL FUNCTION   |****---------------------
@@ -254,8 +254,8 @@ function intconkey(name, direction)
     end
 end
 
-function concurentcallskey(name)
-    return 'realtime:concurentcalls:'..name..':'..NODEID
+function concurentcallskey(name, direction)
+    return 'realtime:concurentcalls:'..direction..':'..name..':'..NODEID
 end
 
 ----------------------------------------------------------------------------
