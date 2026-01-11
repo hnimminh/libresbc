@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
-## [v1.0.0] - TBA
+## [v1.0.0] - 2025-01-11
 - handle direction concurent calls
 - fix verify concurent calls
 - end of life cluster candidate attributes
@@ -16,6 +16,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - introduce shield: separately control nftables with api/pubsub
 - remove access layer function
 - docker way as default
+- upgrade latest software along with trixie
 
 ## [v0.8.0] - 2024-09-14
 - Support Debian 12 (bookworm)

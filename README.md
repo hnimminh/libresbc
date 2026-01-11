@@ -16,8 +16,8 @@
     <img src="https://badgen.net/badge/license/MIT/ffd700" alt="">
   </a>
   <a href="#" target="_blank">
-    <img src="https://img.shields.io/badge/clone-22/week-00afd7?style=plastic&logo=GitHubActions">
-    <img src="https://img.shields.io/badge/view-1415/week-d70000?style=plastic&logo=monkeytie">
+    <img src="https://img.shields.io/badge/clone-26/week-00afd7?style=plastic&logo=GitHubActions">
+    <img src="https://img.shields.io/badge/view-1547/week-d70000?style=plastic&logo=monkeytie">
   </a>
 </p>
 
@@ -48,8 +48,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 </p>
 <br>
 <p align="center"> 
-  <img width="100px" src="https://raw.githubusercontent.com/hnimminh/hnimminh/master/bc.png">
-  <br><strong>BITCOIN</strong>
+  <br><strong>Bitcoin Wallet</strong>
   <br>1MNjpx5Jy9KUxx2gt5qVmExruehgPi3dQX
 </p>
 
@@ -123,7 +122,7 @@ If you want to contribute time to LibreSBC then here's a list of suggestions to 
 
 
 ## Architecture
-![image](https://user-images.githubusercontent.com/58973699/121683376-7c80bd00-cae7-11eb-8161-c03022f9bf6d.png)
+![Image](https://github.com/user-attachments/assets/8e2a9488-9827-4861-9cf3-ce7724d7898f)
 
 ## Functions
 SBCs commonly maintain full session state and offer the following functions:
@@ -182,14 +181,10 @@ Support to intergrate with 3rd-party system or customer function easily
 ## Documents
 Please go to [Wiki](https://github.com/hnimminh/libresbc/wiki)
 
-## Roadmap
-[Development & Roadmap](https://github.com/hnimminh/libresbc/projects/1)
 
 ## Discussions
 * Let development [Discuss](https://github.com/hnimminh/libresbc/discussions)
 
-## Community
-* LibreSBC has an initial community on the [slack](https://librertc.slack.com/)
 
 ## Who use LibreSBC
 On my awareness, here is the list of them
