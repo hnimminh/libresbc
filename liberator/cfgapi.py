@@ -54,8 +54,8 @@ def switch(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.error(f"module=liberator, space=cfgapi, section=switch, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @cfgrouter.get("/cfgapi/fsxml/acl", include_in_schema=False)
@@ -94,8 +94,8 @@ def acl(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.error(f"module=liberator, space=cfgapi, section=acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @cfgrouter.get("/cfgapi/fsxml/distributor", include_in_schema=False)
@@ -123,8 +123,8 @@ def distributor(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.info(f"module=liberator, space=cfgapi, section=distributor, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @cfgrouter.get("/cfgapi/fsxml/sip-setting/{nodeid}", include_in_schema=False)
@@ -215,8 +215,8 @@ def sip(request: Request, response: Response, nodeid: str=Path(...)):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.error(f"module=liberator, space=cfgapi, section=sip-setting, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @cfgrouter.get("/cfgapi/fsxml/directory", include_in_schema=False)
@@ -276,5 +276,5 @@ def directory(request: Request, response: Response):
     except Exception as e:
         response.status_code, result = 500, str()
         logger.error(f"module=liberator, space=cfgapi, section=directory, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
