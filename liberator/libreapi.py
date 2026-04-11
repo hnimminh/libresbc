@@ -2527,7 +2527,7 @@ class RoutingTableModel(BaseModel):
     desc: Optional[str] = Field(default='', max_length=64, description='description')
     variables: Optional[List[str]] = Field(None, min_length=1, max_length=5, description='sip variable for routing base, eg: cidnumber, cidname, dstnumber, intconname, realm')
     action: RoutingTableActionEnum = Field(default='query', description=f'routing action: {_QUERY} - find nexthop by query routing record; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection; {_HTTPR} - find nexthop by HTTP GET')
-    routes: Optional[Union[RouteModel, List[Union[str,int]]]] = Field(None, description='route model data')
+    routes: Optional[Union[RouteModel, List[Union[str,int]], str]] = Field(None, description='route model data')
     navigator: Optional[str] = Field(None, pattern=_NAME_, max_length=32, description='reference (clearip/youmail) sip entity of route')
     # validation
     @model_validator(mode='before')
