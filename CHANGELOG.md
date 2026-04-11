@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 i.e. `<Major version>.<Minor version>.<Patch version>`
 
-## [v1.0.0] - 2025-01-11
+## [v1.0.1] - 2026-04-11
+- fix(python): requests==2.33.1 for security
+- fix(liberator): add str type for routes after transforming
+- refactor(liberator): best-practice final return
+
+## [v1.0.0] - 2026-01-11
 - handle direction concurent calls
 - fix verify concurent calls
 - end of life cluster candidate attributes
