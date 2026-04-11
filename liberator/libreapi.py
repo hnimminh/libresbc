@@ -154,8 +154,8 @@ def update_cluster(reqbody: ClusterModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=change_cluster, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.get("/libreapi/cluster", status_code=200)
@@ -171,8 +171,8 @@ def get_cluster(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=get_cluster, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 
@@ -227,8 +227,8 @@ def create_netalias(reqbody: NetworkAlias, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/base/netalias/{identifier}", status_code=200)
 def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -277,8 +277,8 @@ def update_netalias(reqbody: NetworkAlias, response: Response, identifier: str=P
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_netalias, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/base/netalias/{identifier}", status_code=200)
 def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -301,8 +301,8 @@ def delete_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/netalias/{identifier}", status_code=200)
 def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -319,8 +319,8 @@ def detail_netalias(response: Response, identifier: str=Path(..., regex=_NAME_))
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/netalias", status_code=200)
 def list_netalias(response: Response):
@@ -341,8 +341,8 @@ def list_netalias(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_netalias, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # SYSTEMWIDE FIREWALL IP WHITE/BLACK
@@ -370,8 +370,8 @@ def update_fwset(reqbody: List[Union[IPv4Address, IPv6Address]], response: Respo
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_fwset, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/firewall", status_code=200)
 def get_fwset(response: Response):
@@ -386,8 +386,8 @@ def get_fwset(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=get_fwset, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ACL
@@ -449,8 +449,8 @@ def create_acl(reqbody: ACLModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/base/acl/{identifier}", status_code=200)
 def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -486,8 +486,8 @@ def update_acl(reqbody: ACLModel, response: Response, identifier: str=Path(..., 
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/base/acl/{identifier}", status_code=200)
 def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -512,8 +512,8 @@ def delete_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_acl, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/acl/{identifier}", status_code=200)
 def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -530,8 +530,8 @@ def detail_acl(response: Response, identifier: str=Path(..., regex=_NAME_)):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/acl", status_code=200)
 def list_acl(response: Response):
@@ -552,8 +552,8 @@ def list_acl(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_acl, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -680,8 +680,8 @@ def create_sipprofile(reqbody: SIPProfileModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/sipprofile/{identifier}", status_code=200)
 def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -742,8 +742,8 @@ def update_sipprofile(reqbody: SIPProfileModel, response: Response, identifier: 
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/sipprofile/{identifier}", status_code=200)
 def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -775,8 +775,8 @@ def delete_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_sipprofile, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/sipprofile/{identifier}", status_code=200)
 def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -793,8 +793,8 @@ def detail_sipprofile(response: Response, identifier: str=Path(..., regex=_NAME_
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/sipprofile", status_code=200)
 def list_sipprofile(response: Response):
@@ -820,8 +820,8 @@ def list_sipprofile(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_sipprofile, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -865,8 +865,8 @@ def create_preanswer_class(reqbody: PreAnswerModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/class/preanswer/{identifier}", status_code=200)
 def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -896,8 +896,8 @@ def update_preanswer_class(reqbody: PreAnswerModel, response: Response, identifi
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/class/preanswer/{identifier}", status_code=200)
 def delete_preanswer_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -917,8 +917,8 @@ def delete_preanswer_class(response: Response, identifier: str=Path(..., regex=_
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/preanswer/{identifier}", status_code=200)
 def detail_preanswer_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -935,8 +935,8 @@ def detail_preanswer_class(response: Response, identifier: str=Path(..., regex=_
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/preanswer", status_code=200)
 def list_preanswer_class(response: Response):
@@ -962,8 +962,8 @@ def list_preanswer_class(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_preanswer_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # MEDIA CLASS
@@ -1023,8 +1023,8 @@ def create_media_class(reqbody: MediaModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/class/media/{identifier}", status_code=200)
 def update_media_class(reqbody: MediaModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1054,8 +1054,8 @@ def update_media_class(reqbody: MediaModel, response: Response, identifier: str=
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/class/media/{identifier}", status_code=200)
 def delete_media_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1075,8 +1075,8 @@ def delete_media_class(response: Response, identifier: str=Path(..., regex=_NAME
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/media/{identifier}", status_code=200)
 def detail_media_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1093,8 +1093,8 @@ def detail_media_class(response: Response, identifier: str=Path(..., regex=_NAME
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/media", status_code=200)
 def list_media_class(response: Response):
@@ -1120,8 +1120,8 @@ def list_media_class(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_media_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # CAPACITY
@@ -1146,8 +1146,8 @@ def create_capacity_class(reqbody: CapacityModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/class/capacity/{identifier}", status_code=200)
 def update_capacity_class(reqbody: CapacityModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1177,8 +1177,8 @@ def update_capacity_class(reqbody: CapacityModel, response: Response, identifier
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/class/capacity/{identifier}", status_code=200)
 def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1198,8 +1198,8 @@ def delete_capacity_class(response: Response, identifier: str=Path(..., regex=_N
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/capacity/{identifier}", status_code=200)
 def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1216,8 +1216,8 @@ def detail_capacity_class(response: Response, identifier: str=Path(..., regex=_N
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/capacity", status_code=200)
 def list_capacity_class(response: Response):
@@ -1243,8 +1243,8 @@ def list_capacity_class(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_capacity_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # NUMBER TRANSLATION
@@ -1273,8 +1273,8 @@ def create_translation_class(reqbody: TranslationModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/class/translation/{identifier}", status_code=200)
 def update_translation_class(reqbody: TranslationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1306,8 +1306,8 @@ def update_translation_class(reqbody: TranslationModel, response: Response, iden
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/class/translation/{identifier}", status_code=200)
 def delete_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1327,8 +1327,8 @@ def delete_translation_class(response: Response, identifier: str=Path(..., regex
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/translation/{identifier}", status_code=200)
 def detail_translation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1345,8 +1345,8 @@ def detail_translation_class(response: Response, identifier: str=Path(..., regex
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/translation", status_code=200)
 def list_translation_class(response: Response):
@@ -1371,8 +1371,8 @@ def list_translation_class(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_translation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1476,8 +1476,8 @@ def create_manipulation(reqbody: ManipulationModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_manipulation, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/class/manipulation/{identifier}", status_code=200)
 def update_manipulation_class(reqbody: ManipulationModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1514,8 +1514,8 @@ def update_manipulation_class(reqbody: ManipulationModel, response: Response, id
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/class/manipulation/{identifier}", status_code=200)
 def delete_manipulation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1535,8 +1535,8 @@ def delete_manipulation_class(response: Response, identifier: str=Path(..., rege
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/manipulation/{identifier}", status_code=200)
 def detail_manipulation_class(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1553,8 +1553,8 @@ def detail_manipulation_class(response: Response, identifier: str=Path(..., rege
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/class/manipulation", status_code=200)
 def list_manipulation_class(response: Response):
@@ -1579,8 +1579,8 @@ def list_manipulation_class(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_manipulation_class, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1659,8 +1659,8 @@ def create_gateway(reqbody: GatewayModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/base/gateway/{identifier}", status_code=200)
 def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1705,8 +1705,8 @@ def update_gateway(reqbody: GatewayModel, response: Response, identifier: str=Pa
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/base/gateway/{identifier}", status_code=200)
 def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1727,8 +1727,8 @@ def delete_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_gateway, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/gateway/{identifier}", status_code=200)
 def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -1745,8 +1745,8 @@ def detail_gateway(response: Response, identifier: str=Path(..., regex=_NAME_)):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/base/gateway", status_code=200)
 def list_gateway(response: Response):
@@ -1772,8 +1772,8 @@ def list_gateway(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_gateway, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -1973,8 +1973,8 @@ def create_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def update_outbound_interconnection(reqbody: OutboundInterconnection, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2079,8 +2079,8 @@ def update_outbound_interconnection(reqbody: OutboundInterconnection, response: 
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def delete_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2127,8 +2127,8 @@ def delete_outbound_interconnection(response: Response, identifier: str=Path(...
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_outbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/interconnection/outbound/{identifier}", status_code=200)
 def detail_outbound_interconnection(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2147,8 +2147,8 @@ def detail_outbound_interconnection(response: Response, identifier: str=Path(...
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_outbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 @librerouter.get("/libreapi/interconnection/outbound", status_code=200)
@@ -2175,8 +2175,8 @@ def list_outbound_interconnect(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_outbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # INBOUND INTERCONECTION
@@ -2316,8 +2316,8 @@ def create_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.put("/libreapi/interconnection/inbound/{identifier}", status_code=200)
@@ -2411,8 +2411,8 @@ def update_inbound_interconnection(reqbody: InboundInterconnection, response: Re
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.delete("/libreapi/interconnection/inbound/{identifier}", status_code=200)
@@ -2454,8 +2454,8 @@ def delete_inbound_interconnection(response: Response, identifier: str=Path(...,
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_inbound_interconnection, requestid={requestid}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.get("/libreapi/interconnection/inbound/{identifier}", status_code=200)
@@ -2470,8 +2470,8 @@ def detail_inbound_interconnection(response: Response, identifier: str=Path(...,
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_inbound_interconnection, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.get("/libreapi/interconnection/inbound", status_code=200)
@@ -2497,8 +2497,8 @@ def list_inbound_interconnect(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_inbound_interconnect, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -2599,8 +2599,8 @@ def create_routing_table(reqbody: RoutingTableModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.put("/libreapi/routing/table/{identifier}", status_code=200)
 def update_routing_table(reqbody: RoutingTableModel, response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2659,8 +2659,8 @@ def update_routing_table(reqbody: RoutingTableModel, response: Response, identif
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.delete("/libreapi/routing/table/{identifier}", status_code=200)
 def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2698,8 +2698,8 @@ def delete_routing_table(response: Response, identifier: str=Path(..., regex=_NA
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/routing/table/{identifier}", status_code=200)
 def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NAME_)):
@@ -2755,8 +2755,8 @@ def detail_routing_table(response: Response, identifier: str=Path(..., regex=_NA
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=detail_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 @librerouter.get("/libreapi/routing/table", status_code=200)
 def list_routing_table(response: Response):
@@ -2783,8 +2783,8 @@ def list_routing_table(response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=list_routing_table, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 # ROUTING RECORD
@@ -2887,8 +2887,8 @@ def create_routing_record(reqbody: RoutingRecordModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=create_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.put("/libreapi/routing/record", status_code=200)
@@ -2943,8 +2943,8 @@ def update_routing_record(reqbody: RoutingRecordModel, response: Response):
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=update_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @librerouter.delete("/libreapi/routing/record/{table}/{match}/{value}", status_code=200)
@@ -2984,6 +2984,5 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
 
+    return result
