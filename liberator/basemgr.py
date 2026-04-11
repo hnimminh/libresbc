@@ -141,8 +141,8 @@ def nftupdate(data):
     except Exception as e:
         result = False
         logger.critical(f"module=liberator, space=basemgr, action=nftupdate, data={data}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 #---------------------------------------------------------------------------------
 _nftdelimiter_ = ', '
@@ -168,8 +168,8 @@ def nftsets(setname, ops, srcips, bantime=None):
     except Exception as e:
         result = False
         logger.critical(f"module=liberator, space=basemgr, action=nftsets, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -209,8 +209,8 @@ def fsinstance(data):
     except Exception as e:
         result = False
         logger.critical(f"module=liberator, space=basemgr, action=fsinstance, data={data}, exception={e}, traceback={traceback.format_exc()}")
-    finally:
-        return result
+
+    return result
 
 
 @threaded
@@ -252,7 +252,8 @@ def fssocket(requestid, commands, delay, sockets):
         logger.error(f"module=liberator, space=basemgr, func=fssocket, commands={commands}, requestid={requestid}, esno={len(sockets)} exception={e}, tracings={traceback.format_exc()}")
     finally:
         if fs and fs.connected: fs.stop()
-        return result
+
+    return result
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------

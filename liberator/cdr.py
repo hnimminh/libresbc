@@ -183,8 +183,10 @@ def parseruri(ruri):
         netparts = ruri.split('@')
         transport = netparts[1].split(';transport=')[1].split(';')[0]
         host, port = netparts[1].split(';transport=')[0].split(':')
-    finally:
-        return host, port, transport
+    except Exception as e:
+        pass
+
+    return host, port, transport
 
 
 def timefmtwrap():
@@ -416,8 +418,8 @@ class CDRHandler(Thread):
         except Exception as e:
             logger.error(f"module=liberator, space=cdr, class=CDRHandler, action=rclean, exception={e}, tracings={traceback.format_exc()}")
             result = False
-        finally:
-            return result
+
+        return result
 
 
 class CDRMaster(Thread):
