@@ -1,4 +1,4 @@
-requests==2.32.4
+requests==2.33.1
 fastapi==0.115.6
 typing==3.7.4.3
 pydantic==2.10.4
