@@ -2810,7 +2810,7 @@ class RoutingRecordModel(BaseModel):
     match: MatchingEnum = Field(description='matching options, include lpm: longest prefix match, em: exact match, eq: equal, ne: not equal, gt: greater than, lt: less than',)
     value: str = Field(min_length=1, max_length=128, pattern=_DIAL_, description=f'value of variable that declared in routing table. {__DEFAULT_ENTRY__} is predefined value for default entry')
     action: RoutingRecordActionEnum = Field(default=_ROUTE, description=f'routing action: {_JUMPS} - jumps to other routing table; {_BLOCK} - block the call; {_ROUTE} - route call to outbound interconnection')
-    routes: Optional[Union[RouteModel, List[Union[str,int]]]]  = Field(description='route model data')
+    routes: Optional[Union[RouteModel, List[Union[str,int]], str]]  = Field(description='route model data')
     # validation and transform data
     @model_validator(mode='before')
     @classmethod
