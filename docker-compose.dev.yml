@@ -31,6 +31,7 @@ services:
     restart: always
     image: hnimminh/libresbc-liberator:1.0.0-dev2
     volumes:
+      - /var/log/libresbc:/var/log/libresbc
       - /var/log/libresbc/cdr:/var/log/libresbc/cdr
       - /opt/libresbc/liberator:/opt/libresbc/liberator
     command: ["/opt/libresbc/venv/bin/python3", "/opt/libresbc/liberator/main.py"]
@@ -58,6 +59,7 @@ services:
     restart: always
     image: hnimminh/libresbc-freeswitch:1.10.12-13-trixie #hnimminh/libresbc-freeswitch:1.10.11
     volumes:
+      - /var/log/libresbc:/var/log/libresbc
       - /var/log/libresbc/cdr:/var/log/libresbc/cdr
       - /opt/libresbc/fsw.xml:/usr/local/etc/freeswitch/freeswitch.xml
       - /opt/libresbc/callng:/opt/libresbc/callng

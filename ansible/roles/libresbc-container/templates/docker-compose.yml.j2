@@ -31,6 +31,7 @@ services:
     restart: always
     image: hnimminh/libresbc-liberator:1.0.0-dev2
     volumes:
+      - {{libresbc_log_path}}:/var/log/libresbc
       - {{libresbc_log_path}}/cdr:/var/log/libresbc/cdr
 {% if with_source %}
       - {{libresbc_sw_path}}/liberator:/opt/libresbc/liberator
@@ -60,6 +61,7 @@ services:
     restart: always
     image: hnimminh/libresbc-freeswitch:1.10.12-13-trixie #hnimminh/libresbc-freeswitch:1.10.11
     volumes:
+      - {{libresbc_log_path}}:/var/log/libresbc
       - {{libresbc_log_path}}/cdr:/var/log/libresbc/cdr
 {% if with_source %}
       - /opt/libresbc/fsw.xml:/usr/local/etc/freeswitch/freeswitch.xml

@@ -12,6 +12,7 @@
         - "{{libresbc_sw_path}}/liberator/fscfg/xml"
         - "{{libresbc_sw_path}}/liberator/nft"
         - "{{libresbc_sw_path}}/callng"
+        - "{{libresbc_log_path}}"
         - "{{libresbc_log_path}}/cdr"
 
     - name: Copy libresbc with liberator as source
