@@ -52,7 +52,10 @@ local function register()
         password = eslpassword
     }
 
-    local result, error = pcall(rdbconn:hset('DISCOVERY', NODEID, json.encode(payload)))
+    local result, error = pcall(function()
+        return rdbconn:hset('DISCOVERY', NODEID, json.encode(payload))
+    end)
+
     if not result then
         log.error('module=callng, space=event:initiation, action=register, nodeid=%s, error=%s', NODEID, error)
     else

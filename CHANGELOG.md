@@ -22,6 +22,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - remove access layer function
 - docker way as default
 - upgrade latest software along with trixie
+- fix(ngcall): pcall register rdb
 
 ## [v0.8.0] - 2024-09-14
 - Support Debian 12 (bookworm)
