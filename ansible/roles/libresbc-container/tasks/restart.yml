@@ -1,14 +1,18 @@
 ---
-- name: Rebuild container
-  community.docker.docker_compose_v2:
-    project_src: "/{{libresbc_docker_path}}"
-    build: always
-    recreate: always
+- name: Provisioning libresbc docker service
+  ansible.builtin.template:
+    src: "libresbc-docker.service.j2"
+    dest: "/etc/systemd/system/libresbc-docker.service"
+    owner: root
+    group: root
+    mode: "0644"
+  changed_when: true
+  notify:
+    - restart-libresbc-docker
 
-- name: Restart container
-  community.docker.docker_compose_v2:
-    project_src: "/{{libresbc_docker_path}}"
-    build: never
-    state: restarted
-
+#- name: Rebuild container
+#  community.docker.docker_compose_v2:
+#    project_src: "/{{libresbc_docker_path}}"
+#    build: always
+#    recreate: always
 ...

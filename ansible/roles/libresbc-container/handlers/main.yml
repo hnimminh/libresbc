@@ -1,0 +1,8 @@
+---
+- name: restart-libresbc-docker
+  systemd:
+    name: libresbc-docker
+    enabled: true
+    state: restarted
+    daemon_reload: true
+...

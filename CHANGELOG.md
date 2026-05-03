@@ -23,6 +23,7 @@ i.e. `<Major version>.<Minor version>.<Patch version>`
 - docker way as default
 - upgrade latest software along with trixie
 - fix(ngcall): pcall register rdb
+- feat(deployment): enhancing libre docker service
 
 ## [v0.8.0] - 2024-09-14
 - Support Debian 12 (bookworm)
