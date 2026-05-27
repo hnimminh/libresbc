@@ -24,7 +24,22 @@ end
 ---------------------******************************---------------------
 ---------------------*****|       MAIN       |*****---------------------
 ---------------------******************************---------------------
+local function cleanup_stale_concurentcalls()
+    -- FreeSWITCH startup: remove stale call-tracking keys left by a hard kill/crash
+    local pattern = 'realtime:concurentcalls:*:*:' .. NODEID
+    local cursor = '0'
+    repeat
+        local res = rdbconn:scan(cursor, 'MATCH', pattern, 'COUNT', 100)
+        cursor = res[1]
+        for _, key in ipairs(res[2]) do
+            rdbconn:del(key)
+            log.info('module=callng, space=event:startup, action=cleanup_stale_concurentcalls, key=%s', key)
+        end
+    until cursor == '0'
+end
+
 local function main()
+    cleanup_stale_concurentcalls()
     recovery()
 end
 -----
