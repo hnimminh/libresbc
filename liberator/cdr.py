@@ -431,6 +431,16 @@ class CDRMaster(Thread):
     def run(self):
         logger.info(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
+        try:
+            orphans = rdbconn.zrange('cdr:inprogress', 0, -1)
+            for orphan_uuid in orphans:
+                if not rdbconn.exists(f'cdr:detail:{orphan_uuid}'):
+                    logger.warning(f"module=liberator, space=cdr, action=startup_scan, state=orphan_found, uuid={orphan_uuid}")
+                    rdbconn.zrem('cdr:inprogress', orphan_uuid)
+            if orphans:
+                logger.info(f"module=liberator, space=cdr, action=startup_scan, total_in_progress={len(orphans)}")
+        except Exception as e:
+            logger.error(f"module=liberator, space=cdr, action=startup_scan, exception={e}")
         while not self.stop:
             try:
                 reply = rdbconn.blpop('cdr:queue:new', REDIS_TIMEOUT)
@@ -445,6 +455,9 @@ class CDRMaster(Thread):
                         # write cdr
                         handler = CDRHandler(uuid, details)
                         handler.start()
+                    else:
+                        logger.warning(f"module=liberator, space=cdr, action=cdrmaster, state=detail_expired, uuid={uuid}, note=CDR_LOST")
+                        rdbconn.zrem('cdr:inprogress', uuid)
             except redis.RedisError as e:
                 # wait and try again
                 time.sleep(5)
