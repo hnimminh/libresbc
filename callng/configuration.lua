@@ -41,7 +41,7 @@ ROUTE = 'route'
 HTTPR = 'httpr'
 EMPTYSTRING = ''
 --- CDR
-CDRTTL = 3600
+CDRTTL = 172800  -- 48 hours; reduced from 1h to prevent silent CDR loss on liberator downtime
 
 --- SECURITY
 ROLLING_WINDOW_TIME = 1000                             --- use the exactly 1 second = 1000ms
