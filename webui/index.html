@@ -70,8 +70,12 @@
               </ul>
           </li>
           <li class="nav-item">
-            <a href="" class="nav-link" id="cfg-routing-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-routing" type="button" 
+            <a href="" class="nav-link" id="cfg-routing-tab" data-bs-toggle="tab" data-bs-target="#nav-cfg-routing" type="button"
             role="tab" aria-controls="nav-cfg-routing" aria-selected="false" onclick="GeneralGetPresent('RoutingTable');">Routing</a>
+          </li>
+          <li class="nav-item">
+            <a href="" class="nav-link" id="cdr-tab" data-bs-toggle="tab" data-bs-target="#nav-cdr" type="button"
+            role="tab" aria-controls="nav-cdr" aria-selected="false" onclick="loadCDR();">CDR</a>
           </li>
           <li class="nav-item">
             <a href="/apidocs" class="nav-link"  type="button" role="tab"><i class="fa  fa-info-circle"></i></a>
@@ -263,6 +267,34 @@
               <!--- END: ROUTING DATA -->                
             </div>
             <!-- END -->
+
+            <!-- CDR -->
+            <div class="tab-pane fade" id="nav-cdr" role="tabpanel" aria-labelledby="cdr-tab">
+              <div class="py-1 text-center"><h3>CDR</h3></div>
+              <hr>
+              <div class="d-flex align-items-center gap-2 mb-3">
+                <input type="date" id="cdr-date-input" class="form-control" style="max-width:180px;">
+                <button type="button" class="btn btn-primary" onclick="loadCDR()"><i class="fa fa-search"></i> Load</button>
+                <span id="cdr-count" class="text-muted small"></span>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover table-striped" id="cdr-table">
+                  <thead class="table-dark">
+                    <tr>
+                      <th>Time</th>
+                      <th>Caller</th>
+                      <th>Destination</th>
+                      <th>Route</th>
+                      <th>Duration</th>
+                      <th>Hangup</th>
+                      <th>Libre Cause</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cdr-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+            <!-- END CDR -->
           </div>
           <!--- PROGRESS BAR -->
           <hr>
