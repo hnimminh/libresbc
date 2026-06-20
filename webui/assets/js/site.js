@@ -943,3 +943,57 @@ function ShowToast(message, msgtype='danger'){
     document.getElementById('event-message').innerHTML = message;
     $('.toast').toast('show');
 }
+
+// --------------------------------------------------
+// CDR
+// --------------------------------------------------
+
+(function() {
+    var input = document.getElementById('cdr-date-input');
+    if (input) {
+        var today = new Date().toISOString().slice(0, 10);
+        input.value = today;
+        input.max = today;
+    }
+})();
+
+function loadCDR() {
+    var input = document.getElementById('cdr-date-input');
+    var date = input ? input.value : new Date().toISOString().slice(0, 10);
+    $.ajax({
+        type: 'GET',
+        url: '/libreapi/cdr/records?date=' + encodeURIComponent(date) + '&limit=500',
+        success: function(data) {
+            var tbody = document.getElementById('cdr-table-body');
+            var count = document.getElementById('cdr-count');
+            if (!Array.isArray(data) || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No records</td></tr>';
+                if (count) count.textContent = '';
+                return;
+            }
+            if (count) count.textContent = data.length + ' sessions';
+            var rows = data.map(function(r) {
+                var ts = r.start_time ? new Date(parseInt(r.start_time) * 1000) : null;
+                var timeStr = ts ? ts.toLocaleTimeString() : '-';
+                var dur = parseInt(r.duration) || 0;
+                var durStr = Math.floor(dur / 60) + ':' + String(dur % 60).padStart(2, '0');
+                var answered = r.answer_time && r.answer_time !== '0';
+                var route = (r.from_intcon || '?') + ' → ' + (r.to_intcon || '?');
+                var hangup = r.hangup_cause || '-';
+                var hangupClass = hangup === 'NORMAL_CLEARING' ? 'text-muted' : 'text-danger fw-bold';
+                var libreHangup = r.libre_hangup_cause || '';
+                return '<tr>' +
+                    '<td>' + LSBC.escapeAttr(timeStr) + '</td>' +
+                    '<td>' + LSBC.escapeAttr(r.caller_number || '-') + '</td>' +
+                    '<td>' + LSBC.escapeAttr(r.destination_number || '-') + '</td>' +
+                    '<td class="text-nowrap small">' + LSBC.escapeAttr(route) + '</td>' +
+                    '<td>' + (answered ? durStr : '<span class="text-warning">no answer</span>') + '</td>' +
+                    '<td class="' + hangupClass + '">' + LSBC.escapeAttr(hangup) + '</td>' +
+                    '<td class="text-muted small">' + LSBC.escapeAttr(libreHangup) + '</td>' +
+                    '</tr>';
+            });
+            tbody.innerHTML = rows.join('');
+        },
+        error: function(jqXHR) { LSBC.ajaxError(jqXHR); }
+    });
+}

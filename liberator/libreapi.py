@@ -10,6 +10,8 @@
 import traceback
 import re
 import json
+import time
+import os
 import redis
 import validators
 from pydantic import model_validator, StringConstraints, BaseModel, Field
@@ -18,11 +20,12 @@ from typing import Optional, List, Union
 from typing_extensions import Annotated
 from enum import Enum
 from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_network as IPvNetwork
-from fastapi import APIRouter, Response, Path
+from datetime import datetime, timezone
+from fastapi import APIRouter, Response, Path, Query
 from fastapi.encoders import jsonable_encoder
 from configuration import (_APPLICATION, _SWVERSION, _DESCRIPTION, CHANGE_CFG_CHANNEL, SECURITY_CHANNEL,
                            SWCODECS, DFT_CLUSTER_ATTRS, _BUILTIN_ACLS_,
-                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT)
+                           REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, LOGDIR)
 from utilities import logger, get_request_uuid, redishash, jsonhash, fieldjsonify, fieldredisify, listify, stringify, getaname, removekey, isjson
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -2984,5 +2987,76 @@ def delete_routing_record(response: Response, value:str=Path(..., regex=_DIAL_),
     except Exception as e:
         response.status_code, result = 500, None
         logger.error(f"module=liberator, space=libreapi, action=delete_routing_record, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
+
+    return result
+
+
+#-----------------------------------------------------------------------
+# CDR
+#-----------------------------------------------------------------------
+
+@librerouter.get("/libreapi/cdr/records", status_code=200)
+def get_cdr_records(response: Response, date: str = Query(None), limit: int = Query(200, ge=1, le=2000)):
+    try:
+        if date is None:
+            date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        else:
+            datetime.strptime(date, '%Y-%m-%d')
+
+        cdr_file = os.path.join(LOGDIR, 'cdr', f'{date}.cdr.nice.json')
+        legs = []
+        if os.path.isfile(cdr_file):
+            with open(cdr_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            legs.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            pass
+
+        # group by seshid — merge inbound + outbound into one session record
+        sessions = {}
+        for leg in legs:
+            sid = leg.get('seshid') or leg.get('uuid')
+            if sid not in sessions:
+                sessions[sid] = {}
+            direction = leg.get('direction', '')
+            if direction == 'inbound':
+                sessions[sid]['inbound'] = leg
+            elif direction == 'outbound':
+                sessions[sid]['outbound'] = leg
+            else:
+                sessions[sid].setdefault('inbound', leg)
+
+        merged = []
+        for sid, data in sessions.items():
+            ib = data.get('inbound') or {}
+            ob = data.get('outbound') or {}
+            base = ib if ib else ob
+            merged.append({
+                'seshid':      sid,
+                'start_time':  base.get('start_time'),
+                'end_time':    base.get('end_time'),
+                'answer_time': base.get('answer_time'),
+                'duration':    base.get('duration'),
+                'caller_number':      ib.get('caller_number') or ob.get('caller_number'),
+                'destination_number': ib.get('destination_number') or ob.get('destination_number'),
+                'from_intcon': ib.get('intconname'),
+                'to_intcon':   ob.get('intconname'),
+                'gateway':     ob.get('gateway_name'),
+                'hangup_cause': base.get('hangup_cause'),
+                'libre_hangup_cause': base.get('libre_hangup_cause'),
+                'sip_hangup_cause': base.get('sip_hangup_cause'),
+            })
+
+        merged.sort(key=lambda r: int(r.get('end_time') or 0), reverse=True)
+        result = merged[:limit]
+        response.status_code = 200
+    except ValueError:
+        response.status_code, result = 400, {'error': 'Invalid date format, use YYYY-MM-DD'}
+    except Exception as e:
+        response.status_code, result = 500, None
+        logger.error(f"module=liberator, space=libreapi, action=get_cdr_records, requestid={get_request_uuid()}, exception={e}, traceback={traceback.format_exc()}")
 
     return result
