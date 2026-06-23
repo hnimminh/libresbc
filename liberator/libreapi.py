@@ -2839,9 +2839,10 @@ class RoutingRecordModel(BaseModel):
                 secondary = routes.get('secondary')
                 load = routes.get('load')
                 if action == _ROUTE:
-                    for intconname in [primary, secondary]:
-                        if not rdbconn.exists(f'intcon:out:{intconname}'):
-                            raise ValueError('nonexistent outbound interconnect')
+                    if not rdbconn.exists(f'intcon:out:{primary}'):
+                        raise ValueError('nonexistent outbound interconnect')
+                    if secondary and not rdbconn.exists(f'intcon:out:{secondary}'):
+                        raise ValueError('nonexistent outbound interconnect')
                 else:
                     for _table in [primary, secondary]:
                         if _table == table:
