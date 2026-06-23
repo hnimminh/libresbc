@@ -41,7 +41,7 @@ ROUTE = 'route'
 HTTPR = 'httpr'
 EMPTYSTRING = ''
 --- CDR
-CDRTTL = 172800  -- 48 hours; reduced from 1h to prevent silent CDR loss on liberator downtime
+CDRTTL = tonumber(os.getenv('CDRTTL')) or 3600  -- configurable via env var; increase (e.g. 172800) to prevent silent CDR loss on liberator downtime
 
 --- SECURITY
 ROLLING_WINDOW_TIME = 1000                             --- use the exactly 1 second = 1000ms
