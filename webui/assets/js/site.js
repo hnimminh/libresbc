@@ -324,9 +324,11 @@ function GetPresentNode(){
         success: function (data) {
             ShowProgress();
             let CandidateHtml = EMPTYSTR;
-            data.candidates.forEach((element) => {
-                CandidateHtml = `${CandidateHtml}<span class="badge bg-secondary rounded-pill" id="cdr-bucket">${element}</span>`;
-            });
+            if (Array.isArray(data.candidates)) {
+                data.candidates.forEach((element) => {
+                    CandidateHtml = `${CandidateHtml}<span class="badge bg-secondary rounded-pill" id="cdr-bucket">${element}</span>`;
+                });
+            }
             document.getElementById('node-info').innerHTML = `
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                 Software Version <span class="badge bg-success rounded-pill">${data.swversion}</span>
@@ -351,9 +353,11 @@ function GetPresentNode(){
         success: function (data) {
             ShowProgress();
             let MembersHtml = EMPTYSTR;
-            data.members.forEach((element) => {
-                MembersHtml = `${MembersHtml}<span class="badge bg-dark rounded-pill" id="cdr-bucket">${element}</span>`;
-            });
+            if (Array.isArray(data.members)) {
+                data.members.forEach((element) => {
+                    MembersHtml = `${MembersHtml}<span class="badge bg-dark rounded-pill" id="cdr-bucket">${element}</span>`;
+                });
+            }
             document.getElementById('cluster-info').innerHTML = `
             <li class="list-group-item d-flex justify-content-between align-items-center">
             Cluster Name <span class="badge bg-warning text-dark rounded-pill">${data.name}</span>
@@ -412,6 +416,7 @@ function GeneralGetPresent(SettingName){
 }
 
 function GeneralPresentData(DataList, SettingName, presentation){
+    if (!Array.isArray(DataList)) return;
     let tablebody = EMPTYSTR;
     let cnt = 1;
     DataList.forEach((element) => {
@@ -552,6 +557,7 @@ function GeneralCreate(SettingName, ObjectName=EMPTYSTR){
 
 // Access domain policy+user presentation
 function AccessDomainPresentData(data, presentation){
+    if (!Array.isArray(data)) return;
     let AccessDomainHtml = EMPTYSTR;
     let cnt = 0;
     data.forEach((Adomain) => {
@@ -724,6 +730,7 @@ function UpdateAccessUser(domain, user){
 // --   Routing                                     //
 // -------------------------------------------------//
 function RoutingTablePresentData(data, presentation){
+    if (!Array.isArray(data)) return;
     let RoutingTablesHtml = EMPTYSTR;
     data.forEach((Rtable) => {
         let rtbName = Rtable.name;
@@ -773,7 +780,7 @@ function RoutingTableDetail(Rtablename){
         url: `/libreapi/routing/table/${Rtablename}`,
         success: function (data) {
             ShowProgress();
-            records = data.records;
+            records = Array.isArray(data.records) ? data.records : [];
             delete data['records'];
             document.getElementById(`DetailRT${Rtablename}`).innerHTML = `
             <div class="card border-primary">
