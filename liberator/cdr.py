@@ -7,6 +7,7 @@
 # All Rights Reserved.
 #
 
+import os
 import time
 import traceback
 from threading import Thread
@@ -21,6 +22,9 @@ import redis
 from configuration import (_APPLICATION, _SWVERSION,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, REDIS_TIMEOUT,
                            LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE, CDRFNAME_INTERVAL, CDRFNAME_FMT)
+
+CDRTTL = int(os.getenv('CDRTTL', 3600))
+CLEANUP_INTERVAL = CDRTTL
 from utilities import logger
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -431,18 +435,16 @@ class CDRMaster(Thread):
     def run(self):
         logger.info(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
-        try:
-            orphans = rdbconn.zrange('cdr:inprogress', 0, -1)
-            for orphan_uuid in orphans:
-                if not rdbconn.exists(f'cdr:detail:{orphan_uuid}'):
-                    logger.warning(f"module=liberator, space=cdr, action=startup_scan, state=orphan_found, uuid={orphan_uuid}")
-                    rdbconn.zrem('cdr:inprogress', orphan_uuid)
-            if orphans:
-                logger.info(f"module=liberator, space=cdr, action=startup_scan, total_in_progress={len(orphans)}")
-        except Exception as e:
-            logger.error(f"module=liberator, space=cdr, action=startup_scan, exception={e}")
+        last_cleanup_time = time.time()
         while not self.stop:
             try:
+                current_time = time.time()
+                if current_time - last_cleanup_time > CLEANUP_INTERVAL:
+                    cutoff_time = int(current_time) - CDRTTL
+                    removed = rdbconn.zremrangebyscore('cdr:inprogress', '-inf', cutoff_time)
+                    if removed > 0:
+                        logger.info(f"module=liberator, space=cdr, action=periodic_cleanup, orphans_removed={removed}")
+                    last_cleanup_time = current_time
                 reply = rdbconn.blpop('cdr:queue:new', REDIS_TIMEOUT)
                 if reply:
                     uuid = reply[1]
