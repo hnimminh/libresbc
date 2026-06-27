@@ -7,7 +7,6 @@
 # All Rights Reserved.
 #
 
-import os
 import time
 import traceback
 from threading import Thread
@@ -19,12 +18,10 @@ import json
 import requests
 import redis
 
-from configuration import (_APPLICATION, _SWVERSION,
+from configuration import (_APPLICATION, _SWVERSION, CDRTTL,
                            REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD, SCAN_COUNT, REDIS_TIMEOUT,
                            LOGDIR, HTTPCDR_ENDPOINTS, DISKCDR_ENABLE, CDRFNAME_INTERVAL, CDRFNAME_FMT)
 
-CDRTTL = int(os.getenv('CDRTTL', 3600))
-CLEANUP_INTERVAL = CDRTTL
 from utilities import logger
 
 REDIS_CONNECTION_POOL = redis.BlockingConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD,
@@ -435,11 +432,11 @@ class CDRMaster(Thread):
     def run(self):
         logger.info(f"module=liberator, space=cdr, action=start_cdr_thread")
         rdbconn = redis.StrictRedis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True)
-        last_cleanup_time = time.time()
+        last_cleanup_time = 0
         while not self.stop:
             try:
                 current_time = time.time()
-                if current_time - last_cleanup_time > CLEANUP_INTERVAL:
+                if (current_time - last_cleanup_time) > CDRTTL:
                     cutoff_time = int(current_time) - CDRTTL
                     removed = rdbconn.zremrangebyscore('cdr:inprogress', '-inf', cutoff_time)
                     if removed > 0:
