@@ -148,3 +148,9 @@ if _CDRFNAME_INTERVAL and _CDRFNAME_INTERVAL.isdigit():
 CDRFNAME_FMT = os.getenv('CDRFNAME_FMT')
 if not CDRFNAME_FMT:
     CDRFNAME_FMT = '%Y-%m-%d.cdr.nice'
+
+# life time for CDR
+_CDRTTL = os.getenv('CDRTTL')
+CDRTTL = 8080
+if _CDRTTL and _CDRTTL.isdigit():
+    CDRTTL = int(_CDRTTL)
