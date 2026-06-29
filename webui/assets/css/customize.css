@@ -18,6 +18,40 @@
     top: 80px;
     right: 10px;
     z-index: 999;
+    min-width: 400px;
+    max-width: 600px;
+}
+
+/* Estilos para mensajes de error en el toast */
+.toast .toast-body {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.toast .toast-body strong {
+    color: inherit;
+}
+
+.toast .toast-body code {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+}
+
+.toast .toast-body small {
+    opacity: 0.8;
+    font-size: 0.85rem;
+}
+
+/* Toast de advertencia con mejor legibilidad */
+.toast.bg-warning .toast-body {
+    color: #000 !important;
+}
+
+.toast.bg-warning .toast-body code {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: #000;
 }
 
 .offcanvas.offcanvas-start {
