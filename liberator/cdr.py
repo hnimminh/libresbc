@@ -284,6 +284,7 @@ class CDRHandler(Thread):
             progress_time = fmtime(self.details.get('progress_time'))
             progress_media_time = fmtime(self.details.get('progress_media_time'))
             duration = self.details.get('duration', 0)
+            billsec = self.details.get('billsec', 0)
             # sip address
             sip_network_ip = self.details.get('sip_network_ip')
             sip_network_port = self.details.get('sip_network_port')
@@ -327,7 +328,7 @@ class CDRHandler(Thread):
             elif bridge_sip_hangup_cause: sip_resp_code = bridge_sip_hangup_cause
             elif libre_sip_hangup_cause: sip_resp_code = libre_sip_hangup_cause
             else:
-                if duration and duration.isdigit() and int(duration) > 0: sip_resp_code = 'sip:200'
+                if billsec and int(billsec) > 0: sip_resp_code = 'sip:200'
                 elif sip_redirected_to: sip_resp_code = 'sip:302'
                 else: sip_resp_code = 'sip:000'
             status = SIP_DISPOSITIONS.get(int(sip_resp_code.split(':')[1]), 'FAILURE')
@@ -352,6 +353,7 @@ class CDRHandler(Thread):
                 'progress_time': progress_time,
                 'progress_media_time': progress_media_time,
                 'duration': duration,
+                'billsec': billsec,
                 'sip_network_ip': sip_network_ip,
                 'sip_network_port': sip_network_port,
                 'sip_local_network_addr': sip_local_network_addr,
