@@ -201,7 +201,7 @@ def fsinstance(data):
         fsrun = Popen(['/usr/local/bin/freeswitch', '-nc', '-reincarnate'], stdout=PIPE, stderr=PIPE)
         _, stderr = bdecode(fsrun.communicate())
 
-        if stderr and not stderr.endswith('Backgrounding.'):
+        if stderr and not stderr.endswith('Backgrounding.\n'):
             result = False
             stderr = stderr.replace('\n', '')
             logger.error(f"module=liberator, space=basemgr, action=fsinstance.fsrun, error={stderr}")
