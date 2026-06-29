@@ -29,9 +29,8 @@ local function cdrreport()
     local end_time = event:getHeader("variable_end_epoch")
     local progress_time = event:getHeader("variable_progress_epoch")
     local progress_media_time = event:getHeader("variable_progress_media_epoch")
-    local answer_epoch = tonumber(answer_time) or 0
-    local duration = (tonumber(end_time) or 0) - (tonumber(start_time) or 0)
-    local billsec = answer_epoch > 0 and ((tonumber(end_time) or 0) - answer_epoch) or 0
+    local duration = tonumber(event:getHeader("variable_duration")) or 0
+    local billsec = tonumber(event:getHeader("variable_billsec")) or 0
     --
     local sip_network_ip = event:getHeader("variable_sip_network_ip")
     local sip_network_port = event:getHeader("variable_sip_network_port")
