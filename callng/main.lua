@@ -205,6 +205,13 @@ local function main()
             -- outbound manipulation
             manipulate(InLeg, NgVars)
             --------------------------------------------------------------------
+            -- P-Asserted-Identity header
+            if fieldjsonify(rdbconn:hget(intconkey(NgVars.route, OUTBOUND), 'pai')) then
+                local _sipadip_pai = freeswitch.getGlobalVariable(_sipprofile..':advertising')
+                if not _sipadip_pai then _sipadip_pai = freeswitch.getGlobalVariable('hostname') end
+                InLeg:execute("export", "nolocal:sip_h_P-Asserted-Identity=<sip:"..NgVars.cidnumber.."@".._sipadip_pai..";user=phone>")
+            end
+            --------------------------------------------------------------------
 
             -- start outbound leg
             log.info('module=callng, space=main, action=connect_gateway, seshid=%s, uuid=%s, route=%s, sipprofile=%s, gateway=%s, algorithm=%s, forceroute=%s',

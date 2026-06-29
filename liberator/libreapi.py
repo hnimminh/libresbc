@@ -1868,6 +1868,7 @@ class OutboundInterconnection(BaseModel):
     nofailover_sip_codes: Optional[List[SIPCode]] = Field(default=[], min_length=0, max_item=32, description='a set of sip response code that stop failover')
     nodes: List[str] = Field(default=['_ALL_'], min_length=1, max_item=len(CLUSTERMEMBERS), description='a set of node member that interconnection engage to')
     enable: bool = Field(default=True, description='enable/disable this interconnection')
+    pai: Optional[bool] = Field(default=False, description='send P-Asserted-Identity header on outbound INVITE')
 
     @model_validator(mode='before')
     @classmethod
