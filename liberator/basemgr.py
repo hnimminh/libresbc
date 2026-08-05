@@ -215,7 +215,7 @@ def fsinstance(data):
 
 @threaded
 def fssocket(requestid, commands, delay, sockets):
-    result, fs = False, None
+    result = False
     try:
         # connecting
         logger.info(f"module=liberator, space=basemgr, func=fssocket, action=preparing, requestid={requestid}, nodeids={[socket.get('nodeid') for socket in sockets]}, commands={commands}, delay={delay}")
@@ -225,33 +225,34 @@ def fssocket(requestid, commands, delay, sockets):
             password = socket.get('password')
             nodeid = socket.get('nodeid')
             fs = redfs.InboundESL(host=ipaddr, port=port, password=password, timeout=10)
-            for _ in range(0,3):
-                try:
-                    fs.connect()
-                    if fs.connected: break
-                except:
-                    if delay:
-                        time.sleep(delay)
-                    else:
-                        time.sleep(5)
-            # send api commands
-            if commands and fs.connected:
-                result = True
-                for command in commands:
-                    response = fs.send(f'api {command}')
-                    if response:
-                        resultstr = response.data
-                        if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
-                            _result = True
+            try:
+                for _ in range(0,3):
+                    try:
+                        fs.connect()
+                        if fs.connected: break
+                    except:
+                        if delay:
+                            time.sleep(delay)
                         else:
-                            _result = False
-                            logger.warning(f"module=liberator, space=basemgr, func=fssocket, requestid={requestid}, nodeid={nodeid},command={command}, result={resultstr}")
-                        result = bool(result and _result)
-            logger.info(f"module=liberator, space=basemgr, func=fssocket, connected={fs.connected}, requestid={requestid}, nodeid={nodeid}, commands={commands}, result={result}")
+                            time.sleep(5)
+                # send api commands
+                if commands and fs.connected:
+                    result = True
+                    for command in commands:
+                        response = fs.send(f'api {command}')
+                        if response:
+                            resultstr = response.data
+                            if '+OK' in resultstr or 'Success' in resultstr or '+ok' in resultstr:
+                                _result = True
+                            else:
+                                _result = False
+                                logger.warning(f"module=liberator, space=basemgr, func=fssocket, requestid={requestid}, nodeid={nodeid},command={command}, result={resultstr}")
+                            result = bool(result and _result)
+                logger.info(f"module=liberator, space=basemgr, func=fssocket, connected={fs.connected}, requestid={requestid}, nodeid={nodeid}, commands={commands}, result={result}")
+            finally:
+                if fs.connected: fs.stop()
     except Exception as e:
         logger.error(f"module=liberator, space=basemgr, func=fssocket, commands={commands}, requestid={requestid}, esno={len(sockets)} exception={e}, tracings={traceback.format_exc()}")
-    finally:
-        if fs and fs.connected: fs.stop()
 
     return result
 
