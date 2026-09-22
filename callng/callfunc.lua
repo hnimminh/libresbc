@@ -190,6 +190,14 @@ function inMediaProcess(name, DxLeg)
     else
         DxLeg:setVariable("rtp_disable_vad_in", "true")
     end
+
+    if medias.rtp_secure_media == 'mandatory' then
+        DxLeg:setVariable("rtp_secure_media", "mandatory:"..table.concat(SRPT_ENCRYPTION_SUITES, ':'))
+        DxLeg:setVariable("sdp_secure_savp_only", "true")
+    elseif medias.rtp_secure_media == 'optional' then
+        DxLeg:setVariable("rtp_secure_media", "optional:"..table.concat(SRPT_ENCRYPTION_SUITES, ':'))
+    end
+    return medias.rtp_secure_media
 end
 
 function outMediaProcess(name, DxLeg)
@@ -221,6 +229,14 @@ function outMediaProcess(name, DxLeg)
     else
         DxLeg:execute("export", "nolocal:rtp_disable_vad_out=true")
     end
+
+    if medias.rtp_secure_media == 'mandatory' then
+        DxLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..table.concat(SRPT_ENCRYPTION_SUITES, ':'))
+        DxLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
+    elseif medias.rtp_secure_media == 'optional' then
+        DxLeg:execute("export", "nolocal:rtp_secure_media=optional:"..table.concat(SRPT_ENCRYPTION_SUITES, ':'))
+    end
+    return medias.rtp_secure_media
 end
 
 ---------------------------------------------------------------------------------------------------------------------------------------------

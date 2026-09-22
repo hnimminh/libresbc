@@ -83,8 +83,8 @@ local function main()
         log.info('module=callng, space=main, action=translate, seshid=%s, uuid=%s, direction=%s, intconname=%s, tranrules=%s, cidnumber=%s, cidname=%s, dstnumber=%s',
             NgVars.seshid, uuid, INBOUND, NgVars.intconname, rulejoin(tranrules), NgVars.cidnumber, NgVars.cidname, NgVars.dstnumber)
         -- media negotiation - secure
-        inMediaProcess(NgVars.intconname, InLeg)
-        if transport:lower()=='tls' then
+        local in_secmedia = inMediaProcess(NgVars.intconname, InLeg)
+        if transport:lower()=='tls' and (in_secmedia == nil or in_secmedia == 'false') then
             InLeg:setVariable("rtp_secure_media", "mandatory:"..NgVars.ENCRYPTION_SUITES)
             InLeg:setVariable("sdp_secure_savp_only", "true")
         end
@@ -184,8 +184,8 @@ local function main()
             end
             -- media negotiation - secure
             InLeg:execute("export", "media_mix_inbound_outbound_codecs=true")
-            outMediaProcess(NgVars.route, InLeg)
-            if gwtransport:lower() == 'tls' then
+            local out_secmedia = outMediaProcess(NgVars.route, InLeg)
+            if gwtransport:lower() == 'tls' and (out_secmedia == nil or out_secmedia == 'false') then
                 InLeg:execute("export", "nolocal:rtp_secure_media=mandatory:"..NgVars.ENCRYPTION_SUITES)
                 InLeg:execute("export", "nolocal:sdp_secure_savp_only=true")
             end
